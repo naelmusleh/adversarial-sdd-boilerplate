@@ -55,7 +55,7 @@ Framework artifacts describe reusable process. Generated application artifacts d
 - A Supabase project only when the new app is ready to run its server. The template does not provision a database or create credentials.
 - A GitHub account/repository only if the owner chooses GitHub as the app's remote. Local use is supported.
 
-The requested Next.js 15 line is pinned to `15.5.27`, the current 15.x backport reported by npm at preparation time. Next.js 16 is the newer major line; this template deliberately keeps the requested 15 major and should be upgraded through a reviewed dependency change. [Next.js 15.5 release notes](https://nextjs.org/blog/next-15-5) · [Next.js 15 package versions](https://www.npmjs.com/package/next?activeTab=versions).
+The bundled Next.js starter is pinned to `15.5.27`, the 15.x backport selected when this starter was prepared. The template does not assert that this remains the newest patch release; update it through a reviewed dependency change. [Next.js 15.5 release notes](https://nextjs.org/blog/next-15-5) · [Next.js 15 package versions](https://www.npmjs.com/package/next?activeTab=versions).
 
 ## Start a brand-new application from scratch
 
@@ -98,21 +98,27 @@ python3 scripts/init_app_project.py \
 
 The initializer refuses a non-empty target. By default it creates the five canonical app SDD documents, an app README, app-specific `AGENTS.md`, `.gitignore`, and a copy of the dependency-free artifact helper. It never overwrites existing work. Add `--include-lifecycle-records` only if the team wants the optional supporting record templates preseeded; otherwise create records when their gate requires them.
 
-### 4. Copy the runtime and lifecycle files into the app repository
+### 4. Add the selected runtime and lifecycle files to the app repository
 
-The initializer creates the app's SDD files; copy the neutral Next.js runtime and reusable contracts separately. Set `TARGET` to the same path passed to `--target`:
+The initializer creates the app's SDD files and framework helper. Every app also needs the reusable lifecycle contracts. The web runtime below is an optional starter: use it when the app has chosen the bundled Next.js stack. If the app chooses another stack or native clients, retain the SDD/framework files and replace or extend the runtime according to the app's approved architecture. Record that stack and platform decision in the app repository before implementation. Set `TARGET` to the same path passed to `--target`:
 
 ```sh
 TARGET=../example-app
-cp package.json vitest.config.ts tsconfig.json next.config.ts instrumentation.ts .env.example "$TARGET/"
-cp -R src "$TARGET/"
 mkdir -p "$TARGET/tests" "$TARGET/docs" "$TARGET/framework"
-cp tests/setup.ts tests/server-only.ts "$TARGET/tests/"
 cp -R docs/framework "$TARGET/docs/"
 cp -R docs/constitution "$TARGET/docs/"
 cp -R docs/templates "$TARGET/docs/"
 cp -R workflows "$TARGET/"
 cp -R framework/capabilities "$TARGET/framework/"
+```
+
+For the bundled Next.js web starter, add its runtime files as well:
+
+```sh
+TARGET=../example-app
+cp package.json package-lock.json vitest.config.ts tsconfig.json next.config.ts next-env.d.ts instrumentation.ts .env.example "$TARGET/"
+cp -R src "$TARGET/"
+cp tests/setup.ts tests/server-only.ts "$TARGET/tests/"
 cat >> "$TARGET/.gitignore" <<'EOF'
 node_modules/
 .next/
@@ -134,12 +140,11 @@ The app's repository is its source of truth after setup. Later changes to this t
 
 In the new app repo:
 
-1. Complete `mission.md` with the target user, observed problem, outcome, constraints, assumptions, non-goals, and initial success signals.
-2. Record product invariants and decision rights in `constitution.md`.
-3. Define actors, scope, behaviors, data boundaries, acceptance outcomes, non-functional requirements, and open decisions in `specification.md`.
-4. Define the full active journey set, platform behavior, design system, content, states, errors, accessibility, and prototype links in `design.md`.
-5. Create a ranked, dependency-aware implementation backlog in `backlog.md`, linked to requirements and measurable acceptance criteria.
-6. Run required adversarial and CX reviews. Keep findings in review artifacts separate from the documents being reviewed.
+1. Give the agent the app idea, intended user, observed problem evidence, desired outcome, constraints, and any supplied source material. The agent drafts `mission.md`, labeling evidence, assumptions, non-goals, and unknowns.
+2. Have the agent lead product discovery and draft `constitution.md`, `specification.md`, and `backlog.md`, with linked decisions and testable acceptance outcomes.
+3. Review material scope and risk decisions returned by the agent; record owner decisions in the app repository.
+4. Have the agent define the full active journey set, platform behavior, design system, content, states, errors, accessibility, and prototype links in `design.md`.
+5. Run required adversarial and CX reviews. Keep findings in review artifacts separate from the documents being reviewed.
 
 Do not start implementation of dependent features while a blocking requirement, feasibility, coverage, CX, or architecture gate is failed or blocked.
 
@@ -220,5 +225,5 @@ This package is the separated local boilerplate repository. It contains no appli
 - [Gate evidence contracts](docs/framework/GATE-CATALOG-001.md)
 - [Tool and skill routing](docs/framework/TOOL-CATALOG-001.md)
 - [Fresh-session bootstrap contract](framework/capabilities/CAP-000-template-initialization.md)
-- [App-project starter contract](docs/templates/app-project/README.md)
+- [App-project starter contract](framework/capabilities/CAP-004-app-repository-bootstrap.md)
 - [MIT License](LICENSE)

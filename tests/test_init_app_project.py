@@ -66,6 +66,8 @@ class InitAppProjectTests(unittest.TestCase):
             self.assertEqual(len(files), 9)
             generated_readme = (target / "README.md").read_text(encoding="utf-8")
             self.assertIn("EXAMPLE-DECISION-001", generated_readme)
+            self.assertIn("Give your AI agent the app idea", generated_readme)
+            self.assertIn("The agent drafts [`mission.md`](mission.md)", generated_readme)
             validation = subprocess.run(
                 [sys.executable, str(target / "scripts" / "artifacts.py"), "validate"],
                 cwd=target,
@@ -149,7 +151,7 @@ class InitAppProjectTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertFalse((source / ".git").exists())
             generated_readme = (target / "README.md").read_text(encoding="utf-8")
-            self.assertIn("https://github.com/naelmusleh/adversarial-sdd", generated_readme)
+            self.assertIn("https://github.com/naelmusleh/adversarial-sdd-boilerplate", generated_readme)
             validation = subprocess.run(
                 [sys.executable, str(target / "scripts" / "artifacts.py"), "validate"],
                 cwd=temporary_root,

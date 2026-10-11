@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = ROOT / "docs" / "templates" / "app-project"
-DEFAULT_FRAMEWORK_URL = "https://github.com/naelmusleh/adversarial-sdd"
+DEFAULT_FRAMEWORK_URL = "https://github.com/naelmusleh/adversarial-sdd-boilerplate"
 PREFIX_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 ARTIFACT_ID_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]{3}$")
 REQUIRED_METADATA = {"id", "type", "title", "status", "version", "created", "updated"}
@@ -119,7 +119,7 @@ def generated_readme(
 
 **Project status:** Ideation
 **Active gate:** None; discovery has not started
-**Next action:** Complete `mission.md` and begin the [product discovery workflow]({framework_link(framework_url, "workflows/product-discovery.md")}).
+**Next action:** Give your AI agent the app idea, intended user, problem evidence, desired outcome, and known constraints. Ask it to draft `mission.md` and lead the [product discovery workflow]({framework_link(framework_url, "workflows/product-discovery.md")}) in this repository.
 **Canonical status source:** [`backlog.md`](backlog.md)
 
 This repository is the source of truth for {name}: its product decisions, code, and delivery evidence belong here. It was initialized from the reusable [Adversarial SDD template]({framework_url}); there is no framework service to install or operate. No gate has passed and no product decisions are pre-approved by this starter.
@@ -138,8 +138,8 @@ The helper discovers this repository's canonical SDD files and artifact folders;
 
 ## Start here
 
-1. Complete [`mission.md`](mission.md) with user/problem evidence and an accountable owner.
-2. Follow the [product discovery workflow]({framework_link(framework_url, "workflows/product-discovery.md")}) to draft `specification.md`, record open decisions, and request the requirements gate.
+1. Give the agent the app idea, intended user, problem evidence, desired outcome, and known constraints. The agent drafts [`mission.md`](mission.md) with you and records evidence, assumptions, exclusions, and unresolved decisions.
+2. Have the agent follow the [product discovery workflow]({framework_link(framework_url, "workflows/product-discovery.md")}) to draft `constitution.md`, `specification.md`, and `backlog.md`, then return only material decisions and the G-INTENT/G-REQ evidence for your review.
 3. Keep `design.md` as the canonical experience contract. Use the [CX design workflow]({framework_link(framework_url, "workflows/cx-design.md")}) and link visual review evidence there.
 4. Use [`backlog.md`](backlog.md) for prioritized, approved implementation work and the [lifecycle workflow]({framework_link(framework_url, "workflows/lifecycle.md")}) for the next stage.
 

@@ -3,10 +3,10 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 1.1
+version: 1.2
 created: 2026-10-07
-updated: 2026-10-10
-related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001
+updated: 2026-10-11
+related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, CAP-000, CAP-004, FRAMEWORK-ADV-007
 ---
 
 # FRAMEWORK-BACKLOG-001 — Remaining work to complete Adversarial SDD Framework v1
@@ -15,7 +15,7 @@ related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001
 
 This is the ordered backlog for finishing the reusable framework, not an application backlog. Items are sequenced by dependency and can be adjusted when evidence exposes a better order. An item is complete only when its acceptance evidence is recorded in the repository. The slide is a target-state overview; this backlog is the execution plan.
 
-**Current framework state (updated 2026-10-10):** CAP-001 artifact management and CAP-004 app bootstrap are implemented. To reduce startup overhead, CAP-004 now defaults to five canonical SDD artifacts plus README, agent instructions, `.gitignore`, and the local helper; detailed lifecycle records remain available on demand. FRAMEWORK-ADV-007 independently passed the profile split and generated README review; five local tests also cover downloaded-source use without Git metadata. CAP-002 has an independent passing conformance review; the lifecycle/gate contract has passed independent review with a completed paper tabletop; and the CAP-003 through release/operations workflow set has passed bounded written review. The first app implementation remains the principal proof gap; distribution-package review is outstanding before public use.
+**Current framework state (updated 2026-10-11):** CAP-001 artifact management and CAP-004 app bootstrap are implemented. FW-TASK-008 starter handoff is complete after the cold-start acceptance checklist and focused fixes recorded below. CAP-004 defaults to five canonical SDD artifacts plus README, agent instructions, `.gitignore`, and the local helper; detailed lifecycle records remain available on demand. FRAMEWORK-ADV-007 independently passed the profile split and generated README review; the current five-test run also covers downloaded-source use without Git metadata. CAP-002 has an independent passing conformance review; the lifecycle/gate contract has passed independent review with a completed paper tabletop; and the CAP-003 through release/operations workflow set has passed bounded written review. FW-TASK-009 is complete for its bounded Python ping slice, with its evidence summarized in [FRAMEWORK-PILOT-001](FRAMEWORK-PILOT-001.md); this does not establish production readiness. The framework-only candidate passes its local artifact, Python, TypeScript, Vitest, coverage, and Next.js build checks. Clean-history clone/archive validation and owner review remain before any public distribution.
 
 ## Recommended execution sequence
 
@@ -52,7 +52,7 @@ The lifecycle and gate contract (002) establishes shared handoff semantics. CAP-
   3. No document instructs users to independently maintain duplicate canonical copies.
   4. App-specific artifacts are explicitly required to live in the app repository after setup.
   5. Nested project scaffolding is excluded from the framework artifact inventory and validator, so the starter's ordinary README and placeholders are not treated as live artifacts.
-- **Evidence:** [App-project starter guide](../templates/app-project/README.md), generated sample behavior, and independent review [FRAMEWORK-ADV-003](../adversarial-reviews/FRAMEWORK-ADV-003.md).
+- **Evidence:** [CAP-004 — App Repository Bootstrap](../../framework/capabilities/CAP-004-app-repository-bootstrap.md), generated sample behavior, and independent review [FRAMEWORK-ADV-003](../adversarial-reviews/FRAMEWORK-ADV-003.md).
 - **State:** Complete — D-FW-05 is resolved; the artifact map, templates, initializer, and fresh-repository generation are independently reviewed in FRAMEWORK-ADV-003.
 
 - **Execution update (2026-10-08):** The owner chose canonical SDD `design.md` and separate Impeccable generated output under `.impeccable/generated/`. The installed `document` workflow writes at project root, so the starter specifies running it in an isolated staging copy and moving reviewed output into `.impeccable/generated/`; safety and tool compatibility remain to be exercised during the app-repository pilot. The initializer creates a 20-file starter tree in a clean temporary repository; template review remains open.
@@ -150,7 +150,7 @@ The lifecycle and gate contract (002) establishes shared handoff semantics. CAP-
 
 - **Goal:** Make the framework usable in a newly created application repository with low setup effort and no source-of-truth ambiguity.
 - **Requirements:** FR-FW-002, FR-FW-003, FR-FW-008, FR-FW-011, FR-FW-012; NFR-FW-001, NFR-FW-002, NFR-FW-005, NFR-FW-006.
-- **Dependencies:** FW-TASK-001 through FW-TASK-007; D-FW-01 and D-FW-04 when their dependent choices are needed.
+- **Dependencies:** The canonical artifact model, lifecycle/gate contract, adversarial review procedure, and written feasibility, engineering, verification, and operations workflows from FW-TASK-001 through FW-TASK-007; D-FW-01 and D-FW-04 where their dependent choices apply. The remaining implementation/release/operations demonstrations for FW-TASK-004 through FW-TASK-007 are pilot evidence tracked by FW-TASK-009 and are not prerequisites for initializing or navigating the starter.
 - **Work:** Package templates, agent instructions, workflow entry points, tool/skill catalog, required repository labels, and initial status mechanism. Include a clean project creation/handoff guide. Decide which setup steps are generated versus performed by an agent or owner.
 - **Acceptance criteria:**
   1. A new app repo can be initialized with a small set of explicit inputs and no copied content from another application.
@@ -158,7 +158,33 @@ The lifecycle and gate contract (002) establishes shared handoff semantics. CAP-
   3. The owner can locate current state and next action from the repo front page/status artifact.
   4. Framework updates do not overwrite an application's accepted product artifacts without explicit migration/review.
 - **Evidence:** Fresh-repository generation from an empty directory and a downloaded-source simulation without `.git`; exact file inventories and valid unique artifact IDs for both starter profiles; app-local validation; dry-run non-mutation; and non-empty-target preservation. Independent review must cover the current default and optional profile.
-- **State:** In progress — the previous 21-file scaffold (including an unnecessary empty generated-output folder) and its safety behavior were independently reviewed in FRAMEWORK-ADV-006 v0.1. The revised default generates nine files with five canonical artifacts; `--include-lifecycle-records` generates 20 files with 16 unique draft artifacts. Five regression tests cover both profiles, profile-correct decision IDs, copied-helper validation, dry-run, non-empty-target refusal, and downloaded-source use without Git metadata. FRAMEWORK-ADV-007 independently passed the profile split and generated README corrections. Remaining FW-TASK-008 evidence is a full checklist of every acceptance criterion and cold-start owner usability; app initialization does not establish implementation or release readiness.
+- **State: [COMPLETE]** — the starter handoff and cold-start usability criteria below passed on 2026-10-11. Completion means a new app can be initialized, validated, and handed to the documented first product action. It does not claim that the app has passed product gates or that the framework has completed its implementation/release pilot.
+
+#### Onboarding Acceptance Checklist — [COMPLETE] (2026-10-11)
+
+Validation target: a fresh app named `Cold Start Verification App`, prefix `COLDSTART`, generated under a disposable temporary directory from the template repository. The generated app folder was verification output, not a second source of truth. The template checkout was on `main` at `4b0132e`, tracking `origin/main`. The checkout also contained pre-existing `package.json` changes and an untracked `package-lock.json`; these were left untouched.
+
+| CAP-000 check | Result | Verification evidence |
+| --- | --- | --- |
+| 1. Identify the checkout and preserve existing work. | **PASS** | Confirmed the template root, branch, remote-tracking branch, and working-tree status before validation. The initializer wrote only to the new temporary app target; unrelated package changes were preserved. A generated app intentionally has no Git history yet; the README tells the owner to review files, then initialize Git and create its first commit. |
+| 2. Read repository instructions and canonical app state. | **PASS** | Read the template README and CAP-000. The generated app contains `README.md`, `AGENTS.md`, `mission.md`, `constitution.md`, `specification.md`, `design.md`, and `backlog.md`. Read those generated files; all start in draft and make no claim that a product decision or gate is approved. |
+| 3. Parse applicable framework documentation. | **PASS** | Read `docs/framework/GATE-CATALOG-001.md`, `docs/framework/TOOL-CATALOG-001.md`, and `workflows/product-discovery.md`. After following the README's runtime/docs copy step, verified the app-local gate catalog, tool catalog, workflow set, templates, and CAP-000 through CAP-004 files are present. Corrected stale links in the root README, CAP-004, and product-discovery workflow that pointed to a missing `docs/templates/app-project/README.md`. |
+| 4. Inspect product, data, and database contracts. | **PASS — blocker behavior verified by inspection** | The generated specification explicitly requires domain/data ownership, retention/deletion, integrations, permissions, and failure behavior to be decided. Those sections are intentionally unfilled in a new app; the agent must record missing contracts as blockers and must not invent a schema, provider, or authorization policy. |
+| 5. Preserve design-system constraints. | **PASS — no product design is implied** | The generated `design.md` reserves the canonical product experience, journey inventory, cross-surface matrix, status/content contract, brand system, and design decisions. CAP-000 requires applicable Material 3 and Apple HIG review and warns that neutral starter tokens do not approve a product design. The starter does not pre-fill product-specific tokens or claim design approval. |
+| 6. Establish objective project state. | **PASS** | In the generated app, `python3 scripts/artifacts.py list` found 12 artifacts after the documented framework copy step, including all five `COLDSTART` canonical artifacts; `python3 scripts/artifacts.py validate` reported `Validated 12 artifact(s).` In the template checkout, the corresponding commands listed and validated 29 artifacts. A fresh app has no Git history before its instructed initial commit, which is explicitly a setup state rather than missing evidence. |
+| 7. Select one authorized next action and confirm its gate/dependencies. | **PASS** | The generated README and backlog agree: the owner gives the agent the app idea, intended user, problem evidence, desired outcome, and known constraints; the agent drafts `mission.md` and leads `workflows/product-discovery.md` toward G-INTENT/G-REQ. The generated backlog says no gate has passed. There is no approved implementation task yet, so coding is not the next permitted action. The README and CAP-004 were revised to make the owner input and agent action explicit. |
+| 8. Execute the selected application task and update its records. | **NOT APPLICABLE AT BOOTSTRAP** | No product intent was supplied for the disposable app, so the next action is owner-led mission framing. The bootstrap contract correctly prohibits inventing app behavior or starting implementation before that input and the required gates. Durable app records are updated when the owner supplies intent and work begins. |
+| 9. Verify and report actual outcomes and remaining risks. | **PASS** | The initializer reported nine created files. The app-local helper listed and validated the generated SDD artifacts. This entry records exact checks, outputs, setup limits, and the next allowed action. The successful structural validator is not represented as a product gate or implementation proof. |
+
+**Starter-package acceptance evidence:**
+
+1. Fresh empty-target generation produced exactly nine files: five canonical SDD documents, `README.md`, `AGENTS.md`, `.gitignore`, and `scripts/artifacts.py`. The generated README and backlog were inspected; both identify owner-provided product context as the immediate input and agent-led mission/discovery as the next action. The README links to discovery guidance.
+2. The five initializer regression tests passed: lean profile/file inventory and five valid draft artifacts; optional profile/file inventory and 16 valid draft artifacts; dry-run creates no target; a non-empty target and its sentinel file are preserved; and a downloaded-source simulation initializes successfully without `.git` metadata.
+3. The downloaded-source test found a stale fallback URL naming the previous repository. Updated `scripts/init_app_project.py` to use `https://github.com/naelmusleh/adversarial-sdd-boilerplate` and changed the regression assertion. Also changed the generated README and backlog to ask the owner for app context and have the agent draft the project documents, consistent with `WORKFLOW-DISCOVERY-001`. The five-test suite passed after these corrections.
+4. `python3 scripts/artifacts.py validate` passed in the template checkout with `Validated 29 artifact(s).`; the generated app helper passed with `Validated 12 artifact(s).` after framework docs were copied. `git diff --check` passed.
+5. FRAMEWORK-ADV-007 v0.1 independently passed its bounded nine-file/20-file profile and generated-README review. That review predates the fallback-URL and link corrections recorded here; today's regression run verifies the URL correction. No claim is made that the reviewer reran the newly corrected links.
+
+**Cold-start conclusion:** a new engineer can locate project status and the exact next action from the app repository without chat history. The next action is product discovery with owner input, not an implementation task. CAP-000 remains explicit that unresolved product/data/security decisions block dependent work. FW-TASK-009 remains responsible for proving an approved app requirement through implementation, observed verification, reversible non-production release rehearsal, and operations/learning evidence; FW-TASK-010 remains the final framework readiness/release review.
 
 - **Execution update (2026-10-10):** Starter simplification follows the product owner's template/boilerplate direction. Keep the reusable template source as the framework product; each actual app gets its own repository as its source of truth. Supporting templates are added when lifecycle events need them instead of pre-populating empty records by default.
 
@@ -174,7 +200,7 @@ The lifecycle and gate contract (002) establishes shared handoff semantics. CAP-
   3. Friction, missing templates, failed gates, and tool limitations are recorded as framework findings with dispositions.
   4. Application code and deployment artifacts remain in a separate app repository.
 - **Evidence:** Pilot report with artifact links, code review, criterion-to-check results, reversible non-production release/rollback evidence, operations/learning record, owner-decision log, and retrospective. Evidence must distinguish this pilot's platform and release scope from production launch or unsupported native/platform claims.
-- **State:** Ready to start — FW-TASK-008 is complete and its approved starter has been copied into the separate synthetic pilot repository. The pilot remains local-first and non-production; no cloud hosting, GitHub remote, or production access is required. The synthetic Reading Queue is only a framework exercise and carries no claim about a real product problem. Pilot design and implementation evidence remain outstanding.
+- **State:** **Complete for the approved one-slice scope** — a separate local Python ping slice was traced through scoped requirements, feasibility, journey coverage, CX, architecture, implementation, independent code review, measured coverage, reversible local release rehearsal, and operations/learning records. [FRAMEWORK-PILOT-001](FRAMEWORK-PILOT-001.md) preserves the observed metrics and scope limits. This does not complete the sample queue application, validate a real product problem, prove Web/iOS/Android quality, or claim production readiness.
 
 ### FW-TASK-010 — Adversarially review, release, and operate Framework v1
 
@@ -190,7 +216,7 @@ The lifecycle and gate contract (002) establishes shared handoff semantics. CAP-
   5. The release record distinguishes “ready for application implementation” from “proven through production launch.”
   6. The published/downloadable repository has clean history, contains only approved framework materials, includes the MIT License, and does not expose application-specific or private owner data.
 - **Evidence:** Framework adversarial review and rerun, v1 readiness report, version/release note, and updated README.
-- **State:** In progress — local-first README and starter behavior are documented; public fork/download access and MIT License are owner-approved. Prepare a clean-history template package for owner review; explicit publication authorization is still required before anyone can access it publicly.
+- **State:** **In progress — private publication authorized, pending remote update.** The framework-only MIT candidate is committed locally on `codex/fw-task-010-candidate` at `b53f988`. The final tree passed artifact validation, offline dependency installation, five Python tests, typecheck, 30 Vitest tests, 100% coverage, and Next.js production build; see [FRAMEWORK-READINESS-001](FRAMEWORK-READINESS-001.md). The owner authorized publishing the candidate to the existing private GitHub repository and explicitly deferred public distribution until the template has been used to launch a couple of applications. The unused `tree` and `underscore` dependencies have been removed.
 
 ## Explicitly not in the v1 backlog
 
