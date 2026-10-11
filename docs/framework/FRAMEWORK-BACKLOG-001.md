@@ -3,10 +3,10 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 1.2
+version: 1.4
 created: 2026-10-07
 updated: 2026-10-11
-related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, CAP-000, CAP-004, FRAMEWORK-ADV-007
+related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007
 ---
 
 # FRAMEWORK-BACKLOG-001 — Remaining work to complete Adversarial SDD Framework v1
@@ -15,7 +15,7 @@ related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001
 
 This is the ordered backlog for finishing the reusable framework, not an application backlog. Items are sequenced by dependency and can be adjusted when evidence exposes a better order. An item is complete only when its acceptance evidence is recorded in the repository. The slide is a target-state overview; this backlog is the execution plan.
 
-**Current framework state (updated 2026-10-11):** CAP-001 artifact management and CAP-004 app bootstrap are implemented. FW-TASK-008 starter handoff is complete after the cold-start acceptance checklist and focused fixes recorded below. CAP-004 defaults to five canonical SDD artifacts plus README, agent instructions, `.gitignore`, and the local helper; detailed lifecycle records remain available on demand. FRAMEWORK-ADV-007 independently passed the profile split and generated README review; the current five-test run also covers downloaded-source use without Git metadata. CAP-002 has an independent passing conformance review; the lifecycle/gate contract has passed independent review with a completed paper tabletop; and the CAP-003 through release/operations workflow set has passed bounded written review. FW-TASK-009 is complete for its bounded Python ping slice, with its evidence summarized in [FRAMEWORK-PILOT-001](FRAMEWORK-PILOT-001.md); this does not establish production readiness. The framework-only candidate passes its local artifact, Python, TypeScript, Vitest, coverage, and Next.js build checks. Clean-history clone/archive validation and owner review remain before any public distribution.
+**Current framework state (updated 2026-10-11):** CAP-001 artifact management and CAP-004 app bootstrap are implemented. FW-TASK-008 starter handoff is complete after the cold-start acceptance checklist and focused fixes recorded below. CAP-004 defaults to five canonical SDD artifacts plus README, agent instructions, `.gitignore`, and the local helper; detailed lifecycle records remain available on demand. FRAMEWORK-ADV-007 independently passed the profile split and generated README review; the current five-test run also covers downloaded-source use without Git metadata. CAP-002 has an independent passing conformance review; the lifecycle/gate contract has passed independent review with a completed paper tabletop; and the CAP-003 through release/operations workflow set has passed bounded written review. FW-TASK-009 is complete for its bounded Python ping slice, with its evidence summarized in [FRAMEWORK-PILOT-001](FRAMEWORK-PILOT-001.md); this does not establish production readiness. The framework-only candidate passes its local artifact, Python, TypeScript, Vitest, coverage, and Next.js build checks. Owner direction has pulled initial server-side verification and the scheduled governance proposal forward from the deferred roadmap into active work under FW-TASK-012 and FW-TASK-014. Workflow execution and merge-protection configuration remain unverified. Clean-history clone/archive validation and owner review remain before any public distribution.
 
 ## Recommended execution sequence
 
@@ -217,6 +217,74 @@ Validation target: a fresh app named `Cold Start Verification App`, prefix `COLD
   6. The published/downloadable repository has clean history, contains only approved framework materials, includes the MIT License, and does not expose application-specific or private owner data.
 - **Evidence:** Framework adversarial review and rerun, v1 readiness report, version/release note, and updated README.
 - **State:** **Complete for private v1 use.** The verified framework-only MIT candidate was merged to the private repository's `main` branch through [PR #1](https://github.com/naelmusleh/adversarial-sdd-boilerplate/pull/1) at `f9f8f28c20559a9bb5f9ef859a9b11fa1feac6fa`. GitHub Actions artifact validation passed; local checks passed for five Python tests, typecheck, 30 Vitest tests, 100% coverage, and the Next.js production build. The owner deferred public distribution until after using the template to launch a couple of applications. See [FRAMEWORK-READINESS-001](FRAMEWORK-READINESS-001.md). The unused `tree` and `underscore` dependencies have been removed.
+
+## Deferred roadmap — v2 candidates
+
+FW-TASK-011 and FW-TASK-013 remain proposed v2 work and are deferred until prioritized. FW-TASK-012 has been pulled forward by owner direction for its initial CI implementation; FW-TASK-014 tracks the companion scheduled governance proposal. Remaining deferred work is not a v1 completion or private-use release blocker unless it is separately promoted.
+
+### FW-TASK-011 — Process velocity telemetry and metrics tracker
+
+- **Goal:** Measure framework setup and delivery efficiency from reproducible evidence across application initializations.
+- **Requirements:** Future-version requirements to be assigned when v2 scope is opened.
+- **Dependencies:** A defined manual-setup baseline; an agreed event and retention model; a decision about whether measurements remain local to each template checkout or are deliberately aggregated.
+- **Work:** Add a versioned schema at `docs/framework/METRICS-LEDGER.json` for `time_to_scaffold_seconds`, `defect_escape_count`, and `agent_autonomy_steps`. Define each metric, unit, start/end event, provenance, and missing-data behavior. Instrument `scripts/init_app_project.py` to record the initialization start timestamp and a completed scaffold event with elapsed time. Keep measurements evidence-based: derive elapsed time from recorded timestamps, count escaped defects only from linked defect records and a declared observation window, and derive autonomy steps from recorded workflow checkpoints rather than an agent's unsupported estimate. Do not collect credentials, personal data, or application content in the ledger.
+- **Acceptance criteria:**
+  1. The JSON schema validates ledger entries and rejects missing, malformed, or internally inconsistent timestamps and metric values.
+  2. A controlled fresh-project initialization writes a start event and a completion entry with a measurable `time_to_scaffold_seconds` value.
+  3. The record identifies the script/template revision and the evidence source for each metric; unavailable metrics are represented explicitly rather than as zero.
+  4. A documented manual baseline uses the same start/end definitions and artifact scope as the automated run.
+  5. The measured comparison reports the observed setup-time ratio and limitations; it does not claim velocity compression from estimates or incomparable baselines.
+  6. Tests cover successful recording, interrupted initialization, malformed ledger data, and repeat runs without corrupting prior entries.
+- **Evidence:** Schema validation, controlled initialization log, resulting ledger entry, test results, and a reproducible comparison against the documented manual baseline.
+- **State:** **TODO — deferred to v2.**
+
+### FW-TASK-012 — Automated GitHub Actions gate linting matrix
+
+- **Goal:** Enforce selected, machine-checkable SDD artifact and code-quality requirements on the GitHub server for pull requests.
+- **Requirements:** Future-version requirements to be assigned when v2 scope is opened.
+- **Dependencies:** A finalized machine-readable artifact contract; test and coverage scope; repository branch-protection configuration and an authorized owner to make the CI check required.
+- **Work:** Implement `.github/workflows/verify-pipeline.yml` as the consolidated pull-request/push gate for artifact metadata, initializer regressions, strict TypeScript compilation, Vitest, and the repository's configured 100% coverage thresholds. Separately add a bounded RFC 2119 metadata/language linter only after its machine-checkable scope and rules are specified. Document and verify the required status-check, pull-request, bypass, and branch-protection settings because workflow YAML alone does not block merges. Keep any CI-generated PR handling consistent with GitHub's `GITHUB_TOKEN` workflow-event restrictions.
+- **Acceptance criteria:**
+  1. The workflow runs on pushes and pull requests targeting `main` and reports artifact-contract, initializer, typecheck, unit-test, and coverage results as distinct checks.
+  2. Missing required artifacts or invalid required metadata fail the workflow with actionable file-level diagnostics.
+  3. A controlled fixture with an invalid or missing normative requirement fails the language check; valid normative statements pass under the documented rule.
+  4. A controlled test change that reduces branch coverage to 95% fails the coverage check, while the passing baseline meets exactly 100% across all configured dimensions.
+  5. A test pull request demonstrates non-zero CI failure for each negative case, and repository settings demonstrate that the relevant status check is required before merge.
+  6. The workflow uses least-privilege permissions, pinned or otherwise controlled actions, and does not expose secrets to untrusted pull-request code.
+- **Evidence:** Workflow run links for passing and failing fixtures, coverage reports, and verified required-status/branch-protection configuration.
+- **State:** **In progress — pulled forward by owner direction (2026-10-11).** The consolidated workflow is being implemented with pinned actions and separate least-privilege jobs. RFC 2119 linting, controlled negative fixtures, hosted passing/failing run evidence, and observed repository branch-protection evidence remain open. A green workflow must not be described as merge-blocking until required status checks and branch restrictions are verified.
+
+### FW-TASK-013 — Polyglot AI architecture compiler specifications
+
+- **Goal:** Define and validate language-specific execution boundaries for applications that combine web, backend, and native mobile components.
+- **Requirements:** Future-version requirements to be assigned when v2 scope is opened.
+- **Dependencies:** An approved multi-platform sample project contract; explicit language/toolchain applicability; a stable cross-module data contract.
+- **Work:** Extend `framework/capabilities/CAP-003-ai-engineering-execution.md` with a translation and verification matrix for TypeScript, Python, and native mobile environments. Define how an agent maps requirements to independently scoped subprojects, loads only the applicable language instructions and dependency manifests, and reports cross-project interfaces. Specify a strict JSON serialization contract for inter-module telemetry, including a versioned schema, validation rules, compatibility behavior, and rejection of malformed or unknown critical fields. Keep this as a specification until a bounded compiler/initializer implementation is separately scoped; do not imply that prose instructions alone provide automated isolation.
+- **Acceptance criteria:**
+  1. The matrix covers TypeScript, Python, and native mobile targets with language-specific instructions, manifests, verification commands, and boundaries; platform/language assumptions are explicit.
+  2. The data interface has a versioned JSON Schema (or an equally machine-checkable schema), valid and invalid fixtures, and documented compatibility behavior.
+  3. A multi-platform sample initialization maps web, native mobile, and data/backend directories without copying dependencies or instructions across unrelated language environments.
+  4. Automated checks detect deliberately injected cross-stack dependency or instruction leakage and pass when the fixture is isolated correctly.
+  5. The capability distinguishes the specified behavior from any compiler or orchestration behavior that has not yet been implemented and verified.
+- **Evidence:** Updated CAP-003, language/platform applicability matrix, versioned serialization schema and fixtures, multi-platform sample tree, and isolation-check results.
+- **State:** **TODO — deferred to v2.**
+
+### FW-TASK-014 — Weekly platform governance audit and strategic R&D proposal
+
+- **Goal:** Establish a bounded weekly operations loop that audits locked dependencies and gathers evidence about relevant SDD, context-engineering, and multi-agent execution practices.
+- **Requirements:** Future-version requirements to be assigned when the automation scope is fully evaluated.
+- **Dependencies:** CAP-005 runtime and evidence boundaries; `TAVILY_API_KEY` Actions secret; GitHub Actions permissions limited to read-only collection and draft pull-request creation; append-only decision-record location; a human owner for source and proposal disposition.
+- **Work:** Schedule a Sunday UTC workflow and permit manual execution from `main`; run `npm ci` and `npm audit --json`; execute the three exact CAP-005 research questions using the provider credential only in the collection step; apply deterministic source diversity, evidence, recency, promotional-language, and topic-specific lexical coverage checks against framework docs/workflows/helpers (excluding `/src`); combine dependency metrics, source links, template-tree matches/gaps, filter outcomes, and qualified `FW-TASK-XXX` candidate templates into one new run-specific report under `docs/decisions/architecture-audits/`; validate and submit that record in an updated draft PR on `automation/weekly-architecture-audit`. Never change `/src`, product logic, dependency manifests, lockfiles, prior records, canonical backlog, or repository settings. Candidate task IDs remain provisional until a maintainer reconciles and accepts them. Clearly mark unavailable sources/scanner results and preserve a non-zero workflow conclusion for findings or operational failure.
+- **Acceptance criteria:**
+  1. A controlled clean audit, vulnerability-found audit, and unavailable-scanner case produce the specified status behavior and preserve accurate evidence.
+  2. Each of the three exact research questions is attempted; complete, partial, missing-credential, malformed-response, and no-qualified-source outcomes are distinguishable and never misreported as equivalent.
+  3. A qualifying task draft requires all three sweeps complete, at least three usable sources across two domains, qualifying primary-source evidence, independent non-promotional corroboration, and an unobserved topic-specific template coverage probe; the report lists matching paths and missing markers while labeling this check lexical rather than semantic. Unqualified trends produce no task draft and include the reason.
+  4. The single generated report includes audit metrics, query/source provenance, bounded excerpts, per-source scores/reasons, candidate acceptance criteria, source revision, workflow run ID, and run attempt; it passes the artifact validator.
+  5. A controlled PR run creates or updates a draft PR on the fixed branch `automation/weekly-architecture-audit` containing only the new report. No previous record, canonical backlog item, `/src` file, product file, dependency file, or workflow is changed by the daemon.
+  6. Candidate FW tasks remain noncanonical proposals, require human source verification and ID reconciliation, and are never auto-appended to the framework backlog or auto-merged.
+  7. The workflow uses least-privilege permissions, limits the external API credential to the collector step, treats retrieved content as untrusted data, and documents that dependency/web research does not constitute a full architecture or production-readiness assessment.
+- **Evidence:** CAP-005; workflow run links covering clean, findings, unavailable, and filter outcomes; validated combined report; PR diff/path checks; and maintainer review/disposition.
+- **State:** **In progress — owner direction (2026-10-11).** Workflow, collector, and capability contract are implemented locally. Hosted schedule, Tavily secret configuration, collector/filter scenario evidence, dependency scanner states, fixed-branch draft PR behavior, event-trigger limits, and append-only negative-case evidence remain unverified.
 
 ## Explicitly not in the v1 backlog
 
