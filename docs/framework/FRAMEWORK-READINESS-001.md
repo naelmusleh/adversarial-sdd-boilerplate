@@ -2,8 +2,8 @@
 id: FRAMEWORK-READINESS-001
 type: framework-readiness-review
 title: Adversarial SDD Framework v1 readiness review
-status: in-review
-version: 1.1
+status: approved
+version: 1.2
 created: 2026-10-11
 updated: 2026-10-11
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-PILOT-001, CAP-000, CAP-004
@@ -13,7 +13,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-PILOT-00
 
 ## Decision summary
 
-**Readiness outcome: approved for private GitHub publication; public distribution deferred.** The owner authorized publishing this framework-only MIT candidate to the existing private repository after checks passed on 2026-10-11. The candidate is committed locally on `codex/fw-task-010-candidate`; its implementation/package commit is `727cc31`, followed by documentation-only validation records. The candidate history contains only the template baseline and framework work. A source archive and fresh clone of candidate `c68398a` passed the recorded full checks, and the final committed tree at `b53f988` passed artifact validation, dependency installation, Python tests, typecheck, Vitest, strict coverage, and production build. The owner asked to keep the repository private until the template has been used to launch a couple of applications; public distribution is not authorized by this approval.
+**Readiness outcome: private v1 release complete; public distribution deferred.** The owner authorized private GitHub publication after checks passed on 2026-10-11. The framework-only MIT candidate was merged into `main` through [PR #1](https://github.com/naelmusleh/adversarial-sdd-boilerplate/pull/1), producing merge commit `f9f8f28c20559a9bb5f9ef859a9b11fa1feac6fa`. The repository remains private. The candidate history contains only the template baseline and framework work. A source archive and fresh clone of candidate `c68398a` passed the recorded full checks, and the final tree before publication passed artifact validation, dependency installation, Python tests, typecheck, Vitest, strict coverage, and production build. The owner asked to keep the repository private until the template has been used to launch a couple of applications; public distribution is deferred to a future owner decision.
 
 This report distinguishes framework readiness from proof that an application is production-ready. The pilot was a small local Python diagnostic. The bundled Next.js starter build is a separate package check; neither result establishes the quality or production readiness of a future application.
 
@@ -39,6 +39,7 @@ Observed in this template checkout on 2026-10-11:
 | `npm run build` | **PASS** | Builds the bundled Next.js 15.5.27 starter in this local environment; it is not a deployment or production operations check. |
 | Final committed candidate `b53f988` | **PASS — artifact validation, offline dependency installation, five Python tests, typecheck, 30 Vitest tests, 100% coverage, and production build** | This is the final local verification run before private GitHub publication. npm reported that `esbuild` and `fsevents` install scripts were blocked by the environment's install-script policy; tests and build passed. |
 | Package manifest and lockfile consistency | **PASS — `tree` and its otherwise-unused `underscore` dependency are absent** | The lockfile is included in the local candidate commit and was consumed by `npm ci --offline` in the fresh clone. |
+| Private GitHub publication | **PASS — PR #1 merged to `main` at `f9f8f28c20559a9bb5f9ef859a9b11fa1feac6fa`; repository visibility is private** | GitHub Actions artifact validation passed. Local verification covered Python tests, typecheck, Vitest, 100% coverage, and the production build before publication. |
 | Source archive extracted from `c68398a` | **PASS — 31 artifacts, five Python tests, 30 Vitest tests, strict coverage, typecheck, and production build** | Extracted without `.git`; `npm ci --offline` installed dependencies from cache. npm reported that `esbuild` and `fsevents` install scripts were blocked by the environment's install-script policy; tests and build still passed. |
 | Fresh local Git clone at `c68398a` | **PASS — six commits, clean worktree, `npm ci --offline`, and all documented checks passed** | The clone was local and disposable; it was not fetched from or pushed to GitHub. npm reported that `esbuild` and `fsevents` install scripts were blocked by the environment's install-script policy; typecheck, tests, coverage, and build still passed. |
 | `git diff --check` | **PASS** | Checks whitespace errors in the current diff. |
@@ -52,15 +53,14 @@ The separate-app pilot is summarized in [FRAMEWORK-PILOT-001](FRAMEWORK-PILOT-00
 1. **Template and app startup context could be confused.** The root `AGENTS.md` now gives separate instructions for this template checkout and for an initialized app, where the canonical root SDD files exist.
 2. **Adaptable lifecycle versus bundled stack could be misread.** The README identifies the web runtime as optional and makes the framework contract copy common to each app; other stacks require a recorded app-specific architecture choice.
 3. **The strict coverage check could fail before code review.** The installed Vitest 5 type contract rejects the obsolete `coverage.all` option. That option has been removed; the coverage `include` patterns and 100% thresholds remain. A focused JWT-role case was added to exercise the final missed environment-parser branch.
-4. **External access is not validated.** A clean local clone and source archive passed. The candidate has not yet been pushed to GitHub; remote publication and use by a new app remain to be observed. This does not affect the requested private-only distribution boundary.
+4. **Application use remains unproven.** The template is available from the private GitHub `main` branch, and its artifact-validation workflow passed. Successful app generation and delivery across future app repositories remain to be demonstrated through real use.
 5. **Local pilot artifacts are not part of the package.** The summary preserves the reported facts and limits, while the app code and full operational records remain in the separate local pilot repository. The summary is not a substitute for an independently accessible pilot source archive.
 
 ## 4. Release status and remaining closure work
 
-FW-TASK-010 remains **in progress** until the candidate is available from the private GitHub repository. Local candidate checks passed, and the owner authorized private publication on 2026-10-11. The owner explicitly deferred public distribution until after using the template to launch a couple of applications.
+FW-TASK-010 is **complete for private v1 use**. The candidate is merged into the private repository's `main` branch, the remote artifact-validation workflow passed, and local template checks passed before publication. The owner explicitly deferred public distribution until after using the template to launch a couple of applications. That future visibility change is outside this private v1 release and requires a separate owner decision.
 
-1. Publish the verified candidate to the existing private GitHub repository and confirm the remote content and default-branch state.
-2. If the owner requests changes, update the candidate and rerun affected checks before merging or publishing a replacement.
-3. Keep the repository private. Public release requires a separate future owner instruction after the initial application launches.
+1. Use the private template to initialize and launch the planned applications; record generated-project and delivery evidence in those app repositories.
+2. After those launches, decide whether to keep the template private or authorize public distribution. Re-run the appropriate release hygiene checks before any future visibility change.
 
-At the time this local readiness record was committed, the candidate had not yet been pushed. The `tree` and `underscore` dependencies were removed from the package manifest and lockfile. No deployment or production-credential use occurred in this review.
+The `tree` and `underscore` dependencies were removed from the package manifest and lockfile. No application deployment or production-credential use occurred in this framework release.
