@@ -1,0 +1,40 @@
+---
+id: <APP>-VERIFICATION-001
+type: verification-plan
+title: <Application> verification strategy
+status: draft
+version: 0.1
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+related-artifacts: <APP>-SPEC-001, <APP>-DESIGN-001, <APP>-BACKLOG-001
+---
+
+# <APP>-VERIFICATION-001 — <Application> verification strategy
+
+## Scope and quality goals
+
+Identify supported release surfaces, important user outcomes, risk areas, and quality requirements. Do not assume tests or tools apply just because a template mentions them.
+
+## Requirement-to-evidence map
+
+| Requirement/task ID | Risk | Verification level/method | Environment/tool | Evidence location | Owner/frequency | Limits |
+| --- | --- | --- | --- | --- | --- | --- |
+| <FR/NFR/TASK-ID> | <Impact if wrong> | <Automated/manual/provider/device/security> | <App-specific> | <Path/link> | <Role and cadence> | <What this does not prove> |
+
+## Platform applicability matrix
+
+Mark each platform `in-scope`, `out-of-scope`, or `conditional`. For each in-scope or conditional platform, identify applicable requirement/task IDs, the behavior or feature set, the verification method and environment, and the evidence location. For each out-of-scope platform, record the scope-based reason and whether the exclusion affects feature parity or a release gate. Update this matrix when supported platforms or shared behavior change.
+
+| Platform | Applicability | Requirement/task IDs and behavior | Verification method/environment | Evidence location | Exclusion rationale or condition |
+| --- | --- | --- | --- | --- | --- |
+| Web | <in-scope/out-of-scope/conditional> | <IDs and behavior> | <browser/build/checks> | <path/link> | <reason/condition> |
+| iOS | <in-scope/out-of-scope/conditional> | <IDs and behavior> | <simulator/device/build/checks> | <path/link> | <reason/condition> |
+| Android | <in-scope/out-of-scope/conditional> | <IDs and behavior> | <emulator/device/build/checks> | <path/link> | <reason/condition> |
+
+## Applicability
+
+Record whether unit, integration, end-to-end, accessibility, web audit, native audit, security/privacy, performance, resilience, data migration, and operational checks apply. For each omitted class give scope-based rationale and required owner acceptance if the omission affects a release gate.
+
+## Failure and rerun policy
+
+Record how a failed check is triaged, what can be fixed within the task, when a new task/decision is required, and what evidence is needed to rerun the gate.

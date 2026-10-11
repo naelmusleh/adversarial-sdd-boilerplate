@@ -1,0 +1,37 @@
+---
+id: <APP>-GATE-<GATE-ID>-001
+type: lifecycle-gate-record
+title: <Gate name> result for <project/revision>
+status: in-review
+version: 0.1
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+related-artifacts: <APP>-SPEC-001
+---
+
+# <APP>-GATE-<GATE-ID>-001 — <Gate name> result
+
+## Gate identity and scope
+
+- **Gate ID / transition:**
+- **Project and repository revision:**
+- **Date and reviewers:**
+- **In-scope artifacts/versions, journeys/platforms, code paths, and environments:**
+- **Exclusions and rationale:**
+
+## Criteria and evidence
+
+| Criterion | Evidence link or observed result | Outcome | Finding ID if failed |
+| --- | --- | --- | --- |
+
+## Findings and dispositions
+
+Use stable finding IDs. For each, record evidence, severity, user/business/security impact, blocking status, resolution or explicit deferral, owner decision if required, and rerun evidence.
+
+## Gate outcome
+
+Choose one: `passed`, `failed`, `blocked`, `passed-with-accepted-risk`, or `not-applicable`. Link owner acceptance for residual risk or scope exclusion. A score alone is not a pass.
+
+## Next action
+
+Name the action, accountable owner/agent, dependencies, and whether downstream work is authorized.

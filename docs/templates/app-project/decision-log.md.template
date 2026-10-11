@@ -1,0 +1,20 @@
+---
+id: <APP>-DECISION-LOG-001
+type: decision-log
+title: <Application> decision log
+status: active
+version: 0.1
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+related-artifacts: <APP>-SPEC-001, <APP>-BACKLOG-001
+---
+
+# <APP>-DECISION-LOG-001 — <Application> decision log
+
+Only accepted decisions belong in this log. Proposals and unresolved questions stay in the relevant specification's open-decision register and link here after resolution.
+
+| ID | Date | Decision | Rationale | Decider | Affected artifacts |
+| --- | --- | --- | --- | --- | --- |
+| <APP>-DECISION-001 | YYYY-MM-DD | <Accepted choice> | <Evidence and reasoning> | <Owner/role> | <Artifact IDs> |
+
+Never silently revise a prior decision. Append a superseding decision and link the affected artifacts.

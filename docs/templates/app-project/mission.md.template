@@ -1,0 +1,32 @@
+---
+id: <APP>-MISSION-001
+type: application-mission
+title: <Application> mission
+status: draft
+version: 0.1
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+related-artifacts: <APP>-SPEC-001
+---
+
+# <APP>-MISSION-001 — <Application> mission
+
+## User and problem
+
+Who experiences the problem, in what context, and what evidence shows it matters?
+
+## Desired change
+
+What should become easier, safer, faster, more accessible, or possible for the user?
+
+## Outcome evidence
+
+Name the observable signals that would support or disconfirm the product hypothesis. Avoid selecting targets without evidence.
+
+## Boundaries
+
+State initial scope, explicit exclusions, constraints, and assumptions. Link unresolved decisions rather than guessing.
+
+## Owner and references
+
+Name the accountable product owner and link discovery evidence, requirements, and decisions.

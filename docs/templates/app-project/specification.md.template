@@ -1,0 +1,57 @@
+---
+id: <APP>-SPEC-001
+type: application-specification
+title: <Application> product specification
+status: draft
+version: 0.1
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+mission: <APP>-MISSION-001
+related-artifacts: <APP>-CONSTITUTION-001, <APP>-BACKLOG-001
+---
+
+# <APP>-SPEC-001 — <Application> product specification
+
+## Context and intended outcome
+
+Describe the user problem, evidence, desired outcome, and measurable signals. Distinguish known evidence from assumptions.
+
+## Actors and permissions
+
+Identify user, operator, administrator, external-system, and agent roles that apply. State authorization boundaries.
+
+## Scope and exclusions
+
+List included capabilities. List likely scope expansion and explicit exclusions with rationale.
+
+## Functional requirements
+
+Assign stable IDs (`FR-...`). Each requirement states actor, trigger, behavior, success, failure/empty/partial/unknown states, and testable acceptance criteria.
+
+## Data and domain contracts
+
+Define important entities, ownership, lifecycle, provenance, retention/deletion, validation, and source-of-truth rules. Record open data questions.
+
+## Integrations and external boundaries
+
+For each provider/system, state purpose, data exchanged, permissions, failure behavior, access status, and unresolved legal or commercial constraints. Do not imply an integration exists before evidence.
+
+## Quality requirements
+
+Use stable IDs (`NFR-...`) and define applicability and evidence for security, privacy, accessibility, performance, reliability, observability, cost, localization, and operations.
+
+## Acceptance outcomes
+
+Define product-level outcomes and how they will be measured. Separate app behavior acceptance from business outcome validation.
+
+## Assumptions and dependencies
+
+Label inference and assumptions; name owner, evidence, affected requirements, and what work is blocked.
+
+## Open decision vectors
+
+Use stable IDs (`D-...`). For each: unresolved question, viable options, impact, affected requirements/tasks, owner, and target decision point.
+
+## Traceability
+
+Link to `constitution.md`, `design.md`, `backlog.md`, decision log, research, and review records. Do not duplicate canonical content maintained in those artifacts.
