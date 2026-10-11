@@ -216,7 +216,7 @@ Validation checks artifact metadata, IDs, status vocabulary, and filename/ID con
 
 ## Current package status
 
-This package is the separated local boilerplate repository. It contains no application-specific product requirements, prototype exports, or application worktree history. Its GitHub repository remains private until the owner reviews the exact package and authorizes public release. MIT licensing and local public use are selected; publication is a separate action. Application work belongs in its own repository.
+This package is the separated boilerplate repository and is available from the owner's private GitHub account for application work. It contains no application-specific product requirements, prototype exports, or application worktree history. The repository remains private; public release is deferred until the owner has used the template to launch a couple of applications and separately authorizes a visibility change. The MIT license permits reuse, but it does not make this private repository public. Application work belongs in its own repository.
 
 ## References
 

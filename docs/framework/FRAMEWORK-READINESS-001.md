@@ -3,7 +3,7 @@ id: FRAMEWORK-READINESS-001
 type: framework-readiness-review
 title: Adversarial SDD Framework v1 readiness review
 status: approved
-version: 1.2
+version: 1.3
 created: 2026-10-11
 updated: 2026-10-11
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-PILOT-001, CAP-000, CAP-004
@@ -37,7 +37,7 @@ Observed in this template checkout on 2026-10-11:
 | `npm test` | **PASS — 30 tests in 3 files** | Tests the bundled starter code and focused configuration paths. |
 | `npm run test:coverage` | **PASS — 100%** statements (55/55), branches (57/57), functions (10/10), and lines (52/52) | Applies to the current included `src/` files in this template checkout. It is not a guarantee that a future app will retain full coverage. |
 | `npm run build` | **PASS** | Builds the bundled Next.js 15.5.27 starter in this local environment; it is not a deployment or production operations check. |
-| Final committed candidate `b53f988` | **PASS — artifact validation, offline dependency installation, five Python tests, typecheck, 30 Vitest tests, 100% coverage, and production build** | This is the final local verification run before private GitHub publication. npm reported that `esbuild` and `fsevents` install scripts were blocked by the environment's install-script policy; tests and build passed. |
+| Candidate implementation tree `b53f988` | **PASS — artifact validation, offline dependency installation, five Python tests, typecheck, 30 Vitest tests, 100% coverage, and production build** | Subsequent local commits before private publication contained documentation-only updates. npm reported that `esbuild` and `fsevents` install scripts were blocked by the environment's install-script policy; tests and build passed. |
 | Package manifest and lockfile consistency | **PASS — `tree` and its otherwise-unused `underscore` dependency are absent** | The lockfile is included in the local candidate commit and was consumed by `npm ci --offline` in the fresh clone. |
 | Private GitHub publication | **PASS — PR #1 merged to `main` at `f9f8f28c20559a9bb5f9ef859a9b11fa1feac6fa`; repository visibility is private** | GitHub Actions artifact validation passed. Local verification covered Python tests, typecheck, Vitest, 100% coverage, and the production build before publication. |
 | Source archive extracted from `c68398a` | **PASS — 31 artifacts, five Python tests, 30 Vitest tests, strict coverage, typecheck, and production build** | Extracted without `.git`; `npm ci --offline` installed dependencies from cache. npm reported that `esbuild` and `fsevents` install scripts were blocked by the environment's install-script policy; tests and build still passed. |
