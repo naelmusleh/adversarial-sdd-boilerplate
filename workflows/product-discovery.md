@@ -5,7 +5,7 @@ title: Product idea framing and requirements discovery
 status: draft
 version: 0.1
 created: 2026-10-07
-updated: 2026-10-08
+updated: 2026-10-11
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, WORKFLOW-LIFECYCLE-001
 ---
 
@@ -82,4 +82,4 @@ Report source inventory; artifacts created/revised; requirements and decisions c
 - [GATE-CATALOG-001](../docs/framework/GATE-CATALOG-001.md)
 - [Application lifecycle workflow](lifecycle.md)
 - [Adversarial review workflow](adversarial-review.md)
-- [Application-project starter templates](../docs/templates/app-project/README.md)
+- [Application-project starter instructions](../README.md#start-a-brand-new-application-from-scratch)

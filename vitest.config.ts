@@ -23,7 +23,6 @@ export default defineConfig({
       provider: "v8",
       include: ["src/**/*.{ts,tsx}"],
       exclude: ["src/**/*.{test,spec}.{ts,tsx}", "src/**/*.d.ts"],
-      all: true,
       reporter: ["text", "lcov", "html"],
       thresholds: {
         lines: 100,

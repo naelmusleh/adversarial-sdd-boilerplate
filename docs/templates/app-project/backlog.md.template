@@ -19,9 +19,9 @@ Keep this as the canonical ordered task list unless the project explicitly adopt
 
 - **Lifecycle stage:** Ideation
 - **Last passed gate:** None; no gate has run.
-- **Active task:** Complete `mission.md` with the product owner and available user/problem evidence.
+- **Active task:** Gather the product owner's idea, intended user, available user/problem evidence, desired outcome, and constraints; have the agent draft `mission.md` and start product discovery.
 - **Blockers:** None recorded. Record unknowns and dependencies in the specification; do not infer that they are resolved.
-- **Next action:** Follow the framework product discovery workflow and prepare the intent/requirements gate.
+- **Next action:** Work with the product owner to frame intent, draft the mission, and follow the framework product discovery workflow toward the G-INTENT/G-REQ gates.
 - **Status updated:** YYYY-MM-DD
 
 ## Status and priority rules

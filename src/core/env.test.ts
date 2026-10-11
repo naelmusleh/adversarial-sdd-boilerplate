@@ -128,6 +128,17 @@ describe("loadAppEnv", () => {
     expect(result.supabase.publishableKey).toContain(".");
   });
 
+  it.each([
+    { sub: "project-user" },
+    { role: 42 },
+  ])("rejects a legacy JWT payload without a valid string role", (claims) => {
+    const payload = Buffer.from(JSON.stringify(claims)).toString("base64url");
+    expect(() => loadAppEnv({
+      ...VALID_ENV,
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: `header.${payload}.signature`,
+    })).toThrowError(/must be a valid publishable Supabase key/);
+  });
+
   it("rejects a missing or malformed publishable API token", () => {
     expect(() => loadAppEnv({
       ...VALID_ENV,

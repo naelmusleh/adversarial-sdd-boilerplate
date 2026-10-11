@@ -4,11 +4,23 @@ This repository is the reusable Adversarial SDD application template. Each appli
 
 ## Session start
 
-1. Read `README.md`, `mission.md`, `constitution.md`, `specification.md`, `design.md`, and `backlog.md` before implementation.
-2. Read the matching workflow in `workflows/` and the applicable gate contract in `docs/framework/GATE-CATALOG-001.md`.
-3. Run `python3 scripts/artifacts.py list` and `python3 scripts/artifacts.py validate`; inspect Git status and the current selected backlog item.
-4. State the active gate, approved scope, selected task, acceptance evidence, and any blockers in your work record before making changes.
-5. Do not implement through a failed or blocked gate. Ask the product owner only for decisions, permissions, unavailable evidence, or review that cannot be inferred.
+First identify whether this checkout is the reusable template or an initialized application repository. Do not assume that app-specific root files exist in the template.
+
+### Template repository mode
+
+1. Read `README.md`, this `AGENTS.md`, `docs/missions/MISSION-001.md`, `docs/constitution/FRAMEWORK-001.md`, `docs/constitution/FRAMEWORK-002.md`, `docs/framework/FRAMEWORK-SPEC-001.md`, and `docs/framework/FRAMEWORK-BACKLOG-001.md`.
+2. Read the matching workflow in `workflows/` and the applicable contract in `docs/framework/GATE-CATALOG-001.md` or `framework/capabilities/`.
+3. Run `python3 scripts/artifacts.py list` and `python3 scripts/artifacts.py validate`; inspect Git status and the selected framework backlog item.
+4. State the active gate, approved scope, selected task, acceptance evidence, and blockers in the work record before changing files.
+
+### Initialized application repository mode
+
+1. Read `README.md`, this `AGENTS.md`, `mission.md`, `constitution.md`, `specification.md`, `design.md`, and `backlog.md` before implementation.
+2. Read the matching workflow and applicable gate contract in `docs/framework/GATE-CATALOG-001.md`.
+3. Run `python3 scripts/artifacts.py list` and `python3 scripts/artifacts.py validate`; inspect Git status and the selected application backlog item.
+4. State the active gate, approved scope, selected task, acceptance evidence, and blockers in the work record before changing files.
+
+In either mode, do not implement through a failed or blocked gate. Ask the product owner only for decisions, permissions, unavailable evidence, or review that cannot be inferred.
 
 ## Source-of-truth rules
 
