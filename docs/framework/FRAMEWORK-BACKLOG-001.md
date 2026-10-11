@@ -3,7 +3,7 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 1.2
+version: 1.3
 created: 2026-10-07
 updated: 2026-10-11
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, CAP-000, CAP-004, FRAMEWORK-ADV-007
@@ -217,6 +217,57 @@ Validation target: a fresh app named `Cold Start Verification App`, prefix `COLD
   6. The published/downloadable repository has clean history, contains only approved framework materials, includes the MIT License, and does not expose application-specific or private owner data.
 - **Evidence:** Framework adversarial review and rerun, v1 readiness report, version/release note, and updated README.
 - **State:** **Complete for private v1 use.** The verified framework-only MIT candidate was merged to the private repository's `main` branch through [PR #1](https://github.com/naelmusleh/adversarial-sdd-boilerplate/pull/1) at `f9f8f28c20559a9bb5f9ef859a9b11fa1feac6fa`. GitHub Actions artifact validation passed; local checks passed for five Python tests, typecheck, 30 Vitest tests, 100% coverage, and the Next.js production build. The owner deferred public distribution until after using the template to launch a couple of applications. See [FRAMEWORK-READINESS-001](FRAMEWORK-READINESS-001.md). The unused `tree` and `underscore` dependencies have been removed.
+
+## Deferred roadmap — v2 candidates
+
+The following portfolio escalation and automation items were proposed for a v1.1 horizon and are explicitly deferred to v2 by owner direction. They are not v1 completion or public/private release blockers. Their status remains **TODO** until a future version is prioritized; listing them does not authorize implementation. Reassess scope and dependencies after the template has been used to launch a couple of applications.
+
+### FW-TASK-011 — Process velocity telemetry and metrics tracker
+
+- **Goal:** Measure framework setup and delivery efficiency from reproducible evidence across application initializations.
+- **Requirements:** Future-version requirements to be assigned when v2 scope is opened.
+- **Dependencies:** A defined manual-setup baseline; an agreed event and retention model; a decision about whether measurements remain local to each template checkout or are deliberately aggregated.
+- **Work:** Add a versioned schema at `docs/framework/METRICS-LEDGER.json` for `time_to_scaffold_seconds`, `defect_escape_count`, and `agent_autonomy_steps`. Define each metric, unit, start/end event, provenance, and missing-data behavior. Instrument `scripts/init_app_project.py` to record the initialization start timestamp and a completed scaffold event with elapsed time. Keep measurements evidence-based: derive elapsed time from recorded timestamps, count escaped defects only from linked defect records and a declared observation window, and derive autonomy steps from recorded workflow checkpoints rather than an agent's unsupported estimate. Do not collect credentials, personal data, or application content in the ledger.
+- **Acceptance criteria:**
+  1. The JSON schema validates ledger entries and rejects missing, malformed, or internally inconsistent timestamps and metric values.
+  2. A controlled fresh-project initialization writes a start event and a completion entry with a measurable `time_to_scaffold_seconds` value.
+  3. The record identifies the script/template revision and the evidence source for each metric; unavailable metrics are represented explicitly rather than as zero.
+  4. A documented manual baseline uses the same start/end definitions and artifact scope as the automated run.
+  5. The measured comparison reports the observed setup-time ratio and limitations; it does not claim velocity compression from estimates or incomparable baselines.
+  6. Tests cover successful recording, interrupted initialization, malformed ledger data, and repeat runs without corrupting prior entries.
+- **Evidence:** Schema validation, controlled initialization log, resulting ledger entry, test results, and a reproducible comparison against the documented manual baseline.
+- **State:** **TODO — deferred to v2.**
+
+### FW-TASK-012 — Automated GitHub Actions gate linting matrix
+
+- **Goal:** Enforce selected, machine-checkable SDD artifact and code-quality requirements on the GitHub server for pull requests.
+- **Requirements:** Future-version requirements to be assigned when v2 scope is opened.
+- **Dependencies:** A finalized machine-readable artifact contract; test and coverage scope; repository branch-protection configuration and an authorized owner to make the CI check required.
+- **Work:** Add `.github/workflows/sdd-gate-linter.yml`. On pull requests, validate required framework artifacts and their metadata, check that normative requirements use RFC 2119 terms (`MUST`, `MUST NOT`, `SHOULD`, `SHOULD NOT`, or `MAY`) according to a documented rule, and run the repository's unit tests with statement, function, line, and branch coverage thresholds set to exactly 100% for the declared source scope. Treat metadata validation and normative-keyword linting as separate checks; keyword presence alone is not proof that a requirement is correctly specified. Document the corresponding required status-check and branch-protection settings because workflow YAML alone does not block merges.
+- **Acceptance criteria:**
+  1. The workflow runs on pull requests and reports artifact-contract, normative-language, test, and coverage results as distinct checks.
+  2. Missing required artifacts or invalid required metadata fail the workflow with actionable file-level diagnostics.
+  3. A controlled fixture with an invalid or missing normative requirement fails the language check; valid normative statements pass under the documented rule.
+  4. A controlled test change that reduces branch coverage to 95% fails the coverage check, while the passing baseline meets exactly 100% across all configured dimensions.
+  5. A test pull request demonstrates non-zero CI failure for each negative case, and repository settings demonstrate that the relevant status check is required before merge.
+  6. The workflow uses least-privilege permissions, pinned or otherwise controlled actions, and does not expose secrets to untrusted pull-request code.
+- **Evidence:** Workflow run links for passing and failing fixtures, coverage reports, and verified required-status/branch-protection configuration.
+- **State:** **TODO — deferred to v2.**
+
+### FW-TASK-013 — Polyglot AI architecture compiler specifications
+
+- **Goal:** Define and validate language-specific execution boundaries for applications that combine web, backend, and native mobile components.
+- **Requirements:** Future-version requirements to be assigned when v2 scope is opened.
+- **Dependencies:** An approved multi-platform sample project contract; explicit language/toolchain applicability; a stable cross-module data contract.
+- **Work:** Extend `framework/capabilities/CAP-003-ai-engineering-execution.md` with a translation and verification matrix for TypeScript, Python, and native mobile environments. Define how an agent maps requirements to independently scoped subprojects, loads only the applicable language instructions and dependency manifests, and reports cross-project interfaces. Specify a strict JSON serialization contract for inter-module telemetry, including a versioned schema, validation rules, compatibility behavior, and rejection of malformed or unknown critical fields. Keep this as a specification until a bounded compiler/initializer implementation is separately scoped; do not imply that prose instructions alone provide automated isolation.
+- **Acceptance criteria:**
+  1. The matrix covers TypeScript, Python, and native mobile targets with language-specific instructions, manifests, verification commands, and boundaries; platform/language assumptions are explicit.
+  2. The data interface has a versioned JSON Schema (or an equally machine-checkable schema), valid and invalid fixtures, and documented compatibility behavior.
+  3. A multi-platform sample initialization maps web, native mobile, and data/backend directories without copying dependencies or instructions across unrelated language environments.
+  4. Automated checks detect deliberately injected cross-stack dependency or instruction leakage and pass when the fixture is isolated correctly.
+  5. The capability distinguishes the specified behavior from any compiler or orchestration behavior that has not yet been implemented and verified.
+- **Evidence:** Updated CAP-003, language/platform applicability matrix, versioned serialization schema and fixtures, multi-platform sample tree, and isolation-check results.
+- **State:** **TODO — deferred to v2.**
 
 ## Explicitly not in the v1 backlog
 
