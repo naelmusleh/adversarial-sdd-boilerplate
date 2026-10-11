@@ -26,6 +26,9 @@ The template starts with a neutral Next.js 15, React 19, TypeScript 5, and Supab
 adversarial-sdd-boilerplate/
 ├── README.md                         # this operator manual
 ├── AGENTS.md                         # fresh-session engineering contract
+├── .github/workflows/                # CI checks and weekly governance proposal
+│   ├── verify-pipeline.yml            # artifact, initializer, TypeScript, test, coverage gates
+│   └── weekly-architecture-audit.yml  # dependency and research audit with draft PR
 ├── package.json                      # pinned Next / React / test toolchain
 ├── vitest.config.ts                  # jsdom and strict coverage thresholds
 ├── instrumentation.ts                # server boot environment guard
@@ -37,15 +40,22 @@ adversarial-sdd-boilerplate/
 │   ├── constitution/                  # reusable framework principles
 │   ├── framework/                     # scope, backlog, gates, tool catalog
 │   └── templates/app-project/         # canonical app SDD starter files
-├── framework/capabilities/            # CAP-000 through CAP-004 contracts
+├── framework/capabilities/            # CAP-000 through CAP-005 contracts
 ├── scripts/
 │   ├── artifacts.py                   # list, create, validate SDD records
-│   └── init_app_project.py            # generate a fresh app repository
+│   ├── init_app_project.py            # generate a fresh app repository
+│   └── architecture_research.py       # bounded web research and audit report compiler
 ├── workflows/                         # product lifecycle operating steps
 └── tests/                              # starter tests and coverage support
 ```
 
 Framework artifacts describe reusable process. Generated application artifacts describe one application's product. The initializer does not copy a sample app's requirements or decisions into a new project.
+
+## Repository automation
+
+The [Verify Pipeline](.github/workflows/verify-pipeline.yml) runs independent artifact, initializer, TypeScript, Vitest, and coverage checks for pushes and pull requests targeting `main`. It provides G-RELEASE evidence. GitHub repository protection must separately require those checks and restrict direct updates or bypasses before the evidence becomes a merge block; a successful workflow alone does not protect the branch.
+
+The [Weekly Architecture Audit](.github/workflows/weekly-architecture-audit.yml) runs Sunday at 00:00 UTC and can be started manually from `main`. It audits the committed npm lockfile and runs three public engineering research sweeps. It combines vulnerability metrics, source links, screening outcomes, and any qualified FW task drafts into a new validated report, then opens or updates a draft PR on `automation/weekly-architecture-audit`. Configure the repository Actions secret `TAVILY_API_KEY` for the research sweeps; missing credentials or incomplete research produce a visible non-zero workflow result. The daemon never edits `/src`, the canonical backlog, dependencies, or existing records. A maintainer reviews source claims and accepts any candidate task through a separate change. GitHub may place checks triggered by a PR created with the default Actions token into an approval-required state; a maintainer must approve that run or manually dispatch Verify Pipeline against the PR branch before merge. The combined report is operational evidence, not a complete architecture or production-readiness review. See [CAP-005](framework/capabilities/CAP-005-platform-governance-daemon.md) for permissions, boundaries, and evidence requirements.
 
 ## Requirements
 

@@ -1,0 +1,288 @@
+name: Weekly Architecture Audit
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-architecture-audit-main
+  cancel-in-progress: false
+
+jobs:
+  audit-and-compile-proposal:
+    name: Audit dependencies and research architecture practices
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      report_ready: ${{ steps.compile.outputs.report_ready }}
+      report_path: ${{ steps.compile.outputs.report_path }}
+      audit_state: ${{ steps.compile.outputs.audit_state }}
+      research_state: ${{ steps.compile.outputs.research_state }}
+      audit_date: ${{ steps.compile.outputs.audit_date }}
+      vulnerability_total: ${{ steps.compile.outputs.vulnerability_total }}
+      candidate_count: ${{ steps.compile.outputs.candidate_count }}
+    steps:
+      # actions/checkout v7.0.1
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      # actions/setup-python v7.0.0
+      - name: Set up Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.13"
+
+      # actions/setup-node v7.1.0
+      - name: Set up Node.js 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Require execution from the default branch
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Run this governance audit from the main branch."
+            exit 1
+          fi
+
+      - name: Restore locked npm dependencies
+        run: npm ci
+
+      - name: Audit locked dependencies
+        id: npm-audit
+        shell: bash
+        run: |
+          audit_json="$RUNNER_TEMP/npm-audit-${GITHUB_RUN_ID}.json"
+          audit_stderr="$RUNNER_TEMP/npm-audit-${GITHUB_RUN_ID}.stderr"
+          audit_exit_code=0
+
+          if npm audit --json > "$audit_json" 2> "$audit_stderr"; then
+            audit_exit_code=0
+          else
+            audit_exit_code=$?
+            echo "::notice::npm audit exited with status ${audit_exit_code}; raw scanner stderr is intentionally not written to the workflow log."
+          fi
+
+          {
+            echo "audit_json=$audit_json"
+            echo "audit_exit_code=$audit_exit_code"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run the three bounded strategic R&D web searches
+        id: research
+        timeout-minutes: 8
+        env:
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          RESEARCH_OUTPUT: ${{ runner.temp }}/architecture-research-${{ github.run_id }}-${{ github.run_attempt }}.json
+        run: python3 scripts/architecture_research.py collect --output "$RESEARCH_OUTPUT"
+
+      - name: Compile one combined audit and research report
+        id: compile
+        env:
+          AUDIT_JSON: ${{ steps.npm-audit.outputs.audit_json }}
+          AUDIT_EXIT_CODE: ${{ steps.npm-audit.outputs.audit_exit_code }}
+          RESEARCH_JSON: ${{ runner.temp }}/architecture-research-${{ github.run_id }}-${{ github.run_attempt }}.json
+          REPORT_PATH: docs/decisions/architecture-audits/ARCH-AUDIT-${{ github.run_id }}-${{ github.run_attempt }}-001.md
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          SOURCE_SHA: ${{ github.sha }}
+          OUTPUTS_JSON: ${{ runner.temp }}/architecture-audit-output-${{ github.run_id }}.json
+        run: |
+          python3 scripts/architecture_research.py render \
+            --audit-json "$AUDIT_JSON" \
+            --audit-exit-code "$AUDIT_EXIT_CODE" \
+            --research-json "$RESEARCH_JSON" \
+            --report-path "$REPORT_PATH" \
+            --run-id "$RUN_ID" \
+            --run-attempt "$RUN_ATTEMPT" \
+            --source-sha "$SOURCE_SHA" \
+            --outputs-json "$OUTPUTS_JSON"
+
+          python3 - "$OUTPUTS_JSON" "$GITHUB_OUTPUT" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          metadata = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          outputs = {
+              "report_ready": "true",
+              "report_path": metadata["report_path"],
+              "audit_state": metadata["audit_state"],
+              "research_state": metadata["research_state"],
+              "audit_date": metadata["report_date"],
+              "vulnerability_total": str(metadata["vulnerability_total"]),
+              "candidate_count": str(metadata["candidate_count"]),
+          }
+          with Path(sys.argv[2]).open("a", encoding="utf-8") as output_file:
+              for key, value in outputs.items():
+                  output_file.write(f"{key}={value}\n")
+          PY
+
+      - name: Validate the exact generated proposal against artifact rules
+        run: python3 scripts/artifacts.py validate
+
+      - name: Stage only the generated report for the PR job
+        env:
+          REPORT_PATH: ${{ steps.compile.outputs.report_path }}
+        run: |
+          staged_path="$RUNNER_TEMP/governance-proposal/$REPORT_PATH"
+          mkdir -p "$(dirname "$staged_path")"
+          cp "$REPORT_PATH" "$staged_path"
+
+      # actions/upload-artifact v7.0.0
+      - name: Publish the combined report for the restricted PR job
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        with:
+          name: governance-proposal-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/governance-proposal/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Summarize dependency and research results
+        if: always()
+        env:
+          AUDIT_STATE: ${{ steps.compile.outputs.audit_state }}
+          RESEARCH_STATE: ${{ steps.compile.outputs.research_state }}
+          VULNERABILITY_TOTAL: ${{ steps.compile.outputs.vulnerability_total }}
+          CANDIDATE_COUNT: ${{ steps.compile.outputs.candidate_count }}
+          REPORT_PATH: ${{ steps.compile.outputs.report_path }}
+        run: |
+          {
+            echo "## Weekly dependency and strategic R&D audit"
+            echo
+            echo "- Dependency audit: **${AUDIT_STATE:-unavailable}**"
+            echo "- Vulnerability count: **${VULNERABILITY_TOTAL:-unknown}**"
+            echo "- Three-sweep web research: **${RESEARCH_STATE:-unavailable}**"
+            echo "- Qualified task drafts: **${CANDIDATE_COUNT:-unknown}**"
+            echo "- Combined draft record: `${REPORT_PATH:-not generated}`"
+            echo
+            echo "Research excerpts are untrusted source data. Candidate tasks require human source review and canonical backlog acceptance."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  propose-governance-record:
+    name: Open or update the bounded governance proposal PR
+    needs: audit-and-compile-proposal
+    if: needs.audit-and-compile-proposal.result == 'success' && needs.audit-and-compile-proposal.outputs.report_ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # actions/checkout v7.0.1
+      - name: Check out default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          persist-credentials: false
+
+      # actions/download-artifact v8.0.0
+      - name: Download the combined governance report
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3
+        with:
+          name: governance-proposal-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .
+
+      - name: Enforce append-only report path boundary
+        env:
+          EXPECTED_REPORT_PATH: ${{ needs.audit-and-compile-proposal.outputs.report_path }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+
+          expected = Path(os.environ["EXPECTED_REPORT_PATH"])
+          allowed_prefix = Path("docs/decisions/architecture-audits")
+          if expected.parent != allowed_prefix or not re.fullmatch(r"ARCH-AUDIT-[0-9]+-[0-9]+-001\.md", expected.name):
+              raise SystemExit(f"Refusing out-of-scope report path: {expected}")
+          if not expected.is_file():
+              raise SystemExit(f"Expected generated report is missing: {expected}")
+          if subprocess.run(["git", "ls-files", "--error-unmatch", expected.as_posix()], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+              raise SystemExit(f"Append-only violation: report already exists in Git: {expected}")
+
+          status = subprocess.run(
+              ["git", "status", "--porcelain", "--untracked-files=all"],
+              check=True,
+              capture_output=True,
+              text=True,
+          ).stdout.splitlines()
+          changed_paths = [line[3:] for line in status]
+          if changed_paths != [expected.as_posix()]:
+              raise SystemExit("Refusing PR with changes outside the single new report: " + ", ".join(changed_paths))
+          PY
+
+      # peter-evans/create-pull-request v8.1.1; the exact new report is the only
+      # path staged. The draft PR is never auto-merged.
+      - name: Open or update the weekly governance proposal PR
+        id: proposal
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1
+        with:
+          token: ${{ github.token }}
+          base: main
+          branch: automation/weekly-architecture-audit
+          delete-branch: false
+          draft: true
+          add-paths: ${{ needs.audit-and-compile-proposal.outputs.report_path }}
+          commit-message: "docs(governance): record weekly audit and research"
+          title: "Governance proposal: audit and research ${{ needs.audit-and-compile-proposal.outputs.audit_date }}"
+          body: |
+            ## Weekly dependency and strategic R&D proposal
+
+            - Dependency audit: **${{ needs.audit-and-compile-proposal.outputs.audit_state }}**
+            - Vulnerability total: **${{ needs.audit-and-compile-proposal.outputs.vulnerability_total }}**
+            - Three-sweep research: **${{ needs.audit-and-compile-proposal.outputs.research_state }}**
+            - Qualified task drafts: **${{ needs.audit-and-compile-proposal.outputs.candidate_count }}**
+            - Combined report: `${{ needs.audit-and-compile-proposal.outputs.report_path }}`
+
+            This automation stages only the new run-specific report under `docs/decisions/architecture-audits/`. Research excerpts are untrusted external data. Candidate FW task templates remain proposals in the report; they do not modify the canonical backlog. Review the cited sources and task evidence before accepting any change.
+
+            The proposal is draft-only and is never auto-merged. GitHub may place checks triggered by the default `GITHUB_TOKEN` into an approval-required state. The scheduled workflow validates the generated artifact; a maintainer must approve or dispatch the Verify Pipeline against this PR branch before relying on its checks.
+
+            This PR is not an architecture approval, complete security assessment, or production-readiness claim.
+
+  publish-audit-conclusion:
+    name: Publish the governance run conclusion
+    needs:
+      - audit-and-compile-proposal
+      - propose-governance-record
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Fail visibly on findings, unavailable research, or PR failure
+        env:
+          AUDIT_JOB_RESULT: ${{ needs.audit-and-compile-proposal.result }}
+          AUDIT_STATE: ${{ needs.audit-and-compile-proposal.outputs.audit_state }}
+          RESEARCH_STATE: ${{ needs.audit-and-compile-proposal.outputs.research_state }}
+          PROPOSAL_JOB_RESULT: ${{ needs.propose-governance-record.result }}
+        run: |
+          if [ "$AUDIT_JOB_RESULT" != "success" ]; then
+            echo "::error::Dependency audit or combined proposal generation/validation did not complete successfully."
+            exit 1
+          fi
+          if [ "$PROPOSAL_JOB_RESULT" != "success" ]; then
+            echo "::error::The restricted governance proposal pull request was not created or updated successfully."
+            exit 1
+          fi
+          if [ "$AUDIT_STATE" != "clean" ]; then
+            echo "::error::Dependency audit state is '$AUDIT_STATE'. The proposal was prepared, but the audit is not clean."
+            exit 1
+          fi
+          if [ "$RESEARCH_STATE" != "complete" ]; then
+            echo "::error::The required web research sweeps are '$RESEARCH_STATE'. The proposal was prepared, but research is incomplete. Configure TAVILY_API_KEY and rerun."
+            exit 1
+          fi
+          echo "Weekly dependency audit is clean; all three research sweeps completed; the combined draft proposal was validated and opened or updated."
