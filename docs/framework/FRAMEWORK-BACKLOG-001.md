@@ -3,7 +3,7 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 1.10
+version: 1.11
 created: 2026-10-07
 updated: 2026-10-13
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007
@@ -297,7 +297,8 @@ FW-TASK-011 and FW-TASK-013 remain proposed v2 work and are deferred until prior
   6. Candidate FW tasks remain noncanonical proposals, require human source verification and ID reconciliation, and are never auto-appended to the framework backlog or auto-merged.
   7. The workflow uses least-privilege permissions, limits the external API credential to the collector step, treats retrieved content as untrusted data, and documents that dependency/web research does not constitute a full architecture or production-readiness assessment.
 - **Evidence:** CAP-005; workflow run links covering clean, findings, unavailable, and filter outcomes; validated combined report; PR diff/path checks; and maintainer review/disposition.
-- **State:** **In progress — owner direction (2026-10-11).** Workflow, collector, and capability contract are implemented locally. Hosted schedule, Tavily secret configuration, collector/filter scenario evidence, dependency scanner states, fixed-branch draft PR behavior, event-trigger limits, and append-only negative-case evidence remain unverified.
+- **State:** **In progress — owner direction (2026-10-11).** Workflow, collector, capability contract, and deterministic local scenario tests are implemented. Hosted schedule delivery, Actions secret availability, live provider/filter outcomes, dependency scanner states, fixed-branch draft-PR behavior, event-trigger limits, and hosted append-only negative-case evidence remain unverified.
+- **Execution evidence (2026-10-13, local compiler scenarios):** Added `tests/test_architecture_research.py` and wired it into the Verify Pipeline's Metadata & Artifact Audit job. `python3 -m unittest discover -s tests -p 'test_architecture_research.py' -v` passed 11 tests covering missing credentials, all three fixed query attempts, partial and malformed research responses, clean/findings/unavailable audit states, qualifying and rejected candidates, provisional IDs without backlog mutation, source and hype filtering, and exclusion of `/src` from lexical coverage. `python3 -m unittest discover -s tests -p 'test_artifacts.py' -v` passed 9 tests. `python3 scripts/artifacts.py list` enumerated 33 artifacts; `python3 scripts/artifacts.py validate` passed for all 33; `git diff --check` passed. These tests use deterministic provider/scanner fixtures and do not prove live Tavily, npm registry, Actions secret, schedule, or draft-PR behavior. The local `gh auth status --hostname github.com` reports the CLI token invalid; the connected GitHub tool supports read and PR operations but exposes no workflow-dispatch operation. Hosted execution remains pending valid CLI authentication or the next scheduled run.
 
 ## Explicitly not in the v1 backlog
 

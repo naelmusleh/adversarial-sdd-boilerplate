@@ -732,7 +732,8 @@ Review this combined record and the linked workflow run. Triage dependency findi
 
 This is a draft evidence and proposal record awaiting human review. It is not a complete security assessment, a full architecture review, an accepted backlog change, or a production-readiness claim. The workflow does not modify `/src`, application or product logic, manifests, lockfiles, prior records, backlog policy, deployment settings, or repository settings, and it never auto-merges.
 """
-    report_path.write_text(content, encoding="utf-8", newline="\n")
+    with report_path.open("w", encoding="utf-8", newline="\n") as report_file:
+        report_file.write(content)
     return {
         "artifact_id": artifact_id,
         "audit_state": audit_state,

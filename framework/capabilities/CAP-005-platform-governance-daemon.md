@@ -3,9 +3,9 @@ id: CAP-005
 type: framework-capability
 title: Platform Governance Daemon and Server-Side Quality Gates
 status: draft
-version: 0.2
+version: 0.3
 created: 2026-10-11
-updated: 2026-10-11
+updated: 2026-10-13
 related-artifacts: FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, WORKFLOW-QUALITY-001, WORKFLOW-RELEASE-001
 ---
 
@@ -201,7 +201,7 @@ GitHub suppresses most workflow events caused by the repository's default `GITHU
 
 ## Current evidence and limitations
 
-The workflow and capability text define intended behavior. Until the updated workflow runs on GitHub, the Tavily secret is configured, and controlled scenarios are observed, provider authentication, request quotas, search result quality, filter outcomes, hosted schedule delivery, branch updates, PR path boundaries, npm registry access, workflow permissions, and GitHub token-trigger behavior remain unverified. Repository branch protection is a separate control and must be observed independently. Local artifact validation verifies documentation metadata only; it does not prove hosted workflow execution, source quality, architecture correctness, application security, or effective merge restrictions.
+Local evidence on 2026-10-13: the new deterministic architecture-research test suite passes 11 cases for missing credentials, partial and malformed provider results, audit states, source qualification and rejection, candidate handling, and the `/src` exclusion. The artifact validator passes for all 33 current artifacts. These controlled local tests do not call Tavily or npm and do not establish provider authentication, request quotas, live search quality, hosted schedule delivery, Actions secret availability, dependency-scanner behavior against the remote lockfile, branch updates, draft-PR path restrictions, workflow permissions, or GitHub token-trigger behavior. The local GitHub CLI reports an invalid token and the connected GitHub integration does not expose workflow dispatch, so no hosted run was triggered in this work session. The next evidence step is a manual dispatch from `main` after GitHub CLI authentication or the first scheduled run; record its run URL, report path, PR diff, job conclusions, and any approval-required Verify Pipeline status. Repository branch protection remains a separate control and must be observed independently. Local artifact validation and fixture tests do not prove hosted workflow execution, source quality, architecture correctness, application security, or effective merge restrictions.
 
 ## References
 

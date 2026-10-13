@@ -32,6 +32,9 @@ jobs:
       - name: Test required-artifact contract and normative requirement linter
         run: python3 -m unittest discover -s tests -p "test_artifacts.py" -v
 
+      - name: Test bounded architecture research compiler
+        run: python3 -m unittest discover -s tests -p "test_architecture_research.py" -v
+
       - name: Validate artifact metadata, IDs, and naming
         run: python3 scripts/artifacts.py validate
 
