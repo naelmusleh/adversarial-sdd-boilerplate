@@ -2,8 +2,8 @@
 id: CAP-005
 type: framework-capability
 title: Platform Governance Daemon and Server-Side Quality Gates
-status: draft
-version: 0.3
+status: active
+version: 0.4
 created: 2026-10-11
 updated: 2026-10-13
 related-artifacts: FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, WORKFLOW-QUALITY-001, WORKFLOW-RELEASE-001
@@ -201,7 +201,7 @@ GitHub suppresses most workflow events caused by the repository's default `GITHU
 
 ## Current evidence and limitations
 
-Local evidence on 2026-10-13: the new deterministic architecture-research test suite passes 11 cases for missing credentials, partial and malformed provider results, audit states, source qualification and rejection, candidate handling, and the `/src` exclusion. The artifact validator passes for all 33 current artifacts. These controlled local tests do not call Tavily or npm and do not establish provider authentication, request quotas, live search quality, hosted schedule delivery, Actions secret availability, dependency-scanner behavior against the remote lockfile, branch updates, draft-PR path restrictions, workflow permissions, or GitHub token-trigger behavior. The local GitHub CLI reports an invalid token and the connected GitHub integration does not expose workflow dispatch, so no hosted run was triggered in this work session. The next evidence step is a manual dispatch from `main` after GitHub CLI authentication or the first scheduled run; record its run URL, report path, PR diff, job conclusions, and any approval-required Verify Pipeline status. Repository branch protection remains a separate control and must be observed independently. Local artifact validation and fixture tests do not prove hosted workflow execution, source quality, architecture correctness, application security, or effective merge restrictions.
+Local and hosted evidence on 2026-10-13: the deterministic architecture-research suite passes 11 cases for missing credentials, partial and malformed provider results, clean/findings/unavailable audit states, qualification and rejection, candidate handling, and `/src` exclusion. The artifact validator passes for all 33 current artifacts. Hosted manual run [38438972429](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/38438972429) from `main` completed the dependency scan, all three Tavily requests, report compilation, artifact validation, append-only check, and draft-PR update. It recorded three npm audit findings (one moderate and two high), so the final status correctly failed with `findings`; research was complete, with zero candidate tasks qualifying. Draft PR [#3](https://github.com/naelmusleh/adversarial-sdd-boilerplate/pull/3) contains only the new report `ARCH-AUDIT-38438972429-1-001.md`. GitHub marked the `GITHUB_TOKEN`-triggered Verify Pipeline as `action_required`; the documented manual dispatch against that report branch passed all three checks in [run 38439354867](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/38439354867). Thus manual hosted execution, live secret availability, research/report generation, path restriction, draft PR behavior, and token-trigger handling have observed evidence. The Sunday 00:00 UTC schedule is configured but its first automatic tick was not observed in this work session. Source claims in the report require human review, and the three dependency findings require separate triage; neither this capability nor its workflow changes dependencies or accepts proposed tasks. This evidence is not a complete security assessment, architecture correctness review, application security evaluation, or production-readiness decision.
 
 ## References
 
