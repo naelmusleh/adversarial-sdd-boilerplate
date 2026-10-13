@@ -3,10 +3,10 @@ id: GATE-CATALOG-001
 type: framework-gate-catalog
 title: Lifecycle gate contracts for application projects
 status: draft
-version: 0.4
+version: 0.5
 created: 2026-10-07
-updated: 2026-10-10
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-001, FRAMEWORK-002
+updated: 2026-10-11
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-001, FRAMEWORK-002, WORKFLOW-QUALITY-001
 ---
 
 # GATE-CATALOG-001 — Lifecycle gate contracts for application projects
@@ -38,9 +38,17 @@ A score, a completed checklist without evidence, a prototype, or an implementer'
 | G-COVERAGE | Journey definition to design critique | Active journey inventory; actor/start/exit and recovery paths; applicability/exclusion reasons; requirements mapping; cross-surface contract; linked prototype or other design evidence. | Every in-scope capability and lifecycle journey is covered at the required depth and can be reviewed without relying on chat. | Fill identified journey/state gaps or revise scope; do not use critique as a substitute for missing coverage. |
 | G-CX | CX design to architecture/build readiness | Complete active design target, scoped UX critique method and evidence, rendered/prototype evidence, finding register, targeted fixes, and full affected-set rerun. Use Impeccable `critique` when the app has adopted it; otherwise use the tool-neutral procedure below. | Every finding is resolved with evidence and verified in the rerun, or explicitly accepted by the authorized owner under the residual-risk policy. No finding is silently waived by severity or score. Static design limits are routed to runtime/device gates, not misrepresented as tested. | Focused remediation batch and rerun; on repeated fail, report findings, options, and owner decision; stop CX handoff. |
 | G-ARCH | Architecture to implementation | Approved requirements and CX contract, feasibility evidence, architecture/data/trust boundaries, integration failure behavior, security review, deployment/operations assumptions, and task-ready backlog. | High-impact constraints and dependencies are resolved or explicitly gated; tasks have acceptance and verification paths. | Revise architecture or return affected requirements to owner; stop implementation of dependent tasks. |
-| G-IMPL | Task completion to integration/release candidate | Selected task, linked criteria, reviewed changes, observed task/integration verification, review dispositions, and truthful backlog milestone. | All selected task criteria pass or authorized residual risk is recorded; code review and required checks are complete. | Fix and rerun targeted checks; if still failing or blocked, leave task incomplete and report the cause and next action. |
+| G-IMPL | Task completion to integration/release candidate | Selected task, linked criteria, app-specific required-check plan, reviewed changes, observed task/integration verification tied to the proposed revision, review dispositions, and truthful backlog milestone. | Every selected criterion has observed evidence, or a gate-permitted, explicitly owner-accepted exception is recorded; all app-required checks pass on the applicable revision/scope; code review is complete. An unrun, unavailable, failed, or unscoped required check cannot be counted as passed or silently waived. | Fix and rerun targeted checks; if still failing or blocked, leave task incomplete and report the cause and next action. |
 | G-RELEASE | Release candidate to production | App-specific release checklist; applicable web/native/security/accessibility checks; environment/secrets readiness; monitoring/support/rollback ownership; data migration/recovery plan as applicable; release authorization. | Evidence meets project release criteria and accountable owner authorizes the specific release. | Block deployment; present unmet checks, risk, remediation, and who can authorize/resume. |
 | G-OPERATE | Initial operation to learned next cycle | Health/usage/cost/support/incident evidence, service owner, user feedback and outcomes, and backlog/decision updates. | Operational ownership is active; material incidents and learning are captured and prioritized. | Escalate unresolved service risk; retain last known state and name accountable operator. |
+
+### G-IMPL required-check and coverage evidence
+
+The application repository's approved verification plan defines which checks are required for a task and why. For each selected task, map every acceptance criterion to one or more required check IDs or a documented manual/operational method. Record the exact command or procedure, tool/runtime version, source revision, included code paths and platforms, pass condition, result, and durable evidence location. The G-IMPL record and backlog milestone must link to that mapping. A check that is optional, skipped, not run, unavailable, or run against a different revision/scope cannot satisfy a required criterion.
+
+Coverage is optional unless the application's approved requirements or quality policy makes it mandatory. Where required, the app verification plan must declare the coverage provider/tool and version, source include/exclude scope, measured dimensions, threshold for each dimension, enforcement command/CI job, and result evidence. A passing unit-test command does not prove coverage. Do not inherit a framework-wide 100% rule from the bundled starter: the repository's Vitest 100% thresholds cover this template's configured `src/` TypeScript/TSX source only, while its Python initializer `unittest` suite has no coverage threshold. Any app adopting the web starter must decide and document its own app gate scope; other stacks define their own scope. Existing pilot metrics remain scoped to the modules and run named in [FRAMEWORK-PILOT-001](FRAMEWORK-PILOT-001.md).
+
+The `G-IMPL` outcome is tied to the app's required-check matrix, not to a universal list of commands or a repository-level test count. The matrix is an evidence plan; it does not make checks run automatically unless the app's CI configuration enforces them.
 
 ### Tool-neutral UX critique procedure
 
