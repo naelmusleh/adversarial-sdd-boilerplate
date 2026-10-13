@@ -26,7 +26,10 @@ List included capabilities. List likely scope expansion and explicit exclusions 
 
 ## Functional requirements
 
-Assign stable IDs (`FR-...`). Each requirement states actor, trigger, behavior, success, failure/empty/partial/unknown states, and testable acceptance criteria.
+Use a Markdown table with the columns `ID`, `Requirement`, and `Acceptance evidence`. Assign stable `FR-...` IDs. A requirement statement MUST contain at least one uppercase RFC 2119 keyword: `MUST`, `MUST NOT`, `REQUIRED`, `SHALL`, `SHALL NOT`, `SHOULD`, `SHOULD NOT`, `RECOMMENDED`, `MAY`, or `OPTIONAL`. Include actor, trigger, behavior, success, failure/empty/partial/unknown states, and observable acceptance evidence. The copied artifact helper checks table syntax and keyword casing in this section; it does not judge semantic completeness.
+
+| ID | Requirement | Acceptance evidence |
+| --- | --- | --- |
 
 ## Data and domain contracts
 
@@ -38,7 +41,10 @@ For each provider/system, state purpose, data exchanged, permissions, failure be
 
 ## Quality requirements
 
-Use stable IDs (`NFR-...`) and define applicability and evidence for security, privacy, accessibility, performance, reliability, observability, cost, localization, and operations.
+Use a Markdown table with the columns `ID`, `Requirement`, and `Acceptance evidence`. Assign stable `NFR-...` IDs. A requirement statement MUST contain at least one uppercase RFC 2119 keyword. Define applicability and observable evidence for security, privacy, accessibility, performance, reliability, observability, cost, localization, and operations. The copied artifact helper checks table syntax and keyword casing in this section; it does not judge semantic completeness.
+
+| ID | Requirement | Acceptance evidence |
+| --- | --- | --- |
 
 ## Acceptance outcomes
 
