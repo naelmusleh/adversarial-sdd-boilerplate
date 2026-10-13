@@ -3,7 +3,7 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 1.9
+version: 1.10
 created: 2026-10-07
 updated: 2026-10-13
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007
@@ -130,7 +130,11 @@ The lifecycle and gate contract (002) establishes shared handoff semantics. CAP-
   3. Failed checks route to a bounded fix-and-rerun or an owner decision; they cannot be hidden by a general score.
   4. The checklist never asks an agent to run unavailable checks or claim unsupported coverage.
 - **Evidence:** Verification workflow, platform applicability matrix, sample gate record, and observed pilot results.
-- **State:** In progress — the verification workflow passed bounded written review in FRAMEWORK-ADV-005 v0.3; the starter verification plan now contains a Web/iOS/Android applicability matrix. A project-filled matrix, sample completed gate record, and observed pilot results remain.
+- **State:** Complete — the verification workflow and starter matrix passed bounded written review; [FRAMEWORK-EXAMPLE-001](FRAMEWORK-EXAMPLE-001-python-pilot-gimpl.md) provides a project-filled platform applicability matrix and a completed, evidence-linked G-IMPL example for the approved Python pilot slice. Web, iOS, and Android are explicitly out of scope for that CLI slice; the example does not claim those platforms passed or establish a universal coverage threshold. The underlying pilot evidence and its limits remain in [FRAMEWORK-PILOT-001](FRAMEWORK-PILOT-001.md).
+
+- **Execution update (2026-10-11, initial clarification):** Clarified the app-specific required-check to G-IMPL evidence contract in `workflows/engineering-quality-gates.md`, `docs/framework/GATE-CATALOG-001.md`, and `docs/templates/app-project/verification-plan.md.template`. The contract separates the template's Vitest-only TypeScript/TSX 100% thresholds from the Python `unittest` suite, which has no configured coverage threshold, and from the separate pilot's module-scoped metrics in FRAMEWORK-PILOT-001. Each app must state its own required checks, coverage scope/policy if applicable, revision, pass condition, and evidence links. This clarification alone did not complete FW-TASK-006; at that point, the project-filled platform matrix and sample completed gate record remained outstanding.
+
+- **Execution update (2026-10-11):** Completed the remaining FW-TASK-006 evidence using the Python pilot selected by the owner. FRAMEWORK-EXAMPLE-001 transcribes `PILOT-VERIFICATION-001`, `PILOT-VERIFY-002`, `PILOT-GATE-PING-IMPL-001`, and `PILOT-PING-REVIEW-001`, separates the terminal target from out-of-scope Web/iOS/Android surfaces, maps task criteria to checks and observed evidence, identifies the tested code as an uncommitted working tree, and distinguishes APP-TASK-003's local G-IMPL result from its separate G-RELEASE rehearsal. The source pilot check outputs were not rerun while preparing this example; their provenance and limits are explicit in FRAMEWORK-EXAMPLE-001.
 
 ### FW-TASK-007 — Define release, deployment, operations, and learning workflows
 
