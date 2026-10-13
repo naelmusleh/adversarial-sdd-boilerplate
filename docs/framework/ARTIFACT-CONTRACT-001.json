@@ -1,0 +1,165 @@
+{
+  "contract_id": "ARTIFACT-CONTRACT-001",
+  "contract_version": 1,
+  "normative_keywords": [
+    "MUST",
+    "MUST NOT",
+    "REQUIRED",
+    "SHALL",
+    "SHALL NOT",
+    "SHOULD",
+    "SHOULD NOT",
+    "RECOMMENDED",
+    "MAY",
+    "OPTIONAL"
+  ],
+  "framework": {
+    "required_paths": [
+      "README.md",
+      "AGENTS.md",
+      "package.json",
+      "package-lock.json",
+      "vitest.config.ts",
+      ".github/workflows/verify-pipeline.yml",
+      "scripts/artifacts.py",
+      "scripts/init_app_project.py",
+      "docs/framework/ARTIFACT-CONTRACT-001.json",
+      "docs/templates/app-project/mission.md.template",
+      "docs/templates/app-project/constitution.md.template",
+      "docs/templates/app-project/specification.md.template",
+      "docs/templates/app-project/design.md.template",
+      "docs/templates/app-project/backlog.md.template"
+    ],
+    "required_artifacts": [
+      {
+        "path": "docs/missions/MISSION-001.md",
+        "id": "MISSION-001"
+      },
+      {
+        "path": "docs/constitution/FRAMEWORK-001.md",
+        "id": "FRAMEWORK-001"
+      },
+      {
+        "path": "docs/constitution/FRAMEWORK-002.md",
+        "id": "FRAMEWORK-002"
+      },
+      {
+        "path": "docs/framework/FRAMEWORK-SPEC-001.md",
+        "id": "FRAMEWORK-SPEC-001"
+      },
+      {
+        "path": "docs/framework/FRAMEWORK-BACKLOG-001.md",
+        "id": "FRAMEWORK-BACKLOG-001"
+      },
+      {
+        "path": "docs/framework/GATE-CATALOG-001.md",
+        "id": "GATE-CATALOG-001"
+      },
+      {
+        "path": "docs/framework/TOOL-CATALOG-001.md",
+        "id": "TOOL-CATALOG-001"
+      },
+      {
+        "path": "framework/capabilities/CAP-000-template-initialization.md",
+        "id": "CAP-000"
+      },
+      {
+        "path": "framework/capabilities/CAP-001-artifact-management.md",
+        "id": "CAP-001"
+      },
+      {
+        "path": "framework/capabilities/CAP-002-adversarial-review.md",
+        "id": "CAP-002"
+      },
+      {
+        "path": "framework/capabilities/CAP-003-ai-engineering-execution.md",
+        "id": "CAP-003"
+      },
+      {
+        "path": "framework/capabilities/CAP-004-app-repository-bootstrap.md",
+        "id": "CAP-004"
+      },
+      {
+        "path": "framework/capabilities/CAP-005-platform-governance-daemon.md",
+        "id": "CAP-005"
+      },
+      {
+        "path": "workflows/lifecycle.md",
+        "id": "WORKFLOW-LIFECYCLE-001"
+      },
+      {
+        "path": "workflows/product-discovery.md",
+        "id": "WORKFLOW-DISCOVERY-001"
+      },
+      {
+        "path": "workflows/adversarial-review.md",
+        "id": "WORKFLOW-ADV-001"
+      },
+      {
+        "path": "workflows/cx-design.md",
+        "id": "WORKFLOW-CX-001"
+      },
+      {
+        "path": "workflows/feasibility-architecture.md",
+        "id": "WORKFLOW-FEASIBILITY-001"
+      },
+      {
+        "path": "workflows/ai-engineering-execution.md",
+        "id": "WORKFLOW-AI-ENGINEERING-001"
+      },
+      {
+        "path": "workflows/engineering-quality-gates.md",
+        "id": "WORKFLOW-QUALITY-001"
+      },
+      {
+        "path": "workflows/release-operations.md",
+        "id": "WORKFLOW-RELEASE-001"
+      }
+    ],
+    "requirement_tables": [
+      {
+        "path": "docs/framework/FRAMEWORK-SPEC-001.md",
+        "heading": "### Functional requirements",
+        "requirement_kind": "FR",
+        "minimum_rows": 1
+      },
+      {
+        "path": "docs/framework/FRAMEWORK-SPEC-001.md",
+        "heading": "### Non-functional requirements",
+        "requirement_kind": "NFR",
+        "minimum_rows": 1
+      }
+    ]
+  },
+  "application": {
+    "required_root_files": [
+      "mission.md",
+      "constitution.md",
+      "specification.md",
+      "design.md",
+      "backlog.md"
+    ],
+    "requirement_tables": [
+      {
+        "path": "specification.md",
+        "heading": "## Functional requirements",
+        "requirement_kind": "FR",
+        "minimum_rows": 0
+      },
+      {
+        "path": "specification.md",
+        "heading": "## Quality requirements",
+        "requirement_kind": "NFR",
+        "minimum_rows": 0
+      }
+    ]
+  },
+  "requirement_table_contract": {
+    "headers": [
+      "ID",
+      "Requirement",
+      "Acceptance evidence"
+    ],
+    "rule": "Each non-placeholder requirement row must have a stable ID of the expected kind, non-empty requirement and acceptance-evidence cells, and at least one exact uppercase RFC 2119 keyword in the requirement cell. Lowercase or mixed-case words do not count as RFC 2119 keywords; ordinary prose outside the configured tables is not linted. The check validates syntax and presence of evidence text, not semantic correctness, modality conflicts, or testability."
+  }
+}
