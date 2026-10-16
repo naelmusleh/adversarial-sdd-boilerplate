@@ -3,9 +3,9 @@ id: CAP-003
 type: framework-capability
 title: General AI Engineering Execution
 status: draft
-version: 0.1
+version: 0.2
 created: 2026-10-07
-updated: 2026-10-07
+updated: 2026-10-15
 related-artifacts: FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001
 ---
 
@@ -49,6 +49,22 @@ The implementation agent follows [`workflows/ai-engineering-execution.md`](../..
 - Update only the selected backlog item's milestone/status in its canonical source when evidence supports the transition.
 - Provide a concise, evidence-backed completion or blocked report with changed files, checks/results, remaining risks, and next action.
 
+## Token-efficient execution and user-visible output
+
+- Treat each turn as one bounded transaction; recover continuity from app artifacts, not chat memory. Use `quiet` verbosity by default for new app work. A user may switch at any time to `standard`, `detailed`, or `trace`; apply the change to subsequent updates only.
+- In `quiet` mode, emit only concise task/gate starts when needed, material milestone changes, verification outcomes, blockers, and the next permitted action. Do not narrate every file read or command.
+- Summarize tool and command output. Keep raw logs in their originating terminal, CI run, or durable evidence record; do not copy full logs, entire repository files, or unchanged documents into chat unless explicitly requested.
+- Every visible update must preserve important state: selected task/gate, status, observed evidence when relevant, blocker or owner decision, and next permitted action. No verbosity setting may hide failed checks, unresolved risk, or a gate stop.
+- Final delivery defaults to exact targeted diffs or localized artifact replacements. Include only the minimum evidence and handoff required to make the result reviewable. Do not reprint unchanged files.
+- Never expose hidden reasoning, secrets, credentials, or unredacted sensitive data at any verbosity.
+- Load only the canonical instructions, selected task, directly relevant artifact sections, source files, and checks needed for the current task. Use repository records rather than chat history to recover project state; do not reread or repeat the full codebase/specification without a task-specific need.
+- Use one lead agent by default. Add reviewer or specialist agents only when required by the selected gate or when the expected review value justifies the additional usage. Count each adversarial round as one author draft, one reviewer response, and one author revision; stop after at most two rounds if blocking findings remain.
+- A model or tool prompt cannot enforce a hard spend cap. For the stated account-wide monthly $100 target, distinguish measured, estimated, and unknown usage. Claim enforcement only when an authoritative account-wide meter and hard-stop mechanism cover the relevant usage. Do not initiate optional paid API, provider, or tool calls when their cost is unknown and no applicable budget control is available.
+- Do not treat a rate-limit percentage or per-chat estimate as account-wide dollar spend. Where the available Codex usage view omits subagents, tools, or background activity, state that the account-level amount is unknown.
+- Use the platform's standard/default reasoning setting where the control is available. Do not claim to set a platform control unless observed. Deeper analysis is reserved for a concrete structural correctness, security, or architecture risk and must be scoped to that risk.
+- Do not run sequential background research loops. For an authorized external lookup, make one bounded batch of queries, report its results, then stop. Do not repeat external or multimodal retrieval without a new user instruction.
+- Stop after the selected task or gate handoff. Do not automatically begin a later task or lifecycle gate, even when the current gate passes. Report the next permitted action and yield control to the user.
+
 ## Constraints and decision rights
 
 - Implement exactly one selected backlog item. Do not take adjacent tasks, opportunistic refactors, or unrelated cleanup. If another item is necessary, stop and report the dependency rather than silently expanding scope.
@@ -82,6 +98,7 @@ After editing, stop without marking the item complete when required checks fail,
 5. Domain-specific practices are introduced only when the target project's contract requires them; the core workflow makes no app, financial, database, or technology-stack assumptions.
 6. External consequential actions are not implied by local implementation and retain explicit owner authorization boundaries.
 7. The final report distinguishes completed, partially completed, and blocked work and never claims unobserved verification.
+8. The execution contract defaults to concise, token-efficient progress, supports user-adjustable verbosity, preserves required evidence at every level, and does not claim account-wide budget enforcement without a verified meter and hard stop.
 
 ## Evidence required to advance capability status
 

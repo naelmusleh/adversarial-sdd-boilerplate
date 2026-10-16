@@ -68,6 +68,11 @@ class InitAppProjectTests(unittest.TestCase):
             self.assertIn("EXAMPLE-DECISION-001", generated_readme)
             self.assertIn("Give your AI agent the app idea", generated_readme)
             self.assertIn("The agent drafts [`mission.md`](mission.md)", generated_readme)
+            generated_agents = (target / "AGENTS.md").read_text(encoding="utf-8")
+            self.assertIn("token-efficient `quiet` progress", generated_agents)
+            self.assertIn("`standard`, `detailed`, or `trace`", generated_agents)
+            self.assertIn("Do not automatically advance to another task or gate", generated_agents)
+            self.assertIn("authoritative account-wide meter and hard stop", generated_agents)
             validation = subprocess.run(
                 [sys.executable, str(target / "scripts" / "artifacts.py"), "validate"],
                 cwd=target,

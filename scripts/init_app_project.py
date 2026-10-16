@@ -185,6 +185,11 @@ This is an application repository initialized from Adversarial SDD. Read this fi
 - Do not claim checks, approvals, deployments, or production readiness without observed evidence.
 - Keep `design.md` canonical. Do not run Impeccable `document` at this repository root; use an isolated staging copy and store reviewed generated output in `.impeccable/generated/`.
 - Use `python3 scripts/artifacts.py list`, `validate`, and `new` for local artifact management. The helper is a snapshot of the framework tool; structural validation does not prove links, decisions, gate evidence, or app readiness.
+- Default to token-efficient `quiet` progress: report material milestones, observed check outcomes, blockers, and the next permitted action; summarize logs instead of pasting them. The owner may switch to `standard`, `detailed`, or `trace` at any time. No mode may hide failed checks, required evidence, or safety stops. Omit greetings, filler, and repeated summaries.
+- Keep final chat output to targeted diffs or localized artifact changes. Load only task-relevant context and use repository artifacts to recover state; do not repeat full files or rely on chat history as the source of truth.
+- Use one lead agent by default; use additional reviewers only when the selected gate requires them or the expected value warrants their usage. Stop after at most two author-review-revision rounds if blocking findings remain.
+- Do not claim the $100 account-wide monthly cap is enforced unless an authoritative account-wide meter and hard stop cover Codex, agents, and tools. Distinguish measured, estimated, and unknown usage; treat omitted subagent/tool/background usage as unknown. Avoid optional paid calls with unknown costs when no applicable control is available.
+- Do not automatically advance to another task or gate after the selected handoff. For owner-directed local checks, provide exact commands and mark them unverified until results are supplied; report automatic CI only after observing it on the exact revision.
 
 ## Framework procedures
 
