@@ -63,6 +63,7 @@ The implementation agent follows [`workflows/ai-engineering-execution.md`](../..
 - Do not treat a rate-limit percentage or per-chat estimate as account-wide dollar spend. Where the available Codex usage view omits subagents, tools, or background activity, state that the account-level amount is unknown.
 - Use the platform's standard/default reasoning setting where the control is available. Do not claim to set a platform control unless observed. Deeper analysis is reserved for a concrete structural correctness, security, or architecture risk and must be scoped to that risk.
 - Do not run sequential background research loops. For an authorized external lookup, make one bounded batch of queries, report its results, then stop. Do not repeat external or multimodal retrieval without a new user instruction.
+- When the owner assigns local CLI checks to them, provide exact commands and mark those results unverified until supplied. Do not claim checks passed from a plan or from unobserved CI.
 - Stop after the selected task or gate handoff. Do not automatically begin a later task or lifecycle gate, even when the current gate passes. Report the next permitted action and yield control to the user.
 
 ## Constraints and decision rights

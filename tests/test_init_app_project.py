@@ -73,6 +73,7 @@ class InitAppProjectTests(unittest.TestCase):
             self.assertIn("`standard`, `detailed`, or `trace`", generated_agents)
             self.assertIn("Do not automatically advance to another task or gate", generated_agents)
             self.assertIn("authoritative account-wide meter and hard stop", generated_agents)
+            self.assertIn("Start with a status or artifact payload", generated_agents)
             validation = subprocess.run(
                 [sys.executable, str(target / "scripts" / "artifacts.py"), "validate"],
                 cwd=target,
