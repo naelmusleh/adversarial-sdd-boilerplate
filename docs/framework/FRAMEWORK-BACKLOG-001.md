@@ -3,9 +3,9 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 1.12
+version: 1.13
 created: 2026-10-07
-updated: 2026-10-13
+updated: 2026-10-15
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007
 ---
 
@@ -101,8 +101,11 @@ The lifecycle and gate contract (002) establishes shared handoff semantics. CAP-
   3. The agent reports changed files, checks actually run, results, unresolved risk, and the next task/status update.
   4. No workflow claims all tests passed or a change is production-ready without observed evidence.
   5. CAP-003 specification names user, behavior, constraints, acceptance criteria, and evidence before implementation begins.
+  6. CAP-003 and the generated app instructions default to concise token-efficient progress, allow user-controlled verbosity without weakening evidence, bound adversarial review loops, and distinguish a usage target from verified account-wide enforcement.
 - **Evidence:** CAP-003 specification adversarial review and one bounded task exercise in a separate app repository.
 - **State:** In progress — CAP-003 specification and execution workflow passed bounded written review in FRAMEWORK-ADV-005 v0.3; the separate-app task exercise with observed verification evidence remains.
+- **Execution update (2026-10-15):** Added a token-efficient, user-adjustable progress contract, bounded review rounds, targeted context/output rules, a stop-at-current-gate rule, and explicit account-wide monthly budget enforcement limits to CAP-003, its execution workflow, and generated app instructions. Added initializer regression assertions. The repository instructed this session not to run local validation/test suites; results remain unverified pending owner-run checks or observed CI for the proposed revision. FW-TASK-004 remains in progress; the separate-app exercise is still required.
+- **Execution update (2026-10-15, repository discovery and design-tool bounds):** Extended CAP-003, its execution workflow, CX workflow, and generated app instructions so agents derive the next eligible task from canonical backlog/gate records, inspect `design.md` before Figma work, minimize context reads, keep handoffs concise, and limit each turn to one batched Figma write, one target-frame inspection, and one Impeccable pass. An anomaly blocks the affected review and stops same-turn repair. Added initializer regression assertions. Local tests and artifact validation were not run per the chat-session check boundary; results remain unverified until owner-run checks or exact-revision CI are observed. FW-TASK-004 remains in progress; the separate-app exercise remains outstanding.
 
 ### FW-TASK-005 — Define feasibility and architecture readiness workflow
 

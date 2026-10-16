@@ -3,9 +3,9 @@ id: WORKFLOW-AI-ENGINEERING-001
 type: workflow
 title: Execute one approved application backlog item
 status: draft
-version: 0.1
+version: 0.2
 created: 2026-10-07
-updated: 2026-10-07
+updated: 2026-10-15
 related-artifacts: CAP-003, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001
 ---
 
@@ -14,6 +14,20 @@ related-artifacts: CAP-003, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, FR
 ## Purpose
 
 Guide an AI implementation agent through exactly one approved task in an application's own repository. This workflow turns an existing backlog item into a reviewable code change and evidence record. It does not authorize deployment or silently make product decisions.
+
+## Token-efficient run protocol
+
+- **Default verbosity:** `quiet`. Emit concise progress only for the selected task's start when useful, material milestones, gate/check outcomes, blockers, and the next permitted action.
+- **User control:** The user may request `quiet`, `standard`, `detailed`, or `trace` at any point. Apply the setting to later updates; verbosity never changes acceptance criteria, required checks, evidence, or safety boundaries.
+- **Bounded events:** An update contains the task/gate ID, status, short action, relevant observed evidence, blocker/decision if any, and next permitted action. Avoid transcript-style command narration and repetitive progress.
+- **Output compression:** Report targeted diffs or localized artifact changes. Summarize command/tool output and point to its source; do not paste full logs, full unchanged files, or the complete specification unless specifically requested.
+- **Context budget:** Read the active instructions, selected backlog item, linked requirements, and only the source/test areas needed. Recover state from repository artifacts, not chat history. Do not reload or reproduce the whole repository to restate current status.
+- **Agent budget:** Use one lead agent by default. Use independent review or specialist agents only when the gate requires it or the expected value justifies the additional usage. A review round is one author draft, reviewer response, and author revision. Stop after two rounds if blocking findings remain; report the findings and validation evidence without restarting the loop.
+- **No hidden-reasoning output:** Do not expose internal chain-of-thought, secrets, credentials, private data, or unredacted logs at any verbosity.
+- **Budget claims:** The stated budget target is $100 account-wide per month. A prompt, token percentage, or per-chat estimate is not an account-wide spend meter or hard stop. Report measured, estimated, and unknown usage separately. Claim that the cap is enforced only when an authoritative account-wide meter and hard-stop mechanism cover the relevant Codex, agent, and tool usage. If not available, mark enforcement unverified and do not make optional paid calls with unknown costs.
+- **External lookup:** For an authorized external data or visual query, make one bounded batch, provide the requested result, and stop. Do not repeat browsing or retrieval in a background loop without a new user instruction.
+- **Gate boundary:** Finish the selected task/gate, report the next permitted action, and yield control. Passing a gate does not authorize autonomous entry into a later gate or backlog task.
+- **Testing boundary:** When the owner or repository explicitly assigns local checks to the user, do not run validation or test suites through chat tools. Provide exact commands and mark results unverified until the user supplies output. An automatic repository CI result may be cited only after it is observed for the exact proposed revision.
 
 ## Roles
 
@@ -27,22 +41,24 @@ Guide an AI implementation agent through exactly one approved task in an applica
 Record or link these before editing:
 
 - Application repository identity and root.
-- Selected backlog task ID and canonical backlog path.
+- Selected backlog task ID and canonical backlog path; the owner may name it, or the agent may identify it from canonical backlog and active-gate records when asked to continue.
 - Accepted project instructions and canonical artifact paths.
 - Task status, dependencies, requirement/design/ADR links, and all acceptance criteria.
 - Relevant branch/ref and working-tree state, including pre-existing user changes.
 - Project-prescribed verification and review commands, available tools, and any access limits.
 - Any owner decisions that constrain the implementation.
 
-If any required input is absent, do not infer it from a similarly named task or from framework examples. Identify the missing input in the blocked report.
+If repository facts are absent from the canonical records, inspect the relevant source before asking the owner to provide them. Do not infer approval, task status, dependencies, or gate evidence. If no approved, unblocked task can be identified, report the smallest missing owner decision or evidence and stop.
 
 ## Procedure
 
 ### 1. Confirm the target and task
 
+Resolve exactly one backlog task and active gate before editing. If the owner names a task, use that task. If the owner asks to continue without naming one, locate the active gate and next eligible item in the canonical backlog and gate records; do not ask the owner to locate or repeat repository context already available. Discovery does not grant approval. If task eligibility, required approval, dependencies, or gate evidence cannot be established from repository records, stop before edits and report the smallest missing fact or owner decision; do not infer a target from chat context or a placeholder.
+
 1. Resolve the application repository root and read its `AGENTS.md` or equivalent instructions before substantive work.
-2. Find the application's canonical specification, design/CX contract when relevant, architecture decisions, and backlog. Follow the project's artifact map; do not impose a framework file layout if the app has an approved one.
-3. Find exactly one task matching the explicit task ID. Confirm its status is eligible for implementation under that repository's documented status model, its dependencies are complete, and it links to controlling approved requirements.
+2. Find the application's canonical specification, design/CX contract when relevant, architecture decisions, and backlog. Follow the project's artifact map; do not impose a framework file layout if the app has an approved one. Before any Figma, canvas, or visual-review action, read canonical `design.md` and its relevant journeys, platform matrix, and layout rules; stop the dependent action if they are absent or conflicting.
+3. Find exactly one task matching the task ID resolved above. Confirm its status is eligible for implementation under that repository's documented status model, its dependencies are complete, and it links to controlling approved requirements.
 4. If task eligibility or scope cannot be established, stop before editing and report the evidence and owner action needed.
 
 ### 2. Establish a safe change boundary
