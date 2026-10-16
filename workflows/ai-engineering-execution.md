@@ -18,7 +18,7 @@ Guide an AI implementation agent through exactly one approved task in an applica
 ## Token-efficient run protocol
 
 - **Default verbosity:** `quiet`. Emit concise progress only for the selected task's start when useful, material milestones, gate/check outcomes, blockers, and the next permitted action.
-- **User control:** The user may request `quiet`, `standard`, `detailed`, or `trace) at any point. Apply the setting to later updates; verbosity never changes acceptance criteria, required checks, evidence, or safety boundaries.
+- **User control:** The user may request `quiet`, `standard`, `detailed`, or `trace` at any point. Apply the setting to later updates; verbosity never changes acceptance criteria, required checks, evidence, or safety boundaries.
 - **Bounded events:** An update contains the task/gate ID, status, short action, relevant observed evidence, blocker/decision if any, and next permitted action. Avoid transcript-style command narration and repetitive progress.
 - **Output compression:** Report targeted diffs or localized artifact changes. Summarize command/tool output and point to its source; do not paste full logs, full unchanged files, or the complete specification unless specifically requested.
 - **Context budget:** Read the active instructions, selected backlog item, linked requirements, and only the source/test areas needed. Recover state from repository artifacts, not chat history. Do not reload or reproduce the whole repository to restate current status.
