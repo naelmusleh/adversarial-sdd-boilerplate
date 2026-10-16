@@ -75,7 +75,7 @@ class InitAppProjectTests(unittest.TestCase):
             self.assertIn("authoritative account-wide meter and hard stop", generated_agents)
             self.assertIn("Start with a status or artifact payload", generated_agents)
             self.assertIn("inspect the canonical backlog and active gate records", generated_agents)
-            self.assertIn("before Figma or visual-review work", generated_agents)
+            self.assertIn("Before Figma or visual-review work", generated_agents)
             self.assertIn("one-batch-write", generated_agents)
             self.assertIn("one frame alone cannot pass G-CX", generated_agents)
             self.assertIn("do not recursively dump directory contents", generated_agents)
