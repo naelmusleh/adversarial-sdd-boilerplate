@@ -58,7 +58,7 @@ Resolve exactly one backlog task and active gate before editing. If the owner na
 
 1. Resolve the application repository root and read its `AGENTS.md` or equivalent instructions before substantive work.
 2. Find the application's canonical specification, design/CX contract when relevant, architecture decisions, and backlog. Follow the project's artifact map; do not impose a framework file layout if the app has an approved one. Before any Figma, canvas, or visual-review action, read canonical `design.md` and its relevant journeys, platform matrix, and layout rules; stop the dependent action if they are absent or conflicting.
-3. Find exactly one task matching the explicit task ID. Confirm its status is eligible for implementation under that repository's documented status model, its dependencies are complete, and it links to controlling approved requirements.
+3. Find exactly one task matching the task ID resolved above. Confirm its status is eligible for implementation under that repository's documented status model, its dependencies are complete, and it links to controlling approved requirements.
 4. If task eligibility or scope cannot be established, stop before editing and report the evidence and owner action needed.
 
 ### 2. Establish a safe change boundary
