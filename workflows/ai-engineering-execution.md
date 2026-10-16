@@ -41,23 +41,23 @@ Guide an AI implementation agent through exactly one approved task in an applica
 Record or link these before editing:
 
 - Application repository identity and root.
-- Selected backlog task ID and canonical backlog path.
+- Selected backlog task ID and canonical backlog path; the owner may name it, or the agent may identify it from canonical backlog and active-gate records when asked to continue.
 - Accepted project instructions and canonical artifact paths.
 - Task status, dependencies, requirement/design/ADR links, and all acceptance criteria.
 - Relevant branch/ref and working-tree state, including pre-existing user changes.
 - Project-prescribed verification and review commands, available tools, and any access limits.
 - Any owner decisions that constrain the implementation.
 
-If any required input is absent, do not infer it from a similarly named task or from framework examples. Identify the missing input in the blocked report.
+If repository facts are absent from the canonical records, inspect the relevant source before asking the owner to provide them. Do not infer approval, task status, dependencies, or gate evidence. If no approved, unblocked task can be identified, report the smallest missing owner decision or evidence and stop.
 
 ## Procedure
 
 ### 1. Confirm the target and task
 
-Resolve exactly one explicit backlog task and active gate before editing. If the task ID, approval state, dependencies, or gate cannot be established from repository records, stop before edits and report the missing fact; do not infer a target from chat context or a placeholder.
+Resolve exactly one backlog task and active gate before editing. If the owner names a task, use that task. If the owner asks to continue without naming one, locate the active gate and next eligible item in the canonical backlog and gate records; do not ask the owner to locate or repeat repository context already available. Discovery does not grant approval. If task eligibility, required approval, dependencies, or gate evidence cannot be established from repository records, stop before edits and report the smallest missing fact or owner decision; do not infer a target from chat context or a placeholder.
 
 1. Resolve the application repository root and read its `AGENTS.md` or equivalent instructions before substantive work.
-2. Find the application's canonical specification, design/CX contract when relevant, architecture decisions, and backlog. Follow the project's artifact map; do not impose a framework file layout if the app has an approved one.
+2. Find the application's canonical specification, design/CX contract when relevant, architecture decisions, and backlog. Follow the project's artifact map; do not impose a framework file layout if the app has an approved one. Before any Figma, canvas, or visual-review action, read canonical `design.md` and its relevant journeys, platform matrix, and layout rules; stop the dependent action if they are absent or conflicting.
 3. Find exactly one task matching the explicit task ID. Confirm its status is eligible for implementation under that repository's documented status model, its dependencies are complete, and it links to controlling approved requirements.
 4. If task eligibility or scope cannot be established, stop before editing and report the evidence and owner action needed.
 
