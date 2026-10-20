@@ -28,7 +28,9 @@
       "docs/templates/app-project/constitution.md.template",
       "docs/templates/app-project/specification.md.template",
       "docs/templates/app-project/design.md.template",
-      "docs/templates/app-project/backlog.md.template"
+      "docs/templates/app-project/backlog.md.template",
+      "docs/templates/app-project/architect-handshake.md.template",
+      "framework/capabilities/CAP-006-adversarial-review-daemon.md"
     ],
     "required_artifacts": [
       {
@@ -82,6 +84,10 @@
       {
         "path": "framework/capabilities/CAP-005-platform-governance-daemon.md",
         "id": "CAP-005"
+      },
+      {
+        "path": "framework/capabilities/CAP-006-adversarial-review-daemon.md",
+        "id": "CAP-006"
       },
       {
         "path": "workflows/lifecycle.md",

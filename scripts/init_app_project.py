@@ -37,6 +37,7 @@ LIFECYCLE_FILES = {
     "feasibility-register.md.template": "architecture/feasibility-register.md",
     "architecture-overview.md.template": "architecture/architecture.md",
     "architecture-decision-record.md.template": "architecture/ADR-001.md",
+    "architect-handshake.md.template": "architecture/<APP>-ARCH-HANDSHAKE-001.md",
     "verification-plan.md.template": "delivery/verification-plan.md",
     "verification-record.md.template": "delivery/verification/VERIFY-001.md",
     "release-record.md.template": "delivery/releases/RELEASE-001.md",
@@ -255,7 +256,7 @@ def main() -> int:
 
     today = dt.date.today().isoformat()
     outputs = {
-        destination: render_template(
+        destination.replace("<APP>", prefix): render_template(
             (TEMPLATES / source).read_text(encoding="utf-8"),
             name=name,
             prefix=prefix,

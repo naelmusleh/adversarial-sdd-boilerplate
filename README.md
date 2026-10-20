@@ -40,7 +40,7 @@ adversarial-sdd-boilerplate/
 │   ├── constitution/                  # reusable framework principles
 │   ├── framework/                     # scope, backlog, gates, tool catalog
 │   └── templates/app-project/         # canonical app SDD starter files
-├── framework/capabilities/            # CAP-000 through CAP-005 contracts
+├── framework/capabilities/            # CAP-000 through CAP-006 contracts
 ├── scripts/
 │   ├── artifacts.py                   # list, create, validate SDD records
 │   ├── init_app_project.py            # generate a fresh app repository
@@ -56,6 +56,8 @@ Framework artifacts describe reusable process. Generated application artifacts d
 The [Verify Pipeline](.github/workflows/verify-pipeline.yml) runs independent artifact-contract, artifact-regression, initializer, TypeScript, Vitest, and coverage checks for pushes and pull requests targeting `main`. Framework mode validates the required template inventory and configured RFC 2119 requirement tables from [ARTIFACT-CONTRACT-001](docs/framework/ARTIFACT-CONTRACT-001.json). App mode keeps its five canonical root documents mandatory and applies the same table-shape and uppercase-keyword checks only under the named requirements headings when tables are present. These checks validate structure and language form, not semantic quality. The workflow provides G-RELEASE evidence. GitHub repository protection must separately require those checks and restrict direct updates or bypasses before the evidence becomes a merge block; a successful workflow alone does not protect the branch.
 
 The [Weekly Architecture Audit](.github/workflows/weekly-architecture-audit.yml) runs Sunday at 00:00 UTC and can be started manually from `main`. It audits the committed npm lockfile and runs three public engineering research sweeps. It combines vulnerability metrics, source links, screening outcomes, and any qualified FW task drafts into a new validated report, then opens or updates a draft PR on `automation/weekly-architecture-audit`. Configure the repository Actions secret `TAVILY_API_KEY` for the research sweeps; missing credentials or incomplete research produce a visible non-zero workflow result. The daemon never edits `/src`, the canonical backlog, dependencies, or existing records. A maintainer reviews source claims and accepts any candidate task through a separate change. GitHub may place checks triggered by a PR created with the default Actions token into an approval-required state; a maintainer must approve that run or manually dispatch Verify Pipeline against the PR branch before merge. The combined report is operational evidence, not a complete architecture or production-readiness review. See [CAP-005](framework/capabilities/CAP-005-platform-governance-daemon.md) for permissions, boundaries, and evidence requirements.
+
+The [CAP-006 adversarial reviewer contract](framework/capabilities/CAP-006-adversarial-review-daemon.md) defines a fail-closed, stateless batch review protocol for applications that adopt it. The contract and the Step 2 architect handshake template are included in the framework copy instructions; the handshake is generated with the optional lifecycle records.
 
 ## Requirements
 
@@ -236,4 +238,5 @@ This package is the separated boilerplate repository and is available from the o
 - [Tool and skill routing](docs/framework/TOOL-CATALOG-001.md)
 - [Fresh-session bootstrap contract](framework/capabilities/CAP-000-template-initialization.md)
 - [App-project starter contract](framework/capabilities/CAP-004-app-repository-bootstrap.md)
+- [Asynchronous adversarial reviewer contract](framework/capabilities/CAP-006-adversarial-review-daemon.md)
 - [MIT License](LICENSE)

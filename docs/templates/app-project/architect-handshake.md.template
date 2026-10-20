@@ -1,0 +1,146 @@
+---
+id: <APP>-ARCH-HANDSHAKE-001
+type: architecture-handshake
+title: <Application> Step 2 contract-freezing handshake
+status: draft
+version: 0.1
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+related-artifacts: <APP>-SPEC-001, <APP>-BACKLOG-001, GATE-CATALOG-001, CAP-006
+---
+
+# Step 2 — Contract Freezing: Architect Handshake
+
+## Gate boundary
+
+This contract governs the Architect's Step 2 contract-freezing phase for the **Bounded Local Functional Alpha** milestone. The Architect MUST work only from approved requirements, recorded decisions, the active architecture scope, and the selected milestone's acceptance criteria. This handshake is not evidence that any gate has passed until its required artifacts and checks are present and reviewed.
+
+## Architect protocol enforcement
+
+- The Architect MUST communicate through repository artifacts only. It MUST NOT emit conversational chatter, preambles, greetings, progress narration, or descriptions of its changes. Its output MUST be raw structural configurations written directly to their required repository paths.
+- The Architect MUST NOT expand the approved milestone, invent routes, schemas, dependencies, product behavior, or acceptance criteria. Unresolved decisions and missing evidence remain explicit blockers; they MUST NOT be silently guessed.
+- The active alpha MUST remain local and bounded by its approved requirements. No hosted service, cloud account, deployment, production credential, or external integration is implied by this handshake.
+
+## Future hosted schema isolation
+
+Future hosted paradigms, cloud schemas, hosted-provider data models, and associated migration proposals MUST be stored exclusively under `./docs/architecture/future-hosted/`. They MUST NOT be added to, referenced as active requirements from, or otherwise mixed into the active codebase backlog (`backlog.md`), active local-alpha schemas, or implementation contracts. A future hosted proposal does not authorize implementation; it requires a separately approved scope and gate decision before it can affect active work.
+
+## Frozen contract handoff assets
+
+To complete the Architect phase loop, write the OpenAPI contract to `./packages/contracts/openapi.json` and write the following manifest to `./.sdd/G-ARCH-CONTRACT.json`. The manifest MUST conform to this JSON shape; all listed properties are required, and additional properties are prohibited:
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "G-ARCH Contract Handoff Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source_gate",
+    "active_milestone_gate",
+    "frozen_contract_checksum",
+    "target_data_schemas",
+    "verification_contracts"
+  ],
+  "properties": {
+    "source_gate": {
+      "const": "G-ARCH"
+    },
+    "active_milestone_gate": {
+      "const": "LOCAL_FUNCTIONAL_ALPHA"
+    },
+    "frozen_contract_checksum": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "SHA-256 digest of the exact bytes of ./packages/contracts/openapi.json, prefixed with sha256:."
+    },
+    "target_data_schemas": {
+      "type": "array",
+      "const": [
+        "./packages/contracts/openapi.json"
+      ],
+      "items": {
+        "const": "./packages/contracts/openapi.json"
+      }
+    },
+    "verification_contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pytest",
+        "vitest"
+      ],
+      "properties": {
+        "pytest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "assertions"
+          ],
+          "properties": {
+            "required": {
+              "const": true
+            },
+            "assertions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Explicit pytest assertions tied to approved requirements and the frozen contract."
+            }
+          }
+        },
+        "vitest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "assertions"
+          ],
+          "properties": {
+            "required": {
+              "const": true
+            },
+            "assertions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Explicit Vitest assertions tied to approved requirements and the frozen contract."
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+The Architect MUST replace the schema definition above with a populated manifest instance at `./.sdd/G-ARCH-CONTRACT.json`. The checksum MUST be computed from the exact frozen OpenAPI file bytes and MUST be recomputed whenever that file changes. The `assertions` arrays MUST identify concrete required pytest and Vitest behaviors; generic entries such as “tests pass” do not satisfy the handoff.
+
+## Active backlog structure invariants
+
+The active system backlog at `backlog.md` MUST be written in short, punchy fragments and organized linearly by architectural layer, in this exact order:
+
+1. **Data / Schema** — frozen entities, fields, constraints, and contract ownership.
+2. **Processing Logic** — bounded transformations, validation, and local business rules.
+3. **API Routing** — only approved routes, methods, request/response contracts, and failure behavior.
+4. **Client Component Layouts** — approved screens/components, states, and contract consumers.
+
+Each backlog fragment MUST trace to an approved requirement or decision and state an observable completion condition. The backlog MUST NOT intermingle future hosted work with active alpha work. Hand-waving structures such as `# TODO`, ellipses (`...`), omitted schemas, invented routes, or placeholder acceptance conditions are system errors. Missing detail MUST be recorded as a blocker or owner decision before dependent implementation begins.
+
+## Phase completion criteria
+
+The Architect phase is ready for review only when all of the following are true:
+
+- `./packages/contracts/openapi.json` contains the complete, bounded contract for the approved local alpha scope.
+- `./.sdd/G-ARCH-CONTRACT.json` is a populated JSON instance conforming to the handoff shape above, with a checksum that matches the frozen OpenAPI file.
+- The manifest names explicit required pytest and Vitest assertions that cover the approved contract behaviors.
+- `backlog.md` follows the required layer order and contains no placeholders, ellipses, or future-hosted work.
+- Any proposed future-hosted material is isolated under `./docs/architecture/future-hosted/` and does not alter active alpha scope.
+- Architecture review evidence records the exact artifact versions, checksum, findings, and G-ARCH outcome. A missing or failed required check keeps the gate failed or blocked.

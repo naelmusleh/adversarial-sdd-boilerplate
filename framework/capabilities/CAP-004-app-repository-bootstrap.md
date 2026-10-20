@@ -27,7 +27,7 @@ CAP-004 locally generates a documented app-repository starter from template-sour
 
 - **Inputs:** application name, unique artifact prefix, new/empty target directory, and optional HTTPS framework repository URL.
 - **Default outputs:** five canonical SDD artifacts (`mission.md`, `constitution.md`, `specification.md`, `design.md`, `backlog.md`), README, AGENTS, `.gitignore`, and an app-root-aware copy of the dependency-free artifact CLI (nine files total).
-- **Optional outputs:** `--include-lifecycle-records` adds decision, review/gate, feasibility/architecture, verification/release, and operations starter records (20 files total).
+- **Optional outputs:** `--include-lifecycle-records` adds decision, review/gate, feasibility/architecture (including the Step 2 architect handshake), verification/release, and operations starter records (21 files total).
 - **Next action:** the owner gives the agent the app idea, intended user, available problem evidence, desired outcome, and constraints; the agent drafts `mission.md` and leads product discovery in the app repository.
 
 ## Safety and failure behavior
@@ -41,7 +41,7 @@ CAP-004 locally generates a documented app-repository starter from template-sour
 
 ## Evidence and limits
 
-Implementation: [`scripts/init_app_project.py`](../../scripts/init_app_project.py) and [`scripts/artifacts.py`](../../scripts/artifacts.py). The initializer has a lean default and an explicit full scaffold. The former 21-file output included an unnecessary empty Impeccable directory; the optional full profile is now 20 files with 16 valid metadata IDs in `draft`, while the default is nine files with five canonical SDD IDs. Local regression tests cover both profiles, helper validation, dry-run behavior, refusal to overwrite a non-empty target, and downloaded-source use without `.git`. Independent review FRAMEWORK-ADV-007 passed the profile split and generated README corrections. The FW-TASK-008 cold-start checklist records fresh app initialization, app-local artifact discovery/validation, next-action clarity, and current template-link fixes. This capability does not create a GitHub repository, initialize Git, or provide a starter migration/update mechanism. A starter refresh must be reviewed and manually applied to avoid overwriting application-owned artifacts.
+Implementation: [`scripts/init_app_project.py`](../../scripts/init_app_project.py) and [`scripts/artifacts.py`](../../scripts/artifacts.py). The initializer has a lean default and an explicit full scaffold. The former 21-file output included an unnecessary empty Impeccable directory; the optional full profile now includes the architect handshake and creates 21 files with 17 valid metadata IDs in `draft`, while the default remains nine files with five canonical SDD IDs. Local regression tests cover both profiles, helper validation, dry-run behavior, refusal to overwrite a non-empty target, and downloaded-source use without `.git`. Independent review FRAMEWORK-ADV-007 passed the profile split and generated README corrections. The FW-TASK-008 cold-start checklist records fresh app initialization, app-local artifact discovery/validation, next-action clarity, and current template-link fixes. This capability does not create a GitHub repository, initialize Git, or provide a starter migration/update mechanism. A starter refresh must be reviewed and manually applied to avoid overwriting application-owned artifacts.
 
 ## References
 

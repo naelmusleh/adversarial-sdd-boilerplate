@@ -25,6 +25,7 @@ SUPPORTING_ARTIFACTS = {
     "architecture/feasibility-register.md",
     "architecture/architecture.md",
     "architecture/ADR-001.md",
+    "architecture/EXAMPLE-ARCH-HANDSHAKE-001.md",
     "delivery/verification-plan.md",
     "delivery/verification/VERIFY-001.md",
     "delivery/releases/RELEASE-001.md",
@@ -86,7 +87,7 @@ class InitAppProjectTests(unittest.TestCase):
 
             files = {str(path.relative_to(target)) for path in target.rglob("*") if path.is_file()}
             self.assertEqual(files, CORE_ARTIFACTS | SUPPORTING_ARTIFACTS | BASE_FILES)
-            self.assertEqual(len(files), 20)
+            self.assertEqual(len(files), 21)
             generated_readme = (target / "README.md").read_text(encoding="utf-8")
             self.assertIn("EXAMPLE-DECISION-002", generated_readme)
             validation = subprocess.run(
@@ -97,7 +98,10 @@ class InitAppProjectTests(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(validation.returncode, 0, validation.stderr)
-            self.assertIn("Validated 16 artifact(s).", validation.stdout)
+            self.assertIn("Validated 17 artifact(s).", validation.stdout)
+            handshake = (target / "architecture" / "EXAMPLE-ARCH-HANDSHAKE-001.md").read_text(encoding="utf-8")
+            self.assertIn("./.sdd/G-ARCH-CONTRACT.json", handshake)
+            self.assertIn("LOCAL_FUNCTIONAL_ALPHA", handshake)
 
     def test_dry_run_does_not_create_target(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
