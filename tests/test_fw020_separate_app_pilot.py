@@ -264,6 +264,28 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
                 _, result = self._case(mutate)
                 self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_invalid_accepted_risk_and_not_applicable_results_fail_closed(self) -> None:
+        def empty_waiver(root: Path) -> None:
+            path, record = self._record(root, "G-INTENT")
+            record["gate_result"] = "passed-with-accepted-risk"
+            record["accepted_risk"] = None
+            self._save(path, record)
+
+        _, result = self._case(empty_waiver)
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn("passed-with-accepted-risk requires accepted_risk details", output)
+
+        def unsupported_not_applicable(root: Path) -> None:
+            path, record = self._record(root, "G-CX")
+            record["gate_result"] = "not-applicable"
+            self._save(path, record)
+
+        _, result = self._case(unsupported_not_applicable)
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn("not-applicable gate requires every criterion to be not-applicable", output)
+
     def test_unknown_feasibility_cannot_unblock_and_coverage_cannot_substitute_platform(self) -> None:
         def unblocked(root: Path) -> None:
             path, record = self._record(root, "G-FEAS")
