@@ -30,16 +30,16 @@ The sole entry trigger is an explicit invocation that names a repository root an
 At startup, the reviewer MUST:
 
 1. Resolve the repository root supplied by the invoking process and reject an invalid or ambiguous root.
-2. Check that `./.sdd/G-ARCH-CONTRACT.json` exists, is a regular file, is readable, contains valid JSON, and is populated with every required field described by the architecture handshake.
-3. Validate `source_gate` equals `G-ARCH`, `active_milestone_gate` equals `LOCAL_FUNCTIONAL_ALPHA`, and `target_data_schemas` names exactly `./packages/contracts/openapi.json`.
-4. Check that the named OpenAPI file and the indexed historical rule set are present and readable. Verify the manifest's frozen-contract checksum against the exact OpenAPI bytes before performing policy checks.
+2. Check that `./.sdd/G-ARCH-CONTRACT.json` exists, is a regular file, is readable, contains valid JSON, and conforms to the versioned app-local G-ARCH contract.
+3. Validate `source_gate` equals `G-ARCH`, `framework_revision` matches `./.sdd/framework.lock.json`, and `contract_file.path` names `./packages/contracts/openapi.json` for this CAP-006 profile.
+4. Check that the named OpenAPI file and all explicitly allowlisted `review_inputs` are present and readable. Verify each frozen digest before performing policy checks. The app artifact helper validates manifest structure and file digests; it does not execute this reviewer or produce its verdict.
 5. Freeze the invocation input set and record its revision or, when no commit exists, content digests for each input. A changed input invalidates the invocation; restart with the new frozen set.
 
 If the manifest is absent, empty, malformed, incomplete, has the wrong gate/milestone, or references unavailable inputs, the reviewer MUST immediately terminate with a non-zero exit code. It MUST NOT infer missing fields, search unrelated directories for substitutes, or emit a PASS verdict. If a verdict path is safely writable, it MUST record `REJECT`; otherwise it returns non-zero without claiming that a verdict artifact was written.
 
 ## Required review inputs and baseline integrity
 
-The required active contract is `./packages/contracts/openapi.json`. Historical rules MUST be explicitly indexed by the invocation manifest or by a reviewed, versioned policy index referenced by that manifest. The reviewer MUST compare against the exact 21 historical rules only when all 21 are individually identifiable, readable, and versioned. It MUST verify rule count and unique IDs before evaluation. Missing, duplicate, unversioned, or extra rules make the historical baseline invalid and require `REJECT`; the reviewer MUST NOT synthesize or silently normalize historical rules.
+The required active contract is `./packages/contracts/openapi.json`. Historical rules MUST be explicitly indexed by a `review_inputs` entry whose purpose is `historical-rule-index`, or by a reviewed, versioned policy index explicitly referenced by such an entry. Domain contracts MUST be supplied as separate `review_inputs` with purpose `domain-contract`. The reviewer MUST compare against the exact 21 historical rules only when all 21 are individually identifiable, readable, and versioned. It MUST verify rule count and unique IDs before evaluation. Missing, duplicate, unversioned, or extra rules make the historical baseline invalid and require `REJECT`; the reviewer MUST NOT synthesize or silently normalize historical rules.
 
 This framework repository does not currently define those 21 rule records, the five application domains, or their exhaustive type/error schemas. An application adopting this capability MUST add an explicit reviewed rule index and domain contract to its own architecture records before claiming that the 21-rule and five-domain review can pass. This capability does not create those product-specific contracts.
 

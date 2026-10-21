@@ -50,7 +50,8 @@ If any required input is absent, do not infer it from a similarly named task or 
 1. Inspect the current branch/ref, working-tree changes, relevant files, and repository verification guidance.
 2. Preserve pre-existing changes. Never reset, clean, overwrite, stage, or commit user work as a convenience.
 3. Determine whether the repository expects an isolated branch or another review mechanism. Follow its instructions; do not invent a branch naming rule or create a remote branch unless the task and available authorization support it.
-4. List the selected task's acceptance criteria and their source links. For each, identify the intended code/configuration/documentation change and the check or observation that can demonstrate it.
+4. Confirm whether standing or task-specific authorization covers pushing to the configured remote. Do not ask again when a valid standing authorization already covers this repository and branch; do not push when authorization is absent.
+5. List the selected task's acceptance criteria and their source links. For each, identify the intended code/configuration/documentation change and the check or observation that can demonstrate it.
 
 ### 3. Resolve readiness before coding
 
@@ -81,6 +82,17 @@ When stopping, offer evidence-based options, impacts, the recommended resolution
 4. Inspect the full diff for acceptance coverage, unintended files, secrets, generated artifacts, repository instruction compliance, and unrelated changes.
 5. Request or perform the required independent code/quality review. Resolve findings within this task's scope; if they require a new task or owner decision, report and stop that portion.
 6. A failed check leaves the task incomplete. Make a focused correction and rerun the relevant failed check when safe. If it still fails, stop and provide the failure evidence and next action; do not loop indefinitely or waive the gate yourself.
+
+### 5A. Preserve completed work in Git
+
+After the selected change reaches a coherent, reviewed checkpoint and applicable checks have run:
+
+1. Inspect `git status` and the complete diff. Stage only explicit in-scope paths; inspect the staged diff and confirm it contains no unrelated, generated, secret, or user-owned changes.
+2. Create a descriptive, atomic commit for the completed change. Do not bundle unrelated tasks merely to reduce commit count. If a required check fails, do not claim completion; a failing feature-branch commit may be pushed only when the owner has authorized publication and it is clearly reported as unready for merge.
+3. When push authorization exists, push the commit to the task's authorized feature branch/remote and verify the resulting remote ref. Respect required pull requests and branch protections. Never force-push, bypass required checks, merge, or deploy under this protocol.
+4. If no authorization, remote, or usable credentials exist, preserve the local changes, report the specific blocker, and do not claim that the change has been published. Do not expose credentials while diagnosing access.
+5. After a commit is published, correct it with a new commit; do not amend, rebase, or force-push shared history unless a separate explicit authorization and repository procedure allow it.
+6. Record the commit SHA, branch/ref, push result, check results, and review state in the task milestone and final report.
 
 ### 6. Record the milestone
 

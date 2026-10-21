@@ -27,101 +27,16 @@ Future hosted paradigms, cloud schemas, hosted-provider data models, and associa
 
 ## Frozen contract handoff assets
 
-To complete the Architect phase loop, write the OpenAPI contract to `./packages/contracts/openapi.json` and write the following manifest to `./.sdd/G-ARCH-CONTRACT.json`. The manifest MUST conform to this JSON shape; all listed properties are required, and additional properties are prohibited:
+To complete the Architect phase loop, write the OpenAPI contract to `./packages/contracts/openapi.json` and populate `./.sdd/G-ARCH-CONTRACT.json` from `./.sdd/G-ARCH-CONTRACT.json.template`. The template is the canonical app-local schema; `python3 scripts/artifacts.py validate` checks its exact fields and contract version. The manifest MUST:
 
-```json
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "G-ARCH Contract Handoff Manifest",
-  "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "source_gate",
-    "active_milestone_gate",
-    "frozen_contract_checksum",
-    "target_data_schemas",
-    "verification_contracts"
-  ],
-  "properties": {
-    "source_gate": {
-      "const": "G-ARCH"
-    },
-    "active_milestone_gate": {
-      "const": "LOCAL_FUNCTIONAL_ALPHA"
-    },
-    "frozen_contract_checksum": {
-      "type": "string",
-      "pattern": "^sha256:[a-f0-9]{64}$",
-      "description": "SHA-256 digest of the exact bytes of ./packages/contracts/openapi.json, prefixed with sha256:."
-    },
-    "target_data_schemas": {
-      "type": "array",
-      "const": [
-        "./packages/contracts/openapi.json"
-      ],
-      "items": {
-        "const": "./packages/contracts/openapi.json"
-      }
-    },
-    "verification_contracts": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "pytest",
-        "vitest"
-      ],
-      "properties": {
-        "pytest": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "required",
-            "assertions"
-          ],
-          "properties": {
-            "required": {
-              "const": true
-            },
-            "assertions": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "type": "string",
-                "minLength": 1
-              },
-              "description": "Explicit pytest assertions tied to approved requirements and the frozen contract."
-            }
-          }
-        },
-        "vitest": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "required",
-            "assertions"
-          ],
-          "properties": {
-            "required": {
-              "const": true
-            },
-            "assertions": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "type": "string",
-                "minLength": 1
-              },
-              "description": "Explicit Vitest assertions tied to approved requirements and the frozen contract."
-            }
-          }
-        }
-      }
-    }
-  }
-}
-```
+- Identify contract `G-ARCH-CONTRACT-001`, version `1`, source gate `G-ARCH`, the exact pinned `framework_revision` from `./.sdd/framework.lock.json`, and a specific approved scope.
+- Freeze `specification.md`, `design.md`, `backlog.md`, and any other in-scope architecture artifacts using their stable IDs, versions, and SHA-256 digests of exact file bytes.
+- Name `./packages/contracts/openapi.json` and its exact SHA-256 digest. Recompute the digest whenever the file changes.
+- List exact required verification check IDs, commands, and observable assertions tied to approved requirements. Choose commands for this app's actual stack; do not assume pytest, Vitest, or any other test runner unless the app uses it.
+- Use `review_inputs` to enumerate any policy index or domain contract needed by a later adversarial reviewer. Each entry is explicitly allowlisted and frozen by path, artifact ID, version, and digest; use an empty array when no such reviewer input is approved yet.
+- Identify an independent architecture review by artifact path, ID, version, digest, reviewer mode, and PASS result.
 
-The Architect MUST replace the schema definition above with a populated manifest instance at `./.sdd/G-ARCH-CONTRACT.json`. The checksum MUST be computed from the exact frozen OpenAPI file bytes and MUST be recomputed whenever that file changes. The `assertions` arrays MUST identify concrete required pytest and Vitest behaviors; generic entries such as “tests pass” do not satisfy the handoff.
+The Architect MUST replace all template markers and populate the manifest only after the named inputs are frozen. The validator confirms identity, structure, safe paths, exact artifact versions/digests, and explicit check descriptions. It does not run those commands or prove that their assertions are complete; observed execution evidence belongs to the G-IMPL record.
 
 ## Active backlog structure invariants
 
@@ -139,8 +54,8 @@ Each backlog fragment MUST trace to an approved requirement or decision and stat
 The Architect phase is ready for review only when all of the following are true:
 
 - `./packages/contracts/openapi.json` contains the complete, bounded contract for the approved local alpha scope.
-- `./.sdd/G-ARCH-CONTRACT.json` is a populated JSON instance conforming to the handoff shape above, with a checksum that matches the frozen OpenAPI file.
-- The manifest names explicit required pytest and Vitest assertions that cover the approved contract behaviors.
+- `./.sdd/G-ARCH-CONTRACT.json` is a populated JSON instance conforming to the versioned app-local template and matching `framework.lock.json`.
+- The manifest freezes the OpenAPI and approved architecture artifacts and names stack-appropriate required checks and observable assertions.
 - `backlog.md` follows the required layer order and contains no placeholders, ellipses, or future-hosted work.
 - Any proposed future-hosted material is isolated under `./docs/architecture/future-hosted/` and does not alter active alpha scope.
-- Architecture review evidence records the exact artifact versions, checksum, findings, and G-ARCH outcome. A missing or failed required check keeps the gate failed or blocked.
+- Architecture review evidence records the exact artifact versions/digests, findings, reviewer independence, and G-ARCH outcome. A missing or failed required check keeps the gate failed or blocked.

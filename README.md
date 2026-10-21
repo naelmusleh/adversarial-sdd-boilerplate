@@ -36,6 +36,7 @@ adversarial-sdd-boilerplate/
 ├── src/
 │   ├── app/                           # neutral Next.js App Router shell
 │   └── core/env.ts                    # fail-fast runtime configuration
+├── .sdd/                              # generated app handoff templates and framework lock
 ├── docs/
 │   ├── constitution/                  # reusable framework principles
 │   ├── framework/                     # scope, backlog, gates, tool catalog
@@ -75,7 +76,7 @@ The following steps produce a new local app directory. They do not create a GitH
 
 ### 1. Obtain the template
 
-Clone the repository or download its ZIP from GitHub and extract it. Then open a terminal in the extracted `adversarial-sdd-boilerplate` directory.
+Clone the repository or download its ZIP from GitHub and extract it. Then open a terminal in the extracted `adversarial-sdd-boilerplate` directory. App initialization pins an exact 40-character framework commit. A Git clone supplies that automatically; for a source archive, retain the commit SHA used to download it and pass it with `--framework-revision`.
 
 ```sh
 git clone https://github.com/naelmusleh/adversarial-sdd-boilerplate.git
@@ -108,7 +109,11 @@ python3 scripts/init_app_project.py \
   --target ../example-app
 ```
 
-The initializer refuses a non-empty target. By default it creates the five canonical app SDD documents, an app README, app-specific `AGENTS.md`, `.gitignore`, and a copy of the dependency-free artifact helper. It never overwrites existing work. Add `--include-lifecycle-records` only if the team wants the optional supporting record templates preseeded; otherwise create records when their gate requires them.
+When initializing from a source archive, add `--framework-revision <40-character-commit-sha>` to the command. The generated `.sdd/framework.lock.json` records that revision and digests for the copied validator, handoff templates, gate-record template, and SDD validation workflow. Generated procedure links point to the same immutable revision; initialize from the reviewed framework commit so those links match the copied contracts.
+
+The initializer refuses a non-empty target. By default it creates the five canonical app SDD documents, an app README, app-specific `AGENTS.md`, `.gitignore`, the dependency-free artifact helper, a framework lock, G-REQ/G-ARCH handoff templates, a gate-record template, and an SDD Contract Validation workflow. It never overwrites existing work. Add `--include-lifecycle-records` only if the team wants the optional supporting record templates preseeded; otherwise create records when their gate requires them.
+
+The generated validator checks a populated G-REQ/G-ARCH handoff against frozen artifact versions and file digests. It does not judge requirement quality or execute code checks. Each app still defines its stack-specific G-IMPL checks in its verification plan and CI. The SDD workflow must be configured as a required status check in repository settings before it can block merges; that configuration is not performed by the initializer.
 
 ### 4. Add the selected runtime and lifecycle files to the app repository
 

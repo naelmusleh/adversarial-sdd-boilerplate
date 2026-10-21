@@ -3,9 +3,9 @@ id: FRAMEWORK-SPEC-001
 type: framework-specification
 title: Adversarial SDD Framework v1 scope and behavior
 status: draft
-version: 0.10
+version: 0.12
 created: 2026-10-07
-updated: 2026-10-13
+updated: 2026-10-20
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-BACKLOG-001
 ---
 
@@ -82,6 +82,8 @@ Requirement statements in the tables below use uppercase RFC 2119 keywords for m
 | FR-FW-011 | The framework MUST use tools and skills according to their actual capabilities and lifecycle fit, distinguishing available and tested integrations from optional, unavailable, or future capabilities. | Tool/skill catalog records purpose, stage, inputs, outputs, availability, limitations, and evidence of use; no workflow claims a hook or connector is active without project-level proof. |
 | FR-FW-012 | The framework MUST preserve a product-specific app repository as the source of truth for that application's requirements, implementation, infrastructure, and operational records after handoff, with an explicit transfer/continuity procedure from framework proving work. | A new app repository can be initialized from the template; its source links, history, ownership, and unresolved decisions remain traceable after separation. |
 | FR-FW-013 | The framework MUST provide an approved template-only distribution that a new user can fork/clone or download as a source archive and use locally by following the README. The distribution MUST exclude all app-specific material and private owner information, including prior application history. | After the owner approves the package and license, a clean fork/clone and ZIP download both support the documented local validation and app-initialization path; the public repository has clean history and contains only approved reusable framework materials. |
+| FR-FW-014 | An initialized application MUST record the exact framework source revision and contract versions used to generate its local governance tools. The app's validator MUST check versioned G-REQ and G-ARCH handoff manifests against their frozen source artifacts and must reject a gate record claiming PASS when the required manifest is missing or invalid. | A generated app records a 40-character source commit, artifact/helper contract versions, and locked file digests; controlled valid and invalid handoff fixtures demonstrate that validation accepts matching frozen inputs and rejects drift, missing manifests, duplicate JSON keys, and unsupported contract versions. |
+| FR-FW-015 | The implementation workflow MUST preserve completed authorized changes in Git as scoped, reviewable commits and MUST push them to the authorized feature branch or remote when the owner has granted standing or task-specific push authorization. It MUST inspect the staged diff, exclude unrelated/user changes, preserve review controls, and report commit and push evidence; failed required checks or absent authorization MUST NOT be presented as a completed, merge-ready change. | A workflow tabletop covers a clean change, unrelated pre-existing edits, failing checks, missing remote/authorization, and successful feature-branch publication; every case preserves ownership boundaries and accurately records commit, push, and check status. |
 
 ### Non-functional requirements
 

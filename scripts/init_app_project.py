@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
+import json
 import re
 import subprocess
 import sys
@@ -16,7 +18,15 @@ TEMPLATES = ROOT / "docs" / "templates" / "app-project"
 DEFAULT_FRAMEWORK_URL = "https://github.com/naelmusleh/adversarial-sdd-boilerplate"
 PREFIX_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 ARTIFACT_ID_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]{3}$")
+FRAMEWORK_REVISION_RE = re.compile(r"^[a-f0-9]{40}$")
 REQUIRED_METADATA = {"id", "type", "title", "status", "version", "created", "updated"}
+APP_LOCKED_FILES = (
+    "scripts/artifacts.py",
+    ".sdd/G-REQ-HANDOFF.json.template",
+    ".sdd/G-ARCH-CONTRACT.json.template",
+    "docs/templates/app-project/gate-record.md.template",
+    ".github/workflows/sdd-contract-validation.yml",
+)
 
 # The default is the smallest complete app starter: the five canonical SDD files.
 # Supporting records are created when their lifecycle triggers are reached.
@@ -61,6 +71,8 @@ def validate_generated_artifacts(outputs: dict[str, str]) -> None:
     for relative, content in outputs.items():
         if not relative.endswith(".md") or not content.startswith("---\n"):
             continue
+        if relative.startswith("docs/templates/"):
+            continue
         lines = content.splitlines()
         try:
             end = lines.index("---", 1)
@@ -85,8 +97,8 @@ def validate_generated_artifacts(outputs: dict[str, str]) -> None:
             raise ValueError(f"{relative}: starter artifact must begin in draft status")
 
 
-def framework_link(base: str, path: str) -> str:
-    return f"{base.rstrip('/')}/blob/main/{path}"
+def framework_link(base: str, path: str, revision: str) -> str:
+    return f"{base.rstrip('/')}/blob/{revision}/{path}"
 
 
 def discover_framework_url() -> str:
@@ -108,10 +120,41 @@ def discover_framework_url() -> str:
     return DEFAULT_FRAMEWORK_URL
 
 
+def discover_framework_revision(explicit_revision: str | None = None) -> str:
+    """Return an immutable source commit, requiring one for archive-based use."""
+    if explicit_revision is not None:
+        revision = explicit_revision.strip().lower()
+        if not FRAMEWORK_REVISION_RE.fullmatch(revision):
+            raise ValueError("Framework revision must be an exact 40-character lowercase commit SHA.")
+        return revision
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--verify", "HEAD^{commit}"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise ValueError(
+            "Could not identify an exact framework commit. When using a source archive, pass "
+            "--framework-revision with the 40-character commit SHA for that archive."
+        ) from exc
+    revision = result.stdout.strip().lower()
+    if not FRAMEWORK_REVISION_RE.fullmatch(revision):
+        raise ValueError("Framework checkout did not resolve to an exact 40-character commit SHA.")
+    return revision
+
+
+def sha256_text(value: str) -> str:
+    return "sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
 def generated_readme(
     name: str,
     prefix: str,
     framework_url: str,
+    framework_revision: str,
     *,
     include_lifecycle_records: bool,
 ) -> str:
@@ -120,10 +163,10 @@ def generated_readme(
 
 **Project status:** Ideation
 **Active gate:** None; discovery has not started
-**Next action:** Give your AI agent the app idea, intended user, problem evidence, desired outcome, and known constraints. Ask it to draft `mission.md` and lead the [product discovery workflow]({framework_link(framework_url, "workflows/product-discovery.md")}) in this repository.
+**Next action:** Give your AI agent the app idea, intended user, problem evidence, desired outcome, and known constraints. Ask it to draft `mission.md` and lead the [product discovery workflow]({framework_link(framework_url, "workflows/product-discovery.md", framework_revision)}) in this repository.
 **Canonical status source:** [`backlog.md`](backlog.md)
 
-This repository is the source of truth for {name}: its product decisions, code, and delivery evidence belong here. It was initialized from the reusable [Adversarial SDD template]({framework_url}); there is no framework service to install or operate. No gate has passed and no product decisions are pre-approved by this starter.
+This repository is the source of truth for {name}: its product decisions, code, and delivery evidence belong here. It was initialized from the reusable [Adversarial SDD template]({framework_url}/tree/{framework_revision}); there is no framework service to install or operate. The exact source revision is recorded in [`.sdd/framework.lock.json`](.sdd/framework.lock.json). No gate has passed and no product decisions are pre-approved by this starter.
 
 ## Local artifact commands
 
@@ -140,17 +183,21 @@ The helper discovers this repository's canonical SDD files and artifact folders;
 ## Start here
 
 1. Give the agent the app idea, intended user, problem evidence, desired outcome, and known constraints. The agent drafts [`mission.md`](mission.md) with you and records evidence, assumptions, exclusions, and unresolved decisions.
-2. Have the agent follow the [product discovery workflow]({framework_link(framework_url, "workflows/product-discovery.md")}) to draft `constitution.md`, `specification.md`, and `backlog.md`, then return only material decisions and the G-INTENT/G-REQ evidence for your review.
-3. Keep `design.md` as the canonical experience contract. Use the [CX design workflow]({framework_link(framework_url, "workflows/cx-design.md")}) and link visual review evidence there.
-4. Use [`backlog.md`](backlog.md) for prioritized, approved implementation work and the [lifecycle workflow]({framework_link(framework_url, "workflows/lifecycle.md")}) for the next stage.
+2. Have the agent follow the [product discovery workflow]({framework_link(framework_url, "workflows/product-discovery.md", framework_revision)}) to draft `constitution.md`, `specification.md`, and `backlog.md`, then return only material decisions and the G-INTENT/G-REQ evidence for your review.
+3. Keep `design.md` as the canonical experience contract. Use the [CX design workflow]({framework_link(framework_url, "workflows/cx-design.md", framework_revision)}) and link visual review evidence there.
+4. Use [`backlog.md`](backlog.md) for prioritized, approved implementation work and the [lifecycle workflow]({framework_link(framework_url, "workflows/lifecycle.md", framework_revision)}) for the next stage.
 
 ## Gates and tools
 
-Use the framework's [gate catalog]({framework_link(framework_url, "docs/framework/GATE-CATALOG-001.md")}) for transition criteria and its [tool and skill catalog]({framework_link(framework_url, "docs/framework/TOOL-CATALOG-001.md")}) to select currently available tools. Record applicable gates, their results, and evidence in `reviews/`; a score alone never passes a required gate.
+Use the framework's [gate catalog]({framework_link(framework_url, "docs/framework/GATE-CATALOG-001.md", framework_revision)}) for transition criteria and its [tool and skill catalog]({framework_link(framework_url, "docs/framework/TOOL-CATALOG-001.md", framework_revision)}) to select currently available tools. Record applicable gates, their results, and evidence in `reviews/`; a score alone never passes a required gate.
 
 ## Artifact identities
 
 This project uses the `{prefix}` prefix for stable artifact IDs. Do not reuse IDs. Keep gate results separate from artifact lifecycle statuses, and link decisions/reviews to the exact versions they affect.
+
+## Framework checks
+
+The generated SDD Contract Validation workflow checks artifact metadata, framework snapshot integrity, and populated G-REQ/G-ARCH handoffs. It does not run application tests or prove semantic correctness. Add the app's required code checks from its verification plan to CI and require the relevant status checks in repository settings before treating them as merge or release controls. A workflow file by itself does not block merges.
 
 ## Supporting records as needed
 
@@ -160,7 +207,7 @@ The SDD `design.md` is canonical. The Impeccable `document` command writes `DESI
 '''
 
 
-def generated_agents(framework_url: str) -> str:
+def generated_agents(framework_url: str, framework_revision: str) -> str:
     links = {
         "lifecycle": "workflows/lifecycle.md",
         "discovery": "workflows/product-discovery.md",
@@ -172,7 +219,7 @@ def generated_agents(framework_url: str) -> str:
         "release and operations": "workflows/release-operations.md",
     }
     procedure_list = "\n".join(
-        f"- {label}: {framework_link(framework_url, path)}"
+        f"- {label}: {framework_link(framework_url, path, framework_revision)}"
         for label, path in links.items()
     )
     return f'''# Agent instructions
@@ -183,16 +230,21 @@ This is an application repository initialized from Adversarial SDD. Read this fi
 - Treat repository artifacts as the durable source of truth. Maintain stable IDs, versions, links, open-decision records, and gate evidence.
 - Do not implement work that is blocked by a failed mandatory gate, unresolved owner decision, missing access, or unmet dependency. State the blocker and the next actionable step.
 - AI agents perform authorized documentation and implementation work. The product owner makes material product decisions, accepts residual risk, and authorizes consequential external actions.
+- At each coherent, verified task checkpoint, commit only reviewed in-scope files and inspect the staged diff. Push to the authorized feature branch when standing or task-specific push authorization exists; never force-push, bypass branch protection, merge, or deploy under this rule. If checks fail, authorization is absent, or the remote is unavailable, report the exact state and do not claim the change is complete or published.
 - Do not claim checks, approvals, deployments, or production readiness without observed evidence.
 - Keep `design.md` canonical. Do not run Impeccable `document` at this repository root; use an isolated staging copy and store reviewed generated output in `.impeccable/generated/`.
 - Use `python3 scripts/artifacts.py list`, `validate`, and `new` for local artifact management. The helper is a snapshot of the framework tool; structural validation does not prove links, decisions, gate evidence, or app readiness.
+- The `.sdd/framework.lock.json` file pins the exact framework commit and digests of the copied validator and handoff checks. Update it only as part of a reviewed framework migration.
+- A passed G-REQ or G-ARCH record requires its corresponding populated manifest under `.sdd/`; the validator checks frozen files and exact digests. A passing validator is not itself a gate pass.
+- Add SDD Contract Validation and app-specific required checks to branch protection before claiming they block merges. Do not treat this workflow alone as a release gate.
+- Record each change's commit SHA, branch/ref, push outcome, required-check results, and review status in its task milestone.
 
 ## Framework procedures
 
 Use the current procedures from the configured Adversarial SDD template source. Record the procedure path/version used in gate and review records.
 
-- Gate catalog: {framework_link(framework_url, "docs/framework/GATE-CATALOG-001.md")}
-- Tool and skill catalog: {framework_link(framework_url, "docs/framework/TOOL-CATALOG-001.md")}
+- Gate catalog: {framework_link(framework_url, "docs/framework/GATE-CATALOG-001.md", framework_revision)}
+- Tool and skill catalog: {framework_link(framework_url, "docs/framework/TOOL-CATALOG-001.md", framework_revision)}
 
 {procedure_list}
 '''
@@ -204,6 +256,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--prefix", required=True, help="Stable artifact prefix, e.g. ACME")
     parser.add_argument("--target", required=True, type=Path, help="New or empty application repository directory")
     parser.add_argument("--framework-url", help="Override the GitHub repository URL for the reusable framework")
+    parser.add_argument("--framework-revision", help="Exact 40-character framework commit SHA (required for source archives)")
     parser.add_argument(
         "--include-lifecycle-records",
         action="store_true",
@@ -218,6 +271,11 @@ def main() -> int:
     name = " ".join(args.name.split())
     prefix = args.prefix.strip().upper()
     framework_url = (args.framework_url or discover_framework_url()).strip().rstrip("/")
+    try:
+        framework_revision = discover_framework_revision(args.framework_revision)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     if not name:
         print("Application name must not be empty.", file=sys.stderr)
         return 2
@@ -268,11 +326,43 @@ def main() -> int:
         name,
         prefix,
         framework_url,
+        framework_revision,
         include_lifecycle_records=args.include_lifecycle_records,
     )
-    outputs["AGENTS.md"] = generated_agents(framework_url)
+    outputs["AGENTS.md"] = generated_agents(framework_url, framework_revision)
     outputs[".gitignore"] = ".impeccable/staging/\n"
     outputs["scripts/artifacts.py"] = artifact_helper.read_text(encoding="utf-8")
+    outputs["docs/templates/app-project/gate-record.md.template"] = render_template(
+        (TEMPLATES / "gate-record.md.template").read_text(encoding="utf-8"),
+        name=name,
+        prefix=prefix,
+        today=today,
+    )
+    outputs[".sdd/G-REQ-HANDOFF.json.template"] = (
+        (ROOT / ".sdd" / "G-REQ-HANDOFF.json.template").read_text(encoding="utf-8")
+        .replace("<APP>", prefix)
+        .replace("<40-character framework commit SHA>", framework_revision)
+    )
+    outputs[".sdd/G-ARCH-CONTRACT.json.template"] = (
+        (ROOT / ".sdd" / "G-ARCH-CONTRACT.json.template").read_text(encoding="utf-8")
+        .replace("<APP>", prefix)
+        .replace("<40-character framework commit SHA>", framework_revision)
+    )
+    outputs[".github/workflows/sdd-contract-validation.yml"] = (
+        (TEMPLATES / "sdd-contract-validation.yml.template").read_text(encoding="utf-8")
+    )
+    lock = {
+        "lock_version": 1,
+        "framework_repository": framework_url,
+        "framework_revision": framework_revision,
+        "artifact_contract_id": "ARTIFACT-CONTRACT-001",
+        "artifact_contract_version": 1,
+        "locked_files": {
+            relative: sha256_text(outputs[relative])
+            for relative in APP_LOCKED_FILES
+        },
+    }
+    outputs[".sdd/framework.lock.json"] = json.dumps(lock, indent=2, sort_keys=True) + "\n"
     try:
         validate_generated_artifacts(outputs)
     except ValueError as exc:

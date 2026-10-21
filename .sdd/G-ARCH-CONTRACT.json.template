@@ -1,0 +1,57 @@
+{
+  "contract_id": "G-ARCH-CONTRACT-001",
+  "contract_version": 1,
+  "framework_revision": "<40-character framework commit SHA>",
+  "source_gate": "G-ARCH",
+  "scope": "<approved architecture scope and supported platforms>",
+  "frozen_artifacts": [
+    {
+      "path": "specification.md",
+      "id": "<APP>-SPEC-001",
+      "version": "<artifact version>",
+      "sha256": "sha256:<64 lowercase hexadecimal characters>"
+    },
+    {
+      "path": "design.md",
+      "id": "<APP>-DESIGN-001",
+      "version": "<artifact version>",
+      "sha256": "sha256:<64 lowercase hexadecimal characters>"
+    },
+    {
+      "path": "backlog.md",
+      "id": "<APP>-BACKLOG-001",
+      "version": "<artifact version>",
+      "sha256": "sha256:<64 lowercase hexadecimal characters>"
+    }
+  ],
+  "contract_file": {
+    "path": "packages/contracts/openapi.json",
+    "sha256": "sha256:<64 lowercase hexadecimal characters>"
+  },
+  "required_checks": [
+    {
+      "id": "CHECK-API-001",
+      "command": "<exact local verification command>",
+      "assertions": [
+        "<observable behavior tied to an approved requirement>"
+      ]
+    }
+  ],
+  "review_inputs": [
+    {
+      "purpose": "historical-rule-index",
+      "path": "<repository-relative policy or evidence path>",
+      "id": "<APP>-POLICY-001",
+      "version": "<artifact version>",
+      "sha256": "sha256:<64 lowercase hexadecimal characters>"
+    }
+  ],
+  "independent_review": {
+    "path": "reviews/<APP>-REVIEW-ARCH-001.md",
+    "id": "<APP>-REVIEW-ARCH-001",
+    "version": "<review version>",
+    "sha256": "sha256:<64 lowercase hexadecimal characters>",
+    "reviewer_mode": "independent",
+    "result": "PASS"
+  }
+}

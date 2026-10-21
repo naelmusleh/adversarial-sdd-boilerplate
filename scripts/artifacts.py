@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import re
 import sys
@@ -22,6 +23,21 @@ APP_STABLE_FILENAMES = {
 }
 REQUIRED = ("id", "type", "title", "status", "version", "created", "updated")
 FRAMEWORK_CONTRACT = Path("docs/framework/ARTIFACT-CONTRACT-001.json")
+APP_FRAMEWORK_LOCK = Path(".sdd/framework.lock.json")
+APP_HANDOFFS = {
+    "G-REQ": Path(".sdd/G-REQ-HANDOFF.json"),
+    "G-ARCH": Path(".sdd/G-ARCH-CONTRACT.json"),
+}
+APP_LOCKED_FILES = (
+    "scripts/artifacts.py",
+    ".sdd/G-REQ-HANDOFF.json.template",
+    ".sdd/G-ARCH-CONTRACT.json.template",
+    "docs/templates/app-project/gate-record.md.template",
+    ".github/workflows/sdd-contract-validation.yml",
+)
+APP_LOCK_VERSION = 1
+HANDOFF_CONTRACT_VERSION = 1
+MAX_JSON_BYTES = 1_048_576
 APP_REQUIREMENT_TABLES = (
     {"path": "specification.md", "heading": "## Functional requirements", "requirement_kind": "FR", "minimum_rows": 0},
     {"path": "specification.md", "heading": "## Quality requirements", "requirement_kind": "NFR", "minimum_rows": 0},
@@ -36,6 +52,9 @@ ALLOWED_STATUSES = {
 }
 ID_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]{3}$")
 KEY_RE = re.compile(r"^([a-z][a-z0-9-]*):\s*(.*?)\s*$")
+FRAMEWORK_REVISION_RE = re.compile(r"^[a-f0-9]{40}$")
+SHA256_RE = re.compile(r"^sha256:[a-f0-9]{64}$")
+GATE_RESULTS = {"not-run", "passed", "failed", "blocked", "passed-with-accepted-risk", "not-applicable"}
 
 
 def is_app_project(root: Path) -> bool:
@@ -98,6 +117,258 @@ def read_front_matter(path: Path) -> tuple[dict[str, str], str | None]:
             return data, f"duplicate metadata key: {key}"
         data[key] = value.strip().strip("\"'")
     return data, None
+
+
+def load_json_object(path: Path) -> tuple[dict[str, object] | None, str | None]:
+    """Load strict JSON, rejecting duplicate keys instead of silently keeping the last value."""
+    def unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"duplicate JSON key '{key}'")
+            result[key] = value
+        return result
+
+    def reject_constant(value: str) -> object:
+        raise ValueError(f"non-standard JSON constant '{value}'")
+
+    try:
+        if path.stat().st_size > MAX_JSON_BYTES:
+            return None, f"JSON file exceeds {MAX_JSON_BYTES} byte limit"
+        value = json.loads(
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=unique_object,
+            parse_constant=reject_constant,
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError, RecursionError) as exc:
+        return None, str(exc)
+    if not isinstance(value, dict):
+        return None, "top-level JSON value must be an object"
+    return value, None
+
+
+def file_sha256(path: Path) -> str:
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def check_frozen_artifact(root: Path, item: object, label: str) -> list[str]:
+    if not isinstance(item, dict) or set(item) != {"path", "id", "version", "sha256"}:
+        return [f"{label}: each frozen artifact must define exactly path, id, version, and sha256"]
+    relative, expected_id, expected_version, expected_digest = (
+        item.get("path"), item.get("id"), item.get("version"), item.get("sha256")
+    )
+    if not all(isinstance(value, str) and value.strip() for value in (relative, expected_id, expected_version)):
+        return [f"{label}: frozen artifact path, id, and version must be non-empty strings"]
+    if not isinstance(expected_digest, str) or not SHA256_RE.fullmatch(expected_digest):
+        return [f"{label} ({relative}): sha256 must use the form sha256:<64 lowercase hexadecimal characters>"]
+    path, error = safe_file(root, relative)
+    if error or path is None:
+        return [f"{label} ({relative}): {error or 'could not resolve file'}"]
+    metadata, metadata_error = read_front_matter(path)
+    if metadata_error:
+        return [f"{label} ({relative}): frozen artifact metadata could not be read: {metadata_error}"]
+    problems = []
+    if metadata.get("id") != expected_id:
+        problems.append(f"{label} ({relative}): expected artifact ID '{expected_id}', found '{metadata.get('id', '')}'")
+    if metadata.get("version") != expected_version:
+        problems.append(f"{label} ({relative}): expected version '{expected_version}', found '{metadata.get('version', '')}'")
+    if file_sha256(path) != expected_digest:
+        problems.append(f"{label} ({relative}): frozen file digest does not match")
+    return problems
+
+
+def check_review_reference(root: Path, value: object, label: str) -> list[str]:
+    expected_fields = {"path", "id", "version", "sha256", "reviewer_mode", "result"}
+    if not isinstance(value, dict) or set(value) != expected_fields:
+        return [f"{label}: independent_review must define exactly {', '.join(sorted(expected_fields))}"]
+    if value.get("reviewer_mode") != "independent" or value.get("result") != "PASS":
+        return [f"{label}: handoff requires an independent review with result PASS"]
+    return check_frozen_artifact(
+        root,
+        {key: value.get(key) for key in ("path", "id", "version", "sha256")},
+        label + " independent_review",
+    )
+
+
+def validate_handoff_manifest(root: Path, gate_id: str, revision: str) -> list[str]:
+    manifest_path = APP_HANDOFFS[gate_id]
+    path, error = safe_file(root, manifest_path.as_posix())
+    if error or path is None:
+        return [f"{manifest_path.as_posix()}: required handoff manifest {error or 'is missing'}"]
+    manifest, parse_error = load_json_object(path)
+    if parse_error or manifest is None:
+        return [f"{manifest_path.as_posix()}: invalid JSON handoff manifest: {parse_error or 'invalid object'}"]
+
+    if gate_id == "G-REQ":
+        expected_fields = {"contract_id", "contract_version", "framework_revision", "source_gate", "scope", "frozen_artifacts", "independent_review"}
+        expected_id = "G-REQ-HANDOFF-001"
+        required_paths = {"mission.md", "constitution.md", "specification.md", "backlog.md"}
+    else:
+        expected_fields = {"contract_id", "contract_version", "framework_revision", "source_gate", "scope", "frozen_artifacts", "contract_file", "required_checks", "review_inputs", "independent_review"}
+        expected_id = "G-ARCH-CONTRACT-001"
+        required_paths = {"specification.md", "design.md", "backlog.md"}
+
+    problems: list[str] = []
+    if set(manifest) != expected_fields:
+        problems.append(f"{manifest_path.as_posix()}: fields must be exactly {', '.join(sorted(expected_fields))}")
+    if manifest.get("contract_id") != expected_id or manifest.get("contract_version") != HANDOFF_CONTRACT_VERSION:
+        problems.append(f"{manifest_path.as_posix()}: unsupported contract identity or version")
+    if manifest.get("source_gate") != gate_id:
+        problems.append(f"{manifest_path.as_posix()}: source_gate must be '{gate_id}'")
+    if manifest.get("framework_revision") != revision:
+        problems.append(f"{manifest_path.as_posix()}: framework_revision does not match .sdd/framework.lock.json")
+    scope = manifest.get("scope")
+    if not isinstance(scope, str) or not scope.strip() or "<" in scope or ">" in scope:
+        problems.append(f"{manifest_path.as_posix()}: scope must be a populated string without template markers")
+
+    frozen_artifacts = manifest.get("frozen_artifacts")
+    if not isinstance(frozen_artifacts, list) or not frozen_artifacts:
+        problems.append(f"{manifest_path.as_posix()}: frozen_artifacts must be a non-empty array")
+    else:
+        seen_paths: set[str] = set()
+        observed_paths: set[str] = set()
+        for index, item in enumerate(frozen_artifacts, 1):
+            label = f"{manifest_path.as_posix()} frozen_artifacts[{index}]"
+            problems.extend(check_frozen_artifact(root, item, label))
+            if isinstance(item, dict) and isinstance(item.get("path"), str):
+                relative = item["path"]
+                if relative in seen_paths:
+                    problems.append(f"{label}: duplicate frozen artifact path '{relative}'")
+                seen_paths.add(relative)
+                observed_paths.add(relative)
+        for required_path in sorted(required_paths - observed_paths):
+            problems.append(f"{manifest_path.as_posix()}: frozen_artifacts must include '{required_path}'")
+
+    problems.extend(check_review_reference(root, manifest.get("independent_review"), manifest_path.as_posix()))
+
+    if gate_id == "G-ARCH":
+        contract_file = manifest.get("contract_file")
+        if not isinstance(contract_file, dict) or set(contract_file) != {"path", "sha256"}:
+            problems.append(f"{manifest_path.as_posix()}: contract_file must define exactly path and sha256")
+        else:
+            contract_path, contract_error = safe_file(root, str(contract_file.get("path", "")))
+            digest = contract_file.get("sha256")
+            if contract_error or contract_path is None:
+                problems.append(f"{manifest_path.as_posix()} contract_file: {contract_error or 'file is missing'}")
+            elif not isinstance(digest, str) or not SHA256_RE.fullmatch(digest):
+                problems.append(f"{manifest_path.as_posix()} contract_file: sha256 is malformed")
+            elif file_sha256(contract_path) != digest:
+                problems.append(f"{manifest_path.as_posix()} contract_file: frozen contract digest does not match")
+        checks = manifest.get("required_checks")
+        if not isinstance(checks, list) or not checks:
+            problems.append(f"{manifest_path.as_posix()}: required_checks must be a non-empty array")
+        else:
+            check_ids: set[str] = set()
+            for index, check in enumerate(checks, 1):
+                label = f"{manifest_path.as_posix()} required_checks[{index}]"
+                if not isinstance(check, dict) or set(check) != {"id", "command", "assertions"}:
+                    problems.append(f"{label}: each check must define exactly id, command, and assertions")
+                    continue
+                check_id, command, assertions = check.get("id"), check.get("command"), check.get("assertions")
+                if not isinstance(check_id, str) or not check_id.strip() or check_id in check_ids:
+                    problems.append(f"{label}: id must be a unique non-empty string")
+                else:
+                    check_ids.add(check_id)
+                if not isinstance(command, str) or not command.strip() or "<" in command or ">" in command:
+                    problems.append(f"{label}: command must be a populated exact command")
+                if not isinstance(assertions, list) or not assertions or not all(isinstance(item, str) and item.strip() for item in assertions):
+                    problems.append(f"{label}: assertions must be a non-empty array of non-empty strings")
+        review_inputs = manifest.get("review_inputs")
+        if not isinstance(review_inputs, list):
+            problems.append(f"{manifest_path.as_posix()}: review_inputs must be an array")
+        else:
+            purposes: set[str] = set()
+            for index, review_input in enumerate(review_inputs, 1):
+                label = f"{manifest_path.as_posix()} review_inputs[{index}]"
+                if not isinstance(review_input, dict) or set(review_input) != {"purpose", "path", "id", "version", "sha256"}:
+                    problems.append(f"{label}: each review input must define exactly purpose, path, id, version, and sha256")
+                    continue
+                purpose = review_input.get("purpose")
+                if purpose not in {"historical-rule-index", "domain-contract", "security-review", "other"}:
+                    problems.append(f"{label}: unsupported review input purpose '{purpose}'")
+                problems.extend(
+                    check_frozen_artifact(
+                        root,
+                        {key: review_input.get(key) for key in ("path", "id", "version", "sha256")},
+                        label,
+                    )
+                )
+                if isinstance(purpose, str):
+                    key = f"{purpose}:{review_input.get('path')}"
+                    if key in purposes:
+                        problems.append(f"{label}: duplicate review input '{key}'")
+                    purposes.add(key)
+    return problems
+
+
+def application_governance_problems(root: Path, gate_records: list[tuple[Path, dict[str, str]]]) -> list[str]:
+    """Check a versioned app framework lock and gate handoff manifests when adopted."""
+    lock_path = root / APP_FRAMEWORK_LOCK
+    has_manifest = any((root / path).exists() for path in APP_HANDOFFS.values())
+    problems: list[str] = []
+    revision = ""
+    if lock_path.exists():
+        safe_lock_path, lock_path_error = safe_file(root, APP_FRAMEWORK_LOCK.as_posix())
+        if lock_path_error or safe_lock_path is None:
+            return [f"{APP_FRAMEWORK_LOCK.as_posix()}: {lock_path_error or 'could not resolve lock'}"]
+        lock, parse_error = load_json_object(safe_lock_path)
+        if parse_error or lock is None:
+            return [f"{APP_FRAMEWORK_LOCK.as_posix()}: invalid JSON framework lock: {parse_error or 'invalid object'}"]
+        expected_fields = {"lock_version", "framework_repository", "framework_revision", "artifact_contract_id", "artifact_contract_version", "locked_files"}
+        if set(lock) != expected_fields:
+            problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: fields must be exactly {', '.join(sorted(expected_fields))}")
+        revision_value = lock.get("framework_revision")
+        if lock.get("lock_version") != APP_LOCK_VERSION or lock.get("artifact_contract_id") != "ARTIFACT-CONTRACT-001" or lock.get("artifact_contract_version") != 1:
+            problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: unsupported framework or artifact contract version")
+        if not isinstance(revision_value, str) or not FRAMEWORK_REVISION_RE.fullmatch(revision_value):
+            problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: framework_revision must be a 40-character lowercase commit SHA")
+        else:
+            revision = revision_value
+        repository = lock.get("framework_repository")
+        if not isinstance(repository, str) or not repository.startswith("https://github.com/"):
+            problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: framework_repository must be an HTTPS GitHub repository URL")
+        locked_files = lock.get("locked_files")
+        if not isinstance(locked_files, dict) or set(locked_files) != set(APP_LOCKED_FILES):
+            problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: locked_files must cover exactly the validator, both handoff templates, gate-record template, and SDD workflow")
+        else:
+            for relative in APP_LOCKED_FILES:
+                expected_digest = locked_files.get(relative)
+                path, error = safe_file(root, relative)
+                if error or path is None:
+                    problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()} ({relative}): locked file {error or 'is missing'}")
+                elif not isinstance(expected_digest, str) or not SHA256_RE.fullmatch(expected_digest):
+                    problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()} ({relative}): locked digest is malformed")
+                elif file_sha256(path) != expected_digest:
+                    problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()} ({relative}): file digest differs from the initialized framework snapshot")
+
+    for gate_id, manifest_path in APP_HANDOFFS.items():
+        if (root / manifest_path).exists():
+            if not revision:
+                problems.append(f"{manifest_path.as_posix()}: a versioned .sdd/framework.lock.json is required")
+            else:
+                problems.extend(validate_handoff_manifest(root, gate_id, revision))
+
+    for path, data in gate_records:
+        gate_id = data.get("gate-id", "")
+        if gate_id not in APP_HANDOFFS:
+            continue
+        result = data.get("gate-result", "").lower()
+        if not result:
+            problems.append(f"{path.relative_to(root).as_posix()}: {gate_id} gate record must declare gate-result")
+        elif result not in GATE_RESULTS:
+            problems.append(f"{path.relative_to(root).as_posix()}: invalid gate-result '{data.get('gate-result')}'")
+        if result in {"passed", "passed-with-accepted-risk"}:
+            expected_manifest = APP_HANDOFFS[gate_id].as_posix()
+            if data.get("handoff-manifest") != expected_manifest:
+                problems.append(f"{path.relative_to(root).as_posix()}: passed {gate_id} record must link handoff-manifest '{expected_manifest}'")
+            if not revision:
+                problems.append(f"{path.relative_to(root).as_posix()}: passed {gate_id} record requires a versioned .sdd/framework.lock.json")
+            if not (root / APP_HANDOFFS[gate_id]).is_file():
+                problems.append(f"{path.relative_to(root).as_posix()}: passed {gate_id} record has no populated {expected_manifest}")
+
+    if has_manifest and not lock_path.exists():
+        problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: required because a handoff manifest is present")
+    return problems
 
 
 def safe_file(root: Path, relative: str) -> tuple[Path | None, str | None]:
@@ -330,6 +601,7 @@ def command_list(_: argparse.Namespace) -> int:
 def command_validate(_: argparse.Namespace) -> int:
     problems: list[str] = []
     seen: dict[str, Path] = {}
+    gate_records: list[tuple[Path, dict[str, str]]] = []
     app_project = is_app_project(ROOT)
     if app_project:
         for filename in missing_app_canonical_files(ROOT):
@@ -355,6 +627,8 @@ def command_validate(_: argparse.Namespace) -> int:
                 f"{rel}: invalid artifact status '{status}'; expected one of "
                 f"{', '.join(sorted(ALLOWED_STATUSES))}"
             )
+        if data.get("type") in {"gate-record", "lifecycle-gate-record"}:
+            gate_records.append((path, data))
         artifact_id = data.get("id", "")
         if artifact_id:
             if not ID_RE.fullmatch(artifact_id):
@@ -381,6 +655,8 @@ def command_validate(_: argparse.Namespace) -> int:
             )
             if not canonical_app_file and not stable_workflow_path and not valid_app_id_name and not path.name.startswith(artifact_id):
                 problems.append(f"{rel}: filename must begin with {artifact_id}")
+    if app_project:
+        problems.extend(application_governance_problems(ROOT, gate_records))
     if problems:
         print("\n".join(f"ERROR {item}" for item in problems), file=sys.stderr)
         return 1

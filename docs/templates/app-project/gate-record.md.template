@@ -7,6 +7,9 @@ version: 0.1
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 related-artifacts: <APP>-SPEC-001
+gate-id: G-<GATE-ID>
+gate-result: not-run
+handoff-manifest:
 ---
 
 # <APP>-GATE-<GATE-ID>-001 — <Gate name> result

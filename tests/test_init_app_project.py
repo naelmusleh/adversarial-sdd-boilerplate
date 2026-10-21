@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 import sys
@@ -31,7 +32,17 @@ SUPPORTING_ARTIFACTS = {
     "delivery/releases/RELEASE-001.md",
     "operations/RUNBOOK.md",
 }
-BASE_FILES = {"README.md", "AGENTS.md", ".gitignore", "scripts/artifacts.py"}
+BASE_FILES = {
+    "README.md",
+    "AGENTS.md",
+    ".gitignore",
+    "scripts/artifacts.py",
+    ".sdd/framework.lock.json",
+    ".sdd/G-REQ-HANDOFF.json.template",
+    ".sdd/G-ARCH-CONTRACT.json.template",
+    "docs/templates/app-project/gate-record.md.template",
+    ".github/workflows/sdd-contract-validation.yml",
+}
 
 
 class InitAppProjectTests(unittest.TestCase):
@@ -64,11 +75,16 @@ class InitAppProjectTests(unittest.TestCase):
 
             files = {str(path.relative_to(target)) for path in target.rglob("*") if path.is_file()}
             self.assertEqual(files, CORE_ARTIFACTS | BASE_FILES)
-            self.assertEqual(len(files), 9)
+            self.assertEqual(len(files), 14)
             generated_readme = (target / "README.md").read_text(encoding="utf-8")
             self.assertIn("EXAMPLE-DECISION-001", generated_readme)
             self.assertIn("Give your AI agent the app idea", generated_readme)
             self.assertIn("The agent drafts [`mission.md`](mission.md)", generated_readme)
+            lock = json.loads((target / ".sdd/framework.lock.json").read_text(encoding="utf-8"))
+            self.assertRegex(lock["framework_revision"], r"^[a-f0-9]{40}$")
+            self.assertIn(f"/blob/{lock['framework_revision']}/", generated_readme)
+            req_template = json.loads((target / ".sdd/G-REQ-HANDOFF.json.template").read_text(encoding="utf-8"))
+            self.assertEqual(req_template["framework_revision"], lock["framework_revision"])
             validation = subprocess.run(
                 [sys.executable, str(target / "scripts" / "artifacts.py"), "validate"],
                 cwd=target,
@@ -87,7 +103,7 @@ class InitAppProjectTests(unittest.TestCase):
 
             files = {str(path.relative_to(target)) for path in target.rglob("*") if path.is_file()}
             self.assertEqual(files, CORE_ARTIFACTS | SUPPORTING_ARTIFACTS | BASE_FILES)
-            self.assertEqual(len(files), 21)
+            self.assertEqual(len(files), 26)
             generated_readme = (target / "README.md").read_text(encoding="utf-8")
             self.assertIn("EXAMPLE-DECISION-002", generated_readme)
             validation = subprocess.run(
@@ -101,7 +117,8 @@ class InitAppProjectTests(unittest.TestCase):
             self.assertIn("Validated 17 artifact(s).", validation.stdout)
             handshake = (target / "architecture" / "EXAMPLE-ARCH-HANDSHAKE-001.md").read_text(encoding="utf-8")
             self.assertIn("./.sdd/G-ARCH-CONTRACT.json", handshake)
-            self.assertIn("LOCAL_FUNCTIONAL_ALPHA", handshake)
+            self.assertIn("Choose commands for this app's actual stack", handshake)
+            self.assertNotIn("LOCAL_FUNCTIONAL_ALPHA", handshake)
 
     def test_dry_run_does_not_create_target(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -110,6 +127,14 @@ class InitAppProjectTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("mission.md", result.stdout)
             self.assertNotIn("reviews/REVIEW-001.md", result.stdout)
+            self.assertFalse(target.exists())
+
+    def test_invalid_archive_revision_fails_before_creating_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "app"
+            result = self.invoke(target, "--framework-revision", "main")
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("exact 40-character lowercase commit SHA", result.stderr)
             self.assertFalse(target.exists())
 
     def test_nonempty_target_is_preserved(self) -> None:
@@ -134,6 +159,10 @@ class InitAppProjectTests(unittest.TestCase):
             shutil.copytree(ROOT / "docs" / "templates" / "app-project", templates)
             shutil.copy2(INITIALIZER, scripts / INITIALIZER.name)
             shutil.copy2(ROOT / "scripts" / "artifacts.py", scripts / "artifacts.py")
+            shutil.copytree(ROOT / ".sdd", source / ".sdd")
+            revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True
+            ).stdout.strip()
             target = temporary_root / "example-app"
 
             result = subprocess.run(
@@ -146,6 +175,8 @@ class InitAppProjectTests(unittest.TestCase):
                     "EXAMPLE",
                     "--target",
                     str(target),
+                    "--framework-revision",
+                    revision,
                 ],
                 cwd=temporary_root,
                 capture_output=True,
@@ -155,6 +186,7 @@ class InitAppProjectTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertFalse((source / ".git").exists())
             generated_readme = (target / "README.md").read_text(encoding="utf-8")
+            self.assertIn(f"/tree/{revision}", generated_readme)
             self.assertIn("https://github.com/naelmusleh/adversarial-sdd-boilerplate", generated_readme)
             validation = subprocess.run(
                 [sys.executable, str(target / "scripts" / "artifacts.py"), "validate"],

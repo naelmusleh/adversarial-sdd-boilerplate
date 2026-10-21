@@ -30,6 +30,10 @@
       "docs/templates/app-project/design.md.template",
       "docs/templates/app-project/backlog.md.template",
       "docs/templates/app-project/architect-handshake.md.template",
+      "docs/templates/app-project/gate-record.md.template",
+      "docs/templates/app-project/sdd-contract-validation.yml.template",
+      ".sdd/G-REQ-HANDOFF.json.template",
+      ".sdd/G-ARCH-CONTRACT.json.template",
       "framework/capabilities/CAP-006-adversarial-review-daemon.md"
     ],
     "required_artifacts": [
