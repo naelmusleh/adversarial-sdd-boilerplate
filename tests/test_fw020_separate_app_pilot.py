@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -77,8 +78,22 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             )
         cls._git(cls.app, "add", ".sdd/gate-runs")
         cls._git(cls.app, "commit", "-m", "test: add ten in-progress gate fixtures")
+        cls.app_revision = cls._git(cls.app, "rev-parse", "HEAD").stdout.strip()
         cls.baseline = Path(cls.temporary.name) / "baseline"
         shutil.copytree(cls.app, cls.baseline, ignore=shutil.ignore_patterns(".git"))
+        evidence_path = os.environ.get("FW020_PILOT_EVIDENCE_PATH")
+        if evidence_path:
+            evidence = {
+                "framework_revision": cls.framework_revision,
+                "app_source_revision": cls.source_revision,
+                "app_gate_records_revision": cls.app_revision,
+                "gate_run_count": 10,
+                "gate_results": {gate: "in-progress" for gate in GATES},
+                "app_remote": None,
+                "product_source_present": False,
+                "synthetic_only": True,
+            }
+            Path(evidence_path).write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -131,6 +146,7 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
     def test_app_is_separate_disposable_pinned_and_has_ten_truthful_in_progress_gates(self) -> None:
         lock = json.loads((self.baseline / ".sdd/framework.lock.json").read_text(encoding="utf-8"))
         self.assertEqual(lock["framework_revision"], self.framework_revision)
+        self.assertRegex(self.app_revision, r"^[a-f0-9]{40}$")
         self.assertTrue((self.app / ".git").is_dir())
         self.assertEqual(self._git(self.app, "remote", "-v").stdout, "")
         self.assertFalse(any((self.app / folder).exists() for folder in ("src", "services", "apps")))
@@ -409,6 +425,35 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         output = result.stdout + result.stderr
         self.assertNotEqual(result.returncode, 0, output)
         self.assertIn("[G-IMPL]", output)
+
+    def test_skipped_unavailable_or_failed_required_check_cannot_support_impl_pass(self) -> None:
+        for check_result in ("not-run", "skipped", "unavailable", "failed"):
+            def mutate(root: Path, check_result=check_result) -> None:
+                path, record = self._record(root, "G-IMPL")
+                record["gate_result"] = "passed"
+                record["gate_data"]["selected_task_id"] = "FIXTURE-TASK-001"
+                record["gate_data"]["criterion_check_mappings"] = [
+                    {"criterion_id": item["criterion_id"], "check_ids": ["PILOT-CHECK"], "manual_method": None}
+                    for item in record["criteria_results"]
+                ]
+                record["gate_data"]["required_checks"] = [{
+                    "check_id": "PILOT-CHECK", "command_or_procedure": "synthetic check",
+                    "tool_runtime_version": "synthetic runtime", "source_revision": self.source_revision,
+                    "scope": "synthetic fixture", "pass_condition": "success", "result": check_result,
+                    "evidence_id": "MISSING-CHECK-EVIDENCE",
+                }]
+                record["gate_data"]["review_evidence_ids"] = ["MISSING-REVIEW"]
+                for item in record["criteria_results"]:
+                    item["outcome"] = "pass"
+                    item["evidence_ids"] = ["MISSING-CHECK-EVIDENCE"]
+                self._save(path, record)
+
+            with self.subTest(check_result=check_result):
+                _, result = self._case(mutate)
+                output = result.stdout + result.stderr
+                self.assertNotEqual(result.returncode, 0, output)
+                self.assertIn("[G-IMPL]", output)
+                self.assertIn("$.gate_data.required_checks[0].result", output)
 
 
 if __name__ == "__main__":
