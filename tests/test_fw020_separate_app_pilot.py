@@ -13,6 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 GATE_FIXTURES = ROOT / "docs/framework/examples/gate-contract-v1"
+SYNTHETIC_EXCLUSION = "This synthetic governance pilot does not build or release FlagLite."
 GATES = (
     "G-INTENT", "G-SETUP", "G-REQ", "G-FEAS", "G-COVERAGE",
     "G-CX", "G-ARCH", "G-IMPL", "G-RELEASE", "G-OPERATE",
@@ -35,6 +36,13 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             "--prefix", "FLAGLITE", "--target", str(cls.app),
             "--include-lifecycle-records", "--framework-revision", cls.framework_revision,
         ], cwd=ROOT, check=True, text=True, capture_output=True)
+        mission_path = cls.app / "mission.md"
+        mission_text = mission_path.read_text(encoding="utf-8")
+        mission_text = mission_text.replace(
+            "## Owner and references",
+            f"{SYNTHETIC_EXCLUSION}\n\n## Owner and references",
+        )
+        mission_path.write_text(mission_text, encoding="utf-8")
         subprocess.run(["git", "init", "-q"], cwd=cls.app, check=True)
         cls._git(cls.app, "add", ".")
         cls._git(cls.app, "commit", "-m", "chore: initialize synthetic FW020 app")
@@ -250,6 +258,8 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             "sha256": digest, "source_revision": self.source_revision,
         }
         record["scope"]["artifact_refs"].append(mission_ref)
+        record["scope"]["exclusions"] = [{"item": SYNTHETIC_EXCLUSION, "reason": "synthetic-only pilot boundary",
+            "authority": "fixture owner", "downstream_effect": "no product implementation or release"}]
         record["source_snapshot"]["files"].append(mission_ref)
         evidence_id = "EVIDENCE-MISSION-001"
         decision_id = "OWNER-INTENT-001"
@@ -272,6 +282,22 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         for criterion in record["criteria_results"]:
             criterion.update({"outcome": "pass", "evidence_ids": [evidence_id], "owner_decision_ids": [decision_id]})
         return record, base
+
+    @staticmethod
+    def _refresh_mission_digest(root: Path, record: dict[str, object], exclusion: str) -> None:
+        digest = "sha256:" + hashlib.sha256((root / "mission.md").read_bytes()).hexdigest()
+        for section in (record["scope"]["artifact_refs"], record["source_snapshot"]["files"]):
+            for ref in section:
+                if ref.get("path") == "mission.md":
+                    ref["sha256"] = digest
+        for evidence in record["evidence"]:
+            if evidence.get("type") == "artifact-reference" and evidence.get("details", {}).get("path") == "mission.md":
+                evidence["record_sha256"] = digest
+                evidence["details"]["sha256"] = digest
+        for decision in record["authority"]["owner_decisions"]:
+            decision["choice"] = f"approve-intent: FLAGLITE-MISSION-001; digest={digest}"
+        record["scope"]["exclusions"] = [{"item": exclusion, "reason": "synthetic-only pilot boundary",
+            "authority": "fixture owner", "downstream_effect": "no product implementation or release"}]
 
     def test_intent_synthetic_positive_pass_and_forged_manual_evidence_boundary(self) -> None:
         def positive(root: Path) -> None:
@@ -304,6 +330,27 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0, output)
         self.assertIn("requires artifact-reference evidence for the current mission.md", output)
         self.assertIn("requires accountable-owner approval bound to mission ID and exact mission digest", output)
+
+    def test_intent_pass_rejects_missing_or_unlinked_negative_boundaries(self) -> None:
+        def missing_from_mission(root: Path) -> None:
+            record, _ = self._synthetic_intent_pass(root)
+            mission_path = root / "mission.md"
+            mission_path.write_text(mission_path.read_text(encoding="utf-8").replace(SYNTHETIC_EXCLUSION, ""), encoding="utf-8")
+            self._refresh_mission_digest(root, record, SYNTHETIC_EXCLUSION)
+            self._save(root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-INTENT-002.json", record)
+        _, result = self._case(missing_from_mission)
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn("passed G-INTENT exclusion must be stated in the current mission.md", output)
+
+        def no_exclusions(root: Path) -> None:
+            record, _ = self._synthetic_intent_pass(root)
+            record["scope"]["exclusions"] = []
+            self._save(root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-INTENT-002.json", record)
+        _, result = self._case(no_exclusions)
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn("passed G-INTENT requires explicit negative-space scope.exclusions", output)
 
     def test_setup_pass_uses_observed_local_validation_and_latest_intent_pass(self) -> None:
         def setup_pass(root: Path) -> None:
@@ -447,6 +494,91 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0, output)
                 self.assertIn(expected, output)
 
+    def test_happy_path_only_architecture_prose_and_silent_operations_cannot_pass(self) -> None:
+        cases = (
+            ("G-COVERAGE", lambda d: [row.update(applicable=False) for row in d["gate_data"]["failure_mode_applicability"]],
+             "passed G-COVERAGE requires at least one applicable failure-mode row"),
+            ("G-ARCH", lambda d: d["gate_data"].update({"verification_contracts": []}),
+             "passed G-ARCH requires at least one verified contract with linked evidence"),
+            ("G-OPERATE", lambda d: d["gate_data"].update({"telemetry_gaps": [], "runbook_evidence_ids": ["PILOT-OBSERVATION"]}),
+             "passed G-OPERATE requires an explicit telemetry_gaps declaration"),
+        )
+        for gate_id, change, expected in cases:
+            def mutate(root: Path, gate_id=gate_id, change=change) -> None:
+                path, record = self._record(root, gate_id)
+                self._attach_synthetic_observation(record)
+                record["gate_result"] = "passed"
+                for item in record["criteria_results"]:
+                    item["outcome"] = "pass"
+                change(record)
+                self._save(path, record)
+
+            with self.subTest(gate=gate_id):
+                _, result = self._case(mutate)
+                output = result.stdout + result.stderr
+                self.assertNotEqual(result.returncode, 0, output)
+                self.assertIn(expected, output)
+
+        def architecture_text_observation(root: Path) -> None:
+            path, record = self._record(root, "G-ARCH")
+            self._attach_synthetic_observation(record)
+            record["gate_result"] = "passed"
+            for item in record["criteria_results"]:
+                item["outcome"] = "pass"
+            record["gate_data"]["verification_contracts"] = [{
+                "contract": "Tenant data is isolated in memory.",
+                "method": "Reviewer states the contract is satisfied.",
+                "evidence_id": "PILOT-OBSERVATION",
+            }]
+            self._save(path, record)
+
+        _, result = self._case(architecture_text_observation)
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn("narrative observations cannot verify a data/security contract", output)
+
+    def test_release_mismatched_artifact_hash_and_authorization_cannot_pass(self) -> None:
+        def claimed_release(root: Path, mismatch: str) -> None:
+            path, record = self._record(root, "G-RELEASE")
+            self._attach_synthetic_observation(record)
+            record["gate_result"] = "passed"
+            for item in record["criteria_results"]:
+                item["outcome"] = "pass"
+            digest_a = "sha256:" + "a" * 64
+            digest_b = "sha256:" + "b" * 64
+            record["gate_data"].update({"tested_commit_sha": self.source_revision,
+                "artifact_sha256": digest_a, "required_check_evidence_ids": ["PILOT-RELEASE-CI"],
+                "security_accessibility_platform_evidence_ids": ["PILOT-RELEASE-CI"],
+                "owner_authorization_id": "PILOT-OWNER-AUTH", "support_owner": "synthetic owner"})
+            record["evidence"].append({
+                "evidence_id": "PILOT-RELEASE-CI", "type": "ci-run", "criterion_ids": [],
+                "observed_at": "2026-10-21T13:30:00Z", "observed_by": "synthetic CI",
+                "source_revision": self.source_revision, "scope_ref": "synthetic release",
+                "locator": "synthetic-run", "record_sha256": "sha256:" + "e" * 64,
+                "limitations": ["synthetic only"],
+                "details": {"provider": "synthetic", "run_id_or_url": "synthetic-run",
+                    "commit_sha": self.source_revision, "workflow_job": "verify", "conclusion": "success", "scope": "synthetic"},
+            })
+            record["change_control"].update({"commit_sha": self.source_revision,
+                "branch_ref": "refs/heads/synthetic-release", "remote": "synthetic://no-remote",
+                "push_result": "pushed", "release_artifact_sha256": digest_b,
+                "authorization_ref": "PILOT-OWNER-AUTH" if mismatch == "artifact" else "OTHER-AUTH",
+                "ci_runs": [{"provider": "synthetic", "run_id_or_url": "synthetic-run",
+                    "commit_sha": self.source_revision, "check": "verify", "status": "passed", "scope": "synthetic"}]})
+            self._save(path, record)
+
+        for mismatch, expected in (
+            ("artifact", "G-RELEASE artifact digest must match change_control.release_artifact_sha256"),
+            ("authorization", "G-RELEASE publication authorization_ref must match gate_data.owner_authorization_id"),
+        ):
+            def mutate(root: Path, mismatch=mismatch) -> None:
+                claimed_release(root, mismatch)
+            with self.subTest(mismatch=mismatch):
+                _, result = self._case(mutate)
+                output = result.stdout + result.stderr
+                self.assertNotEqual(result.returncode, 0, output)
+                self.assertIn(expected, output)
+
     def test_textual_independent_review_claim_and_failed_push_do_not_pass(self) -> None:
         def self_review(root: Path) -> None:
             path, record = self._record(root, "G-REQ")
@@ -509,6 +641,31 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0, output)
                 self.assertIn("[G-IMPL]", output)
                 self.assertIn("$.gate_data.required_checks[0].result", output)
+
+        def copied_terminal_output(root: Path) -> None:
+            path, record = self._record(root, "G-IMPL")
+            self._attach_synthetic_observation(record)
+            record["gate_result"] = "passed"
+            record["gate_data"]["selected_task_id"] = "FIXTURE-TASK-001"
+            record["gate_data"]["criterion_check_mappings"] = [
+                {"criterion_id": item["criterion_id"], "check_ids": ["PILOT-CHECK"], "manual_method": None}
+                for item in record["criteria_results"]
+            ]
+            record["gate_data"]["required_checks"] = [{
+                "check_id": "PILOT-CHECK", "command_or_procedure": "synthetic check",
+                "tool_runtime_version": "synthetic runtime", "source_revision": self.source_revision,
+                "scope": "synthetic fixture", "pass_condition": "success", "result": "passed",
+                "evidence_id": "PILOT-OBSERVATION",
+            }]
+            record["gate_data"]["review_evidence_ids"] = ["PILOT-OBSERVATION"]
+            for item in record["criteria_results"]:
+                item.update({"outcome": "pass", "evidence_ids": ["PILOT-OBSERVATION"]})
+            self._save(path, record)
+
+        _, result = self._case(copied_terminal_output)
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn("evidence must be command-execution or ci-run", output)
 
 
 if __name__ == "__main__":

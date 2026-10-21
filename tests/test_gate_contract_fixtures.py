@@ -31,7 +31,11 @@ PREFIX_BY_GATE = {
     "G-ARCH": "GARCH", "G-IMPL": "GIMPL", "G-RELEASE": "GREL",
     "G-OPERATE": "GOP",
 }
-SYNTHETIC_MISSION = "---\nid: SYNTHETIC-MISSION-001\ntype: mission\ntitle: Synthetic mission fixture\nstatus: draft\nversion: 1.0\n---\n\nSynthetic content for validator tests only.\n"
+SYNTHETIC_EXCLUSION = "Synthetic fixture does not build or release a product."
+SYNTHETIC_EXCLUSION_RECORD = {"item": SYNTHETIC_EXCLUSION, "reason": "fixture boundary",
+                              "authority": "fixture owner", "downstream_effect": "no product implementation"}
+SYNTHETIC_MISSION = ("---\nid: SYNTHETIC-MISSION-001\ntype: mission\ntitle: Synthetic mission fixture\nstatus: draft\nversion: 1.0\n---\n\n"
+                     "## Boundaries\n\n" + SYNTHETIC_EXCLUSION + "\n")
 
 
 class GateContractFixtureTests(unittest.TestCase):
@@ -128,6 +132,7 @@ class GateContractFixtureTests(unittest.TestCase):
         record.update({"record_id": "SYNTHETIC-INTENT-PASS-002", "record_version": 2,
                        "supersedes_run_id": baseline["record_id"], "created_at": "2026-10-20T13:00:00Z",
                        "gate_result": "passed", "_baseline_record": baseline})
+        record["scope"]["exclusions"] = [SYNTHETIC_EXCLUSION_RECORD]
         record["scope"]["artifact_refs"].append(mission_ref)
         record["source_snapshot"]["files"].append(mission_ref)
         evidence_id = "EVIDENCE-MISSION-001"
@@ -150,6 +155,17 @@ class GateContractFixtureTests(unittest.TestCase):
         for criterion in record["criteria_results"]:
             criterion.update({"outcome": "pass", "evidence_ids": [evidence_id], "owner_decision_ids": [decision_id]})
         self.assertEqual(self._validate_in_isolated_app(record, schema), [])
+
+        missing_negative_space = json.loads(json.dumps(record))
+        missing_negative_space["scope"]["exclusions"] = []
+        errors = self._validate_in_isolated_app(missing_negative_space, schema)
+        self.assertTrue(any("requires explicit negative-space scope.exclusions" in error for error in errors), errors)
+
+        unlinked_negative_space = json.loads(json.dumps(record))
+        unlinked_negative_space["scope"]["exclusions"] = [{"item": "A different exclusion absent from the mission.",
+            "reason": "fixture boundary", "authority": "fixture owner", "downstream_effect": "no product implementation"}]
+        errors = self._validate_in_isolated_app(unlinked_negative_space, schema)
+        self.assertTrue(any("exclusion must be stated in the current mission.md" in error for error in errors), errors)
 
         wrong_owner_digest = json.loads(json.dumps(record))
         wrong_owner_digest["authority"]["owner_decisions"][0]["choice"] = "approve-intent: SYNTHETIC-MISSION-001; digest=sha256:" + "0" * 64

@@ -1179,6 +1179,15 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                 mission_digest = file_sha256(mission_path) if mission_path.is_file() else None
                 if mission_evidence is None:
                     problems.append(f"{relative}: passed G-INTENT requires artifact-reference evidence for the current mission.md")
+                exclusions = record.get("scope", {}).get("exclusions", []) if isinstance(record.get("scope"), dict) else []
+                mission_text = mission_path.read_text(encoding="utf-8") if mission_path.is_file() else ""
+                exclusion_items = [item.get("item") for item in exclusions if isinstance(item, dict)] if isinstance(exclusions, list) else []
+                if not exclusion_items or not any(isinstance(item, str) and item.strip() for item in exclusion_items):
+                    problems.append(f"{relative}: passed G-INTENT requires explicit negative-space scope.exclusions")
+                else:
+                    for exclusion in exclusion_items:
+                        if not isinstance(exclusion, str) or not exclusion.strip() or exclusion.casefold() not in mission_text.casefold():
+                            problems.append(f"{relative}: passed G-INTENT exclusion must be stated in the current mission.md")
                 approval = next((
                     decision for decision in decisions
                     if isinstance(decision, dict)
@@ -1205,6 +1214,10 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                 if not _id_occurs_in_paths(root, task_id, ("backlog.md",)):
                     problems.append(f"{relative}: gate_data backlog task ID '{task_id}' does not resolve in backlog.md")
             if gate_id == "G-COVERAGE":
+                if record.get("gate_result") in {"passed", "passed-with-accepted-risk"}:
+                    applicability = gate_data.get("failure_mode_applicability", [])
+                    if not any(isinstance(row, dict) and row.get("applicable") is True for row in applicability):
+                        problems.append(f"{relative}: passed G-COVERAGE requires at least one applicable failure-mode row; a happy-path-only matrix cannot pass")
                 scope_surfaces = set(scope.get("surfaces", [])) if isinstance(scope, dict) else set()
                 scope_platforms = set(scope.get("platforms", [])) if isinstance(scope, dict) else set()
                 applicability = gate_data.get("platform_applicability", [])
@@ -1380,9 +1393,21 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                     if not _has_independent_reviewer(reviewers):
                         problems.append(f"{relative}: passed G-REQ requires an independent reviewer result, context disclosure, and author_overlap 'none'")
             if gate_id == "G-ARCH" and record.get("gate_result") in {"passed", "passed-with-accepted-risk"}:
+                verification_contracts = gate_data.get("verification_contracts", [])
+                if not verification_contracts:
+                    problems.append(f"{relative}: passed G-ARCH requires at least one verified contract with linked evidence; prose assertions alone cannot pass")
+                for contract in verification_contracts:
+                    if not isinstance(contract, dict) or not isinstance(contract.get("evidence_id"), str) or contract.get("evidence_id") not in evidence_by_id:
+                        problems.append(f"{relative}: passed G-ARCH verification contract must link a resolvable evidence record")
+                    elif evidence_by_id[contract["evidence_id"]].get("type") not in {"command-execution", "ci-run"}:
+                        problems.append(f"{relative}: passed G-ARCH verification contract requires command-execution or ci-run evidence; narrative observations cannot verify a data/security contract")
                 reviewers = record.get("authority", {}).get("reviewers", [])
                 if not _has_independent_reviewer(reviewers):
                     problems.append(f"{relative}: passed G-ARCH requires an independent reviewer result, context disclosure, and author_overlap 'none'")
+            if gate_id == "G-OPERATE" and record.get("gate_result") in {"passed", "passed-with-accepted-risk"}:
+                telemetry_gaps = gate_data.get("telemetry_gaps", [])
+                if not telemetry_gaps or not any(isinstance(item, str) and item.strip() for item in telemetry_gaps):
+                    problems.append(f"{relative}: passed G-OPERATE requires an explicit telemetry_gaps declaration; use an explicit none-known statement when applicable")
             if gate_id == "G-RELEASE":
                 change = record.get("change_control", {})
                 if not isinstance(change, dict):
