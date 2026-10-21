@@ -748,10 +748,13 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             capture_path.write_bytes(capture_bytes)
             evidence_id = "SYNTHETIC-PNG-CAPTURE-001"
             record["gate_data"]["interaction_evidence_ids"] = [evidence_id]
+            criterion_ids = [item["criterion_id"] for item in record["criteria_results"]]
+            for item in record["criteria_results"]:
+                item["evidence_ids"] = [evidence_id]
             record["evidence"] = [{
                 "evidence_id": evidence_id,
                 "type": "interaction-capture",
-                "criterion_ids": [],
+                "criterion_ids": criterion_ids,
                 "observed_at": "2026-10-21T15:30:00Z",
                 "observed_by": "synthetic fixture",
                 "source_revision": self.source_revision,
