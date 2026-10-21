@@ -8,8 +8,11 @@ import datetime as dt
 import hashlib
 import json
 import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_CANONICAL_FILES = ("mission.md", "constitution.md", "specification.md", "design.md", "backlog.md")
@@ -38,7 +41,9 @@ APP_LOCKED_FILES = (
 APP_LOCKED_FILES_V1 = APP_LOCKED_FILES
 APP_GATE_SCHEMA = Path(".sdd/schemas/gate-run-v1.schema.json")
 APP_GATE_SCHEMA_V1_1 = Path(".sdd/schemas/gate-run-v1.1.schema.json")
+APP_GATE_SCHEMA_V1_2 = Path(".sdd/schemas/gate-run-v1.2.schema.json")
 APP_GATE_TEMPLATE = Path(".sdd/gate-run-v1.json.template")
+APP_GATE_TEMPLATE_V1_2 = Path(".sdd/gate-run-v1.2.json.template")
 APP_GATE_RUNS = Path(".sdd/gate-runs")
 APP_LOCKED_FILES_V2 = APP_LOCKED_FILES_V1 + (APP_GATE_SCHEMA.as_posix(), APP_GATE_TEMPLATE.as_posix())
 APP_REQUIRED_CHECKS_SCHEMA = Path(".sdd/schemas/required-checks-v1.schema.json")
@@ -48,7 +53,14 @@ APP_CI_CHECK_RUNNER = "scripts/ci_checks.py"
 APP_LOCKED_FILES_V3 = APP_LOCKED_FILES_V2 + (
     APP_REQUIRED_CHECKS_SCHEMA.as_posix(), APP_REQUIRED_CHECKS_TEMPLATE.as_posix(), APP_CI_CHECK_RUNNER,
 )
-APP_LOCK_VERSIONS = {1, 2, 3}
+APP_TRUSTED_CI_SCHEMA = Path(".sdd/schemas/trusted-ci-v1.schema.json")
+APP_TRUSTED_CI_TEMPLATE = Path(".sdd/trusted-ci.json.template")
+APP_TRUSTED_CI = Path(".sdd/trusted-ci.json")
+APP_LOCKED_FILES_V4 = APP_LOCKED_FILES_V3 + (
+    APP_GATE_SCHEMA_V1_2.as_posix(), APP_GATE_TEMPLATE_V1_2.as_posix(),
+    APP_TRUSTED_CI_SCHEMA.as_posix(), APP_TRUSTED_CI_TEMPLATE.as_posix(),
+)
+APP_LOCK_VERSIONS = {1, 2, 3, 4}
 HANDOFF_CONTRACT_VERSION = 1
 MAX_JSON_BYTES = 1_048_576
 APP_REQUIREMENT_TABLES = (
@@ -604,7 +616,7 @@ def _app_contract_id_and_version(lock: dict[str, object], lock_version: int) -> 
 
 
 def _gate_schema_for_app(root: Path, contract_version: str) -> tuple[dict[str, object] | None, list[str]]:
-    schema_path_by_version = {"1.0": APP_GATE_SCHEMA, "1.1": APP_GATE_SCHEMA_V1_1}
+    schema_path_by_version = {"1.0": APP_GATE_SCHEMA, "1.1": APP_GATE_SCHEMA_V1_1, "1.2": APP_GATE_SCHEMA_V1_2}
     schema_relative = schema_path_by_version.get(contract_version)
     if schema_relative is None:
         return None, [f"{APP_FRAMEWORK_LOCK.as_posix()}: unsupported gate contract version '{contract_version}'"]
@@ -969,7 +981,7 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                     problems.append(f"{relative}: evidence '{eid}' is not reciprocally linked from criterion {cid}")
             if ev.get("source_revision") != record.get("source_snapshot", {}).get("commit_sha"):
                 problems.append(f"{relative}: evidence '{eid}' source_revision does not match the gate run source snapshot")
-            if contract_version == "1.1" and ev.get("scope_ref") != expected_scope_hash:
+            if contract_version in {"1.1", "1.2"} and ev.get("scope_ref") != expected_scope_hash:
                 problems.append(f"{relative}: evidence '{eid}' scope_ref does not match the canonical hash of this gate run scope")
             if ev.get("type") == "artifact-reference":
                 detail = ev.get("details", {})
@@ -993,7 +1005,7 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                     problems.append(f"{relative}: artifact-reference evidence '{eid}' path is invalid: {evidence_error}")
             if ev.get("type") == "command-execution":
                 detail = ev.get("details", {})
-                if contract_version == "1.1" and detail.get("scope") != ev.get("scope_ref"):
+                if contract_version in {"1.1", "1.2"} and detail.get("scope") != ev.get("scope_ref"):
                     problems.append(f"{relative}: command evidence '{eid}' detail scope does not match its scope_ref")
                 if not detail.get("stdout_ref") and not detail.get("stderr_ref"):
                     problems.append(f"{relative}: command evidence '{eid}' requires durable stdout_ref or stderr_ref evidence")
@@ -1011,7 +1023,7 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                 detail = ev.get("details", {})
                 if detail.get("commit_sha") != source_commit:
                     problems.append(f"{relative}: CI evidence '{eid}' commit_sha does not match the gate-run source snapshot")
-                if contract_version == "1.1" and detail.get("scope") != ev.get("scope_ref"):
+                if contract_version in {"1.1", "1.2"} and detail.get("scope") != ev.get("scope_ref"):
                     problems.append(f"{relative}: CI evidence '{eid}' detail scope does not match its scope_ref")
                 if any(
                     isinstance(item, dict) and item.get("outcome") == "pass" and eid in item.get("evidence_ids", [])
@@ -1130,7 +1142,7 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                         for field in ("condition", "safe_work_boundary"):
                             if not isinstance(dependency.get(field), str) or not dependency[field].strip():
                                 problems.append(f"{relative}: conditional feasibility task '{task_id}' requires {field}")
-                        if contract_version == "1.1" and (not isinstance(dependency.get("state_change_trigger"), str) or not dependency["state_change_trigger"].strip()):
+                        if contract_version in {"1.1", "1.2"} and (not isinstance(dependency.get("state_change_trigger"), str) or not dependency["state_change_trigger"].strip()):
                             problems.append(f"{relative}: conditional feasibility task '{task_id}' requires state_change_trigger")
                 for requirement_id in probe.get("requirement_ids", []):
                     if isinstance(scope, dict) and requirement_id not in scoped_requirements:
@@ -1149,7 +1161,7 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                 for field in ("state", "condition", "safe_work_boundary"):
                     if effect.get(field) != dependency.get(field):
                         problems.append(f"{relative}: feasibility task '{task_id}' dependency_effect {field} does not match its probe")
-                if contract_version == "1.1" and effect.get("state_change_trigger") != dependency.get("state_change_trigger"):
+                if contract_version in {"1.1", "1.2"} and effect.get("state_change_trigger") != dependency.get("state_change_trigger"):
                     problems.append(f"{relative}: feasibility task '{task_id}' dependency_effect state_change_trigger does not match its probe")
             for task_id in effect_by_task.keys() - probe_dependencies.keys():
                 problems.append(f"{relative}: dependency_effect task '{task_id}' has no matching feasibility probe dependency")
@@ -1159,7 +1171,7 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                     for field in ("condition", "safe_work_boundary"):
                         if not isinstance(effect.get(field), str) or not effect[field].strip():
                             problems.append(f"{relative}: conditional dependency effect '{task_id}' requires {field}")
-                    if contract_version == "1.1" and (not isinstance(effect.get("state_change_trigger"), str) or not effect["state_change_trigger"].strip()):
+                    if contract_version in {"1.1", "1.2"} and (not isinstance(effect.get("state_change_trigger"), str) or not effect["state_change_trigger"].strip()):
                         problems.append(f"{relative}: conditional dependency effect '{task_id}' requires state_change_trigger")
 
         # Gate profile evidence IDs must resolve to evidence records of the declared type.
@@ -1304,7 +1316,7 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                     if len(checks_by_id) != len(checks):
                         problems.append(f"{relative}: passing G-IMPL must use unique required check IDs")
                     app_lock, _ = load_json_object(root / APP_FRAMEWORK_LOCK)
-                    if app_lock and app_lock.get("lock_version") == 3:
+                    if app_lock and app_lock.get("lock_version") in {3, 4}:
                         manifest, manifest_problems = required_check_manifest(root)
                         problems.extend(manifest_problems)
                         if manifest is not None:
@@ -1333,6 +1345,35 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                                     for mapping in mappings
                                 ):
                                     problems.append(f"{relative}: G-IMPL criterion mappings must identify required manual check '{check_id}' in manual_method")
+                            if app_lock.get("lock_version") == 4:
+                                expected_check_ids = {item.get("check_id") for item in applicable}
+                                if set(checks_by_id) != expected_check_ids:
+                                    problems.append(f"{relative}: lock-v4 G-IMPL required_checks must exactly match the manifest-required checks for selected task '{selected_task}'")
+                                if record.get("gate_result") in {"passed", "passed-with-accepted-risk"}:
+                                    trusted_policy, trust_problems = trusted_ci_policy(root)
+                                    problems.extend(f"{relative}: {problem}" for problem in trust_problems)
+                                    if trusted_policy is None or trusted_policy.get("status") != "active":
+                                        problems.append(f"{relative}: lock-v4 G-IMPL PASS requires an active trusted CI policy")
+                                    else:
+                                        verified_evidence_ids: set[str] = set()
+                                        for observed_check in checks:
+                                            if not isinstance(observed_check, dict):
+                                                continue
+                                            evidence_id = observed_check.get("evidence_id")
+                                            if not isinstance(evidence_id, str) or evidence_id in verified_evidence_ids:
+                                                continue
+                                            verified_evidence_ids.add(evidence_id)
+                                            linked_evidence = evidence_by_id.get(evidence_id)
+                                            if linked_evidence is None:
+                                                continue
+                                            if linked_evidence.get("type") != "ci-run":
+                                                problems.append(f"{relative}: lock-v4 G-IMPL PASS cannot use local/manual command evidence; a provider-attested ci-run is required")
+                                                continue
+                                            problems.extend(_trusted_gimpl_attestation_problems(
+                                                root, record, linked_evidence, source_commit, trusted_policy,
+                                                [item for item in applicable if isinstance(item, dict)],
+                                                f"{relative} evidence '{evidence_id}'",
+                                            ))
                     for mapping in mappings:
                         if not isinstance(mapping, dict):
                             continue
@@ -1431,7 +1472,7 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                         artifact_digest = gate_data.get("artifact_sha256")
                         if authorization.get("decision_maker") != owner_identity:
                             problems.append(f"{relative}: G-RELEASE authorization must be made by the accountable owner")
-                        if contract_version == "1.1":
+                        if contract_version in {"1.1", "1.2"}:
                             if authorization.get("authorized_artifact_sha256") != artifact_digest or authorization.get("authorized_environment") != environment or authorization.get("authorized_release_window") != gate_data.get("release_window"):
                                 problems.append(f"{relative}: G-RELEASE authorization must exactly bind artifact digest, environment, and release window")
                             authorized_window = gate_data.get("release_window")
@@ -1538,6 +1579,238 @@ def required_check_manifest(root: Path) -> tuple[dict[str, object] | None, list[
     return manifest, problems
 
 
+def trusted_ci_policy(root: Path) -> tuple[dict[str, object] | None, list[str]]:
+    policy_path, path_error = safe_file(root, APP_TRUSTED_CI.as_posix())
+    if path_error or policy_path is None:
+        return None, [f"{APP_TRUSTED_CI.as_posix()}: {path_error or 'could not resolve policy'}"]
+    policy, parse_error = load_json_object(policy_path)
+    if parse_error or policy is None:
+        return None, [f"{APP_TRUSTED_CI.as_posix()}: invalid JSON policy: {parse_error or 'invalid object'}"]
+    schema_path, schema_error = safe_file(root, APP_TRUSTED_CI_SCHEMA.as_posix())
+    if schema_error or schema_path is None:
+        return None, [f"{APP_TRUSTED_CI_SCHEMA.as_posix()}: {schema_error or 'required schema is missing'}"]
+    schema, schema_parse_error = load_json_object(schema_path)
+    if schema_parse_error or schema is None:
+        return None, [f"{APP_TRUSTED_CI_SCHEMA.as_posix()}: invalid JSON Schema: {schema_parse_error or 'invalid object'}"]
+    schema_problems = schema_definition_problems(schema)
+    if schema_problems:
+        return None, [f"{APP_TRUSTED_CI_SCHEMA.as_posix()}: {problem}" for problem in schema_problems]
+    problems = [f"{APP_TRUSTED_CI.as_posix()}: {problem}" for problem in validate_schema_value(policy, schema, schema)]
+    if policy.get("status") == "active":
+        repo = policy.get("repository")
+        protected_ref = policy.get("protected_ref")
+        if isinstance(repo, str) and repo.lower() != repo:
+            problems.append(f"{APP_TRUSTED_CI.as_posix()}: repository must use lowercase canonical owner/repository spelling")
+        if isinstance(protected_ref, str):
+            try:
+                ref_result = subprocess.run(
+                    ["git", "check-ref-format", protected_ref], cwd=root,
+                    capture_output=True, check=False, timeout=5,
+                )
+                valid_git_ref = ref_result.returncode == 0
+            except (OSError, subprocess.TimeoutExpired):
+                valid_git_ref = False
+            if (".." in protected_ref or "//" in protected_ref or protected_ref.endswith("/")
+                    or not protected_ref.startswith("refs/heads/") or not valid_git_ref):
+                problems.append(f"{APP_TRUSTED_CI.as_posix()}: protected_ref is not a valid fully qualified branch ref")
+    lock, lock_error = load_json_object(root / APP_FRAMEWORK_LOCK)
+    if lock_error is None and isinstance(lock, dict) and lock.get("lock_version") == 4:
+        framework_url = lock.get("framework_repository")
+        parsed_framework = urlparse(framework_url) if isinstance(framework_url, str) else None
+        framework_repo = parsed_framework.path.strip("/") if parsed_framework and parsed_framework.netloc.lower() == "github.com" else ""
+        if policy.get("signer_digest") != lock.get("framework_revision"):
+            problems.append(f"{APP_TRUSTED_CI.as_posix()}: signer_digest must match the immutable framework revision in {APP_FRAMEWORK_LOCK.as_posix()}")
+        expected_signer = f"{framework_repo}/.github/workflows/sdd-trusted-ci-attest.yml" if framework_repo else None
+        if not expected_signer or policy.get("signer_workflow") != expected_signer:
+            problems.append(f"{APP_TRUSTED_CI.as_posix()}: signer_workflow must be the framework-owned reusable attester")
+    return policy, problems
+
+
+def _git_blob(root: Path, revision: str, relative: str) -> tuple[bytes | None, str | None]:
+    if not FRAMEWORK_REVISION_RE.fullmatch(revision):
+        return None, "source revision is not a full commit SHA"
+    try:
+        result = subprocess.run(
+            ["git", "cat-file", "blob", f"{revision}:{relative}"],
+            cwd=root, capture_output=True, check=False, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return None, f"could not read source-pinned {relative}: {exc}"
+    if result.returncode != 0:
+        return None, f"source commit does not contain {relative}"
+    return result.stdout, None
+
+
+def _trusted_gimpl_attestation_problems(
+    root: Path,
+    record: dict[str, object],
+    evidence: dict[str, object],
+    source_sha: str,
+    trusted_policy: dict[str, object],
+    applicable_checks: list[dict[str, object]],
+    label: str,
+) -> list[str]:
+    problems: list[str] = []
+    details = evidence.get("details")
+    details = details if isinstance(details, dict) else {}
+    attestation = details.get("attestation")
+    if not isinstance(attestation, dict):
+        return [f"{label}: lock-v4 G-IMPL PASS requires verified provider attestation metadata"]
+    report_relative = attestation.get("report_path")
+    report_path, report_error = safe_file(root, report_relative) if isinstance(report_relative, str) else (None, "report_path must be a repository-relative string")
+    if report_error or report_path is None:
+        return [f"{label}: attested CI report is unavailable: {report_error or 'file is missing'}"]
+    if report_path.is_symlink():
+        return [f"{label}: attested CI report cannot be a symbolic link"]
+    actual_report_sha = file_sha256(report_path)
+    if attestation.get("report_sha256") != actual_report_sha or evidence.get("record_sha256") != actual_report_sha:
+        problems.append(f"{label}: attested CI report digest does not match current report bytes")
+    report, report_error = load_json_object(report_path)
+    if report_error or report is None:
+        return problems + [f"{label}: attested CI report is invalid JSON: {report_error or 'invalid object'}"]
+
+    repo = trusted_policy.get("repository")
+    protected_ref = trusted_policy.get("protected_ref")
+    expected_workflow = f"{repo}/.github/workflows/sdd-contract-validation.yml" if isinstance(repo, str) else ""
+    gate_repo = record.get("repository")
+    gate_repo_url = gate_repo.get("url_or_path") if isinstance(gate_repo, dict) else None
+    parsed_gate_repo = urlparse(gate_repo_url) if isinstance(gate_repo_url, str) else None
+    if (not isinstance(repo, str) or parsed_gate_repo is None or parsed_gate_repo.scheme != "https"
+            or parsed_gate_repo.netloc != "github.com" or parsed_gate_repo.path.strip("/").lower() != repo
+            or parsed_gate_repo.query or parsed_gate_repo.fragment or parsed_gate_repo.username or parsed_gate_repo.password):
+        problems.append(f"{label}: trusted CI repository must match the gate record's GitHub repository")
+    source_manifest_bytes, manifest_error = _git_blob(root, source_sha, APP_REQUIRED_CHECKS.as_posix())
+    source_policy_bytes, policy_error = _git_blob(root, source_sha, APP_TRUSTED_CI.as_posix())
+    if manifest_error:
+        problems.append(f"{label}: {manifest_error}")
+    if policy_error:
+        problems.append(f"{label}: {policy_error}")
+    if source_manifest_bytes is None or source_policy_bytes is None:
+        return problems
+    manifest_sha = "sha256:" + hashlib.sha256(source_manifest_bytes).hexdigest()
+    if attestation.get("manifest_sha256") != manifest_sha:
+        problems.append(f"{label}: attested required-check manifest digest does not match the gate source commit")
+    try:
+        source_manifest = json.loads(source_manifest_bytes)
+        source_policy = json.loads(source_policy_bytes)
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        return problems + [f"{label}: source-pinned CI policy or manifest is invalid JSON: {exc}"]
+    if not isinstance(source_manifest, dict) or source_manifest.get("status") != "active":
+        problems.append(f"{label}: source-pinned required-check manifest is not active")
+    if not isinstance(source_policy, dict) or source_policy != trusted_policy:
+        problems.append(f"{label}: trusted CI policy differs from the policy at the gate source commit")
+    if isinstance(source_policy, dict) and (source_policy.get("repository") != repo or source_policy.get("protected_ref") != protected_ref or source_policy.get("status") != "active"):
+        problems.append(f"{label}: source-pinned trusted CI policy is not active for the declared repository and protected ref")
+    selected_task = record.get("gate_data", {}).get("selected_task_id") if isinstance(record.get("gate_data"), dict) else None
+    pinned_checks = source_manifest.get("checks", []) if isinstance(source_manifest, dict) else []
+    pinned_applicable = [
+        item for item in pinned_checks
+        if isinstance(item, dict) and item.get("required") is True
+        and selected_task in item.get("task_ids", [])
+    ] if isinstance(pinned_checks, list) else []
+    if pinned_applicable != applicable_checks:
+        problems.append(f"{label}: validator-required check set differs from the source-pinned manifest")
+
+    provider_run = report.get("provider_run")
+    if not isinstance(provider_run, dict):
+        return problems + [f"{label}: attested report has no provider_run object"]
+    expected_ref = protected_ref
+    expected_workflow_ref = f"{expected_workflow}@{expected_ref}"
+    expected_provider_fields = {
+        "provider": "github-actions",
+        "repository": repo,
+        "event_name": "push",
+        "ref": expected_ref,
+        "ref_protected": True,
+        "workflow_ref": expected_workflow_ref,
+        "workflow_sha": source_sha,
+        "tested_commit_sha": source_sha,
+    }
+    for field, expected in expected_provider_fields.items():
+        if provider_run.get(field) != expected:
+            problems.append(f"{label}: attested provider_run.{field} does not match trusted policy/source ({expected!r})")
+    run_url = provider_run.get("run_url")
+    if details.get("run_id_or_url") != run_url or not isinstance(run_url, str) or not re.fullmatch(
+        rf"https://github\.com/{re.escape(str(repo))}/actions/runs/[0-9]+/attempts/[1-9][0-9]*", run_url
+    ):
+        problems.append(f"{label}: G-IMPL CI run URL does not match the attested provider run attempt")
+    if report.get("manifest_status") != "active" or report.get("manifest_sha256") != manifest_sha:
+        problems.append(f"{label}: attested report does not identify the active source-pinned required-check manifest")
+    if report.get("overall_result") != "passed" or report.get("errors") != []:
+        problems.append(f"{label}: attested required-check report is not an error-free pass")
+
+    reported_checks = report.get("checks")
+    checks_by_id = {item.get("check_id"): item for item in reported_checks if isinstance(item, dict)} if isinstance(reported_checks, list) else {}
+    for expected in applicable_checks:
+        check_id = expected.get("check_id")
+        observed = checks_by_id.get(check_id)
+        if expected.get("execution") != "ci":
+            problems.append(f"{label}: required check '{check_id}' is manual; lock-v4 G-IMPL PASS requires CI-only checks")
+            continue
+        if not isinstance(observed, dict):
+            problems.append(f"{label}: attested report omits required check '{check_id}'")
+            continue
+        expected_scope = ", ".join(sorted(expected.get("scope_paths", [])))
+        for field, value in (
+            ("result", "passed"),
+            ("execution", "ci"),
+            ("required", True),
+            ("command_or_procedure", expected.get("command_or_procedure")),
+            ("pass_condition", expected.get("pass_condition")),
+            ("scope_paths", expected.get("scope_paths")),
+            ("task_ids", expected.get("task_ids")),
+            ("acceptance_criteria", expected.get("acceptance_criteria")),
+            ("platforms", expected.get("platforms")),
+        ):
+            if observed.get(field) != value:
+                problems.append(f"{label}: attested check '{check_id}' field '{field}' does not match the source manifest/required outcome")
+        if observed.get("result") != "passed" or observed.get("exit_code") != 0:
+            problems.append(f"{label}: attested required check '{check_id}' did not pass with exit code 0")
+        if expected.get("scope_paths") and observed.get("scope") != expected_scope:
+            problems.append(f"{label}: attested required check '{check_id}' scope differs from the source manifest")
+    if len(applicable_checks) == 0:
+        problems.append(f"{label}: no active required CI checks apply to the selected task")
+
+    gh_path = shutil.which("gh")
+    if gh_path is None:
+        return problems + [f"{label}: GitHub CLI 'gh' is required to cryptographically verify G-IMPL attestation"]
+    command = [
+        gh_path, "attestation", "verify", str(report_path), "--repo", str(repo),
+        "--signer-workflow", str(trusted_policy.get("signer_workflow")),
+        "--signer-digest", str(trusted_policy.get("signer_digest")),
+        "--source-digest", source_sha, "--source-ref", str(protected_ref),
+        "--deny-self-hosted-runners", "--format", "json",
+    ]
+    try:
+        verified = subprocess.run(command, cwd=root, text=True, capture_output=True, check=False, timeout=60)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return problems + [f"{label}: GitHub attestation verification unavailable: {exc}"]
+    if verified.returncode != 0:
+        diagnostic = (verified.stderr or verified.stdout).strip().replace("\n", " ")[:1000]
+        return problems + [f"{label}: GitHub attestation verification failed: {diagnostic or 'gh returned a non-zero status'}"]
+    try:
+        verification_results = json.loads(verified.stdout)
+    except json.JSONDecodeError as exc:
+        return problems + [f"{label}: GitHub attestation verifier returned invalid JSON: {exc}"]
+    expected_digest = actual_report_sha.removeprefix("sha256:")
+    subject_match = False
+    if isinstance(verification_results, list):
+        for item in verification_results:
+            result = item.get("verificationResult") if isinstance(item, dict) else None
+            statement = result.get("statement") if isinstance(result, dict) else None
+            subjects = statement.get("subject") if isinstance(statement, dict) else None
+            if isinstance(subjects, list) and any(
+                isinstance(subject, dict) and isinstance(subject.get("digest"), dict)
+                and subject["digest"].get("sha256") == expected_digest
+                for subject in subjects
+            ):
+                subject_match = True
+                break
+    if not subject_match:
+        problems.append(f"{label}: verified provider attestation does not name the current report digest as its subject")
+    return problems
+
+
 def application_governance_problems(root: Path, gate_records: list[tuple[Path, dict[str, str]]]) -> list[str]:
     """Check a versioned app framework lock and gate handoff manifests when adopted."""
     lock_path = root / APP_FRAMEWORK_LOCK
@@ -1569,6 +1842,8 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: unsupported framework or artifact contract version")
         if lock_version in {2, 3} and (lock.get("gate_contract_id") != "FRAMEWORK-GATE-CONTRACT-001" or lock.get("gate_contract_version") != "1.0"):
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: unsupported gate contract identity or version")
+        if lock_version == 4 and (lock.get("gate_contract_id") != "FRAMEWORK-GATE-CONTRACT-001" or lock.get("gate_contract_version") != "1.2"):
+            problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: lock version 4 requires FRAMEWORK-GATE-CONTRACT-001 v1.2")
         if not isinstance(revision_value, str) or not FRAMEWORK_REVISION_RE.fullmatch(revision_value):
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: framework_revision must be a 40-character lowercase commit SHA")
         else:
@@ -1577,7 +1852,10 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
         if not isinstance(repository, str) or not repository.startswith("https://github.com/"):
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: framework_repository must be an HTTPS GitHub repository URL")
         locked_files = lock.get("locked_files")
-        expected_locked_files = APP_LOCKED_FILES_V1 if lock_version == 1 else APP_LOCKED_FILES_V2 if lock_version == 2 else APP_LOCKED_FILES_V3
+        expected_locked_files = (
+            APP_LOCKED_FILES_V1 if lock_version == 1 else APP_LOCKED_FILES_V2 if lock_version == 2
+            else APP_LOCKED_FILES_V3 if lock_version == 3 else APP_LOCKED_FILES_V4
+        )
         if not isinstance(locked_files, dict) or set(locked_files) != set(expected_locked_files):
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: locked_files must cover exactly the files for framework lock version {lock_version}")
         else:
@@ -1590,9 +1868,12 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
                     problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()} ({relative}): locked digest is malformed")
                 elif file_sha256(path) != expected_digest:
                     problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()} ({relative}): file digest differs from the initialized framework snapshot")
-        if lock_version == 3:
+        if lock_version in {3, 4}:
             _, manifest_problems = required_check_manifest(root)
             problems.extend(manifest_problems)
+        if lock_version == 4:
+            _, trusted_policy_problems = trusted_ci_policy(root)
+            problems.extend(trusted_policy_problems)
 
     for gate_id, manifest_path in APP_HANDOFFS.items():
         if (root / manifest_path).exists():
@@ -1623,8 +1904,8 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
         problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: required because a handoff manifest is present")
     if has_gate_runs and lock_path.exists():
         lock, _ = load_json_object(lock_path)
-        if not lock or lock.get("lock_version") not in {2, 3}:
-            problems.append(f"{APP_GATE_RUNS.as_posix()}: version-2 or version-3 framework lock and explicit gate-contract migration are required")
+        if not lock or lock.get("lock_version") not in {2, 3, 4}:
+            problems.append(f"{APP_GATE_RUNS.as_posix()}: version-2, version-3, or version-4 framework lock and explicit gate-contract migration are required")
         else:
             lock, _ = load_json_object(lock_path)
             contract_version = str(lock.get("gate_contract_version")) if lock else ""
@@ -1639,10 +1920,10 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
                 else:
                     problems.extend(validate_gate_run_records(root, schema, application_id))
     elif has_gate_runs:
-        problems.append(f"{APP_GATE_RUNS.as_posix()}: version-2 or version-3 framework lock and explicit gate-contract migration are required")
+        problems.append(f"{APP_GATE_RUNS.as_posix()}: version-2, version-3, or version-4 framework lock and explicit gate-contract migration are required")
     elif lock_path.exists():
         lock, _ = load_json_object(lock_path)
-        if lock and lock.get("lock_version") in {2, 3}:
+        if lock and lock.get("lock_version") in {2, 3, 4}:
             contract_version = str(lock.get("gate_contract_version"))
             schema, schema_problems = _gate_schema_for_app(root, contract_version)
             problems.extend(schema_problems)

@@ -1,0 +1,194 @@
+name: SDD Trusted CI Attestation
+
+on:
+  workflow_call:
+    inputs:
+      framework-repository:
+        description: Framework repository pinned in the app lock.
+        required: true
+        type: string
+      framework-revision:
+        description: Immutable framework commit pinned in the app lock and caller.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  run-required-checks:
+    name: Run app checks with the pinned framework runner
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      ref_protected: ${{ steps.provider-context.outputs.ref_protected }}
+      manifest_status: ${{ steps.report-state.outputs.manifest_status }}
+    steps:
+      # actions/checkout v7.0.1
+      - name: Check out the exact app source revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
+          path: app
+          persist-credentials: false
+
+      - name: Capture provider protection state
+        id: provider-context
+        env:
+          REF_PROTECTED: ${{ github.ref_protected }}
+        run: echo "ref_protected=${REF_PROTECTED}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify app lock matches the immutable reusable runner revision
+        env:
+          APP_ROOT: ${{ github.workspace }}/app
+          FRAMEWORK_REPOSITORY: ${{ inputs.framework-repository }}
+          FRAMEWORK_REVISION: ${{ inputs.framework-revision }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          app = Path(os.environ["APP_ROOT"])
+          lock = json.loads((app / ".sdd/framework.lock.json").read_text(encoding="utf-8"))
+          policy = json.loads((app / ".sdd/trusted-ci.json").read_text(encoding="utf-8"))
+          expected_repository = "https://github.com/" + os.environ["FRAMEWORK_REPOSITORY"]
+          revision = os.environ["FRAMEWORK_REVISION"]
+          if lock.get("framework_repository") != expected_repository or lock.get("framework_revision") != revision:
+              raise SystemExit("app framework lock does not match the reusable workflow inputs")
+          if policy.get("signer_digest") != revision:
+              raise SystemExit("trusted CI policy does not pin this reusable workflow revision")
+          expected_signer = os.environ["FRAMEWORK_REPOSITORY"] + "/.github/workflows/sdd-trusted-ci-attest.yml"
+          if policy.get("signer_workflow") != expected_signer:
+              raise SystemExit("trusted CI policy names a different signer workflow")
+          PY
+
+      # actions/checkout v7.0.1
+      - name: Check out the immutable framework runner
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ inputs.framework-repository }}
+          ref: ${{ inputs.framework-revision }}
+          path: framework
+          persist-credentials: false
+
+      # actions/setup-python v7.0.0
+      - name: Set up Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.13"
+
+      - name: Execute checks using the immutable framework runner
+        env:
+          SDD_REPOSITORY_ROOT: ${{ github.workspace }}/app
+          SDD_CI_EVIDENCE_DIR: ${{ runner.temp }}/sdd-required-checks-${{ github.run_id }}-${{ github.run_attempt }}
+        run: python3 framework/scripts/ci_checks.py
+
+      - name: Record manifest state for the attestation decision
+        id: report-state
+        if: always()
+        env:
+          REPORT_PATH: ${{ runner.temp }}/sdd-required-checks-${{ github.run_id }}-${{ github.run_attempt }}/required-check-results.json
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ["REPORT_PATH"])
+          if path.is_file() and not path.is_symlink():
+              report = json.loads(path.read_text(encoding="utf-8"))
+              status = report.get("manifest_status", "invalid")
+          else:
+              status = "missing"
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"manifest_status={status}\n")
+          PY
+
+      # actions/upload-artifact v7.0.0
+      - name: Preserve required-check evidence
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        with:
+          name: sdd-required-check-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/sdd-required-checks-${{ github.run_id }}-${{ github.run_attempt }}/
+          if-no-files-found: warn
+          retention-days: 90
+
+  attest-required-check-evidence:
+    name: Attest trusted-runner evidence
+    needs: run-required-checks
+    if: github.event_name == 'push' && needs.run-required-checks.outputs.ref_protected == 'true' && needs.run-required-checks.outputs.manifest_status == 'active' && needs.run-required-checks.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      # actions/download-artifact v8.0.0
+      - name: Download the runner-generated report only
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3
+        with:
+          name: sdd-required-check-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/sdd-required-check-evidence
+
+      - name: Validate the runner report against provider context
+        env:
+          EXPECTED_REPOSITORY: ${{ github.repository }}
+          EXPECTED_REF: ${{ github.ref }}
+          EXPECTED_SHA: ${{ github.sha }}
+          EXPECTED_EVENT: ${{ github.event_name }}
+          EXPECTED_REF_PROTECTED: ${{ github.ref_protected }}
+          REPORT_PATH: ${{ runner.temp }}/sdd-required-check-evidence/required-check-results.json
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report_path = Path(os.environ["REPORT_PATH"])
+          if report_path.is_symlink() or not report_path.is_file():
+              raise SystemExit("trusted-runner report is missing or unsafe")
+          if report_path.stat().st_size > 4_194_304:
+              raise SystemExit("trusted-runner report exceeds 4 MiB")
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+          if not isinstance(report, dict):
+              raise SystemExit("trusted-runner report must be a JSON object")
+          provider = report.get("provider_run")
+          if not isinstance(provider, dict):
+              raise SystemExit("trusted-runner report has no provider context")
+          expected = {
+              "provider": "github-actions",
+              "repository": os.environ["EXPECTED_REPOSITORY"],
+              "ref": os.environ["EXPECTED_REF"],
+              "tested_commit_sha": os.environ["EXPECTED_SHA"],
+              "event_name": os.environ["EXPECTED_EVENT"],
+              "ref_protected": os.environ["EXPECTED_REF_PROTECTED"] == "true",
+          }
+          if expected["event_name"] != "push" or expected["ref_protected"] is not True:
+              raise SystemExit("attestation is restricted to provider-confirmed protected-branch pushes")
+          if any(provider.get(key) != value for key, value in expected.items()):
+              raise SystemExit("trusted-runner report does not match provider execution context")
+          if report.get("overall_result") != "passed" or report.get("manifest_status") != "active":
+              raise SystemExit("trusted-runner report is not an active-manifest pass")
+          if report.get("errors") != []:
+              raise SystemExit("trusted-runner report contains errors")
+          checks = report.get("checks")
+          if not isinstance(checks, list):
+              raise SystemExit("trusted-runner report has no check list")
+          required = [item for item in checks if isinstance(item, dict) and item.get("required") is True]
+          ci_required = [item for item in required if item.get("execution") == "ci"]
+          if not ci_required or any(item.get("result") != "passed" or item.get("exit_code") != 0 for item in ci_required):
+              raise SystemExit("trusted-runner report has missing or failed required CI checks")
+          if any(item.get("execution") == "manual" and item.get("result") != "manual-required" for item in required):
+              raise SystemExit("trusted-runner report has an invalid manual-check outcome")
+          PY
+
+      # actions/attest v4.2.2; pinned to the verified immutable release commit.
+      - name: Sign the trusted-runner report bytes
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: ${{ runner.temp }}/sdd-required-check-evidence/required-check-results.json

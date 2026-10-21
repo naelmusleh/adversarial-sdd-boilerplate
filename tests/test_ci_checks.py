@@ -117,6 +117,24 @@ class RequiredCheckRunnerTests(unittest.TestCase):
         self.assertEqual(check["result"], "passed")
         self.assertEqual(check["stdout_sha256"], "sha256:" + hashlib.sha256(output.read_bytes()).hexdigest())
 
+    def test_framework_pinned_runner_can_execute_against_a_separate_app_checkout(self) -> None:
+        self._manifest("python3 -c 'print(\"trusted runner\")'")
+        evidence_dir = Path(self.evidence_temp.name)
+        env = os.environ.copy()
+        for key in list(env):
+            if key.startswith(("GITHUB_", "RUNNER_")) or key in {"ImageOS", "ImageVersion"}:
+                env.pop(key, None)
+        env["SDD_REPOSITORY_ROOT"] = str(self.root)
+        env["SDD_CI_EVIDENCE_DIR"] = str(evidence_dir)
+        result = subprocess.run(
+            [sys.executable, str(CI_CHECKS)], cwd=ROOT, env=env,
+            text=True, capture_output=True, check=False,
+        )
+        report = json.loads((evidence_dir / "required-check-results.json").read_text(encoding="utf-8"))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(report["checks"][0]["result"], "passed")
+        self.assertEqual(report["provider_run"]["tested_commit_sha"], self._git("rev-parse", "HEAD"))
+
     def test_nonzero_check_fails_and_preserves_observed_exit_code(self) -> None:
         self._manifest("python3 -c 'raise SystemExit(4)'")
         result, report = self._run()

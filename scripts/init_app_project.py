@@ -26,14 +26,24 @@ APP_LOCKED_FILES = (
     ".sdd/G-ARCH-CONTRACT.json.template",
     "docs/templates/app-project/gate-record.md.template",
     ".github/workflows/sdd-contract-validation.yml",
+)
+APP_LOCKED_FILES_V2 = APP_LOCKED_FILES + (
     ".sdd/schemas/gate-run-v1.schema.json",
     ".sdd/gate-run-v1.json.template",
+)
+APP_LOCKED_FILES_V3 = APP_LOCKED_FILES_V2 + (
     "scripts/ci_checks.py",
     ".sdd/schemas/required-checks-v1.schema.json",
     ".sdd/required-checks.json.template",
 )
+APP_LOCKED_FILES_V4 = APP_LOCKED_FILES_V3 + (
+    ".sdd/schemas/gate-run-v1.2.schema.json",
+    ".sdd/gate-run-v1.2.json.template",
+    ".sdd/schemas/trusted-ci-v1.schema.json",
+    ".sdd/trusted-ci.json.template",
+)
 GATE_CONTRACT_ID = "FRAMEWORK-GATE-CONTRACT-001"
-GATE_CONTRACT_VERSION = "1.0"
+GATE_CONTRACT_VERSION = "1.2"
 FRAMEWORK_SOURCE_PATHS = (
     "scripts/init_app_project.py",
     "scripts/artifacts.py",
@@ -361,6 +371,7 @@ def main() -> int:
         print("Framework URL must include a repository name.", file=sys.stderr)
         return 2
     framework_url = f"https://github.com/{repo_parts[0]}/{repo_name}"
+    framework_repository = f"{repo_parts[0]}/{repo_name}"
 
     target = args.target.expanduser().absolute()
     if target.is_symlink():
@@ -423,6 +434,22 @@ def main() -> int:
         (ROOT / ".sdd" / "gate-run-v1.json.template").read_text(encoding="utf-8")
         .replace("<APP>", prefix)
     )
+    outputs[".sdd/schemas/gate-run-v1.2.schema.json"] = (
+        (ROOT / "docs" / "framework" / "schemas" / "gate-run-v1.2.schema.json").read_text(encoding="utf-8")
+    )
+    outputs[".sdd/gate-run-v1.2.json.template"] = (
+        (ROOT / ".sdd" / "gate-run-v1.2.json.template").read_text(encoding="utf-8")
+        .replace("<APP>", prefix)
+    )
+    outputs[".sdd/schemas/trusted-ci-v1.schema.json"] = (
+        (ROOT / "docs" / "framework" / "schemas" / "trusted-ci-v1.schema.json").read_text(encoding="utf-8")
+    )
+    outputs[".sdd/trusted-ci.json.template"] = (
+        (ROOT / ".sdd" / "trusted-ci.json.template").read_text(encoding="utf-8")
+        .replace("<FRAMEWORK_REVISION>", framework_revision)
+        .replace("<FRAMEWORK_REPOSITORY>", framework_repository)
+    )
+    outputs[".sdd/trusted-ci.json"] = outputs[".sdd/trusted-ci.json.template"]
     outputs["scripts/ci_checks.py"] = (ROOT / "scripts" / "ci_checks.py").read_text(encoding="utf-8")
     outputs[".sdd/schemas/required-checks-v1.schema.json"] = (
         (ROOT / "docs" / "framework" / "schemas" / "required-checks-v1.schema.json").read_text(encoding="utf-8")
@@ -432,9 +459,11 @@ def main() -> int:
     outputs[".sdd/required-checks.json"] = required_check_template
     outputs[".github/workflows/sdd-contract-validation.yml"] = (
         (TEMPLATES / "sdd-contract-validation.yml.template").read_text(encoding="utf-8")
+        .replace("<FRAMEWORK_REVISION>", framework_revision)
+        .replace("<FRAMEWORK_REPOSITORY>", framework_repository)
     )
     lock = {
-        "lock_version": 3,
+        "lock_version": 4,
         "framework_repository": framework_url,
         "framework_revision": framework_revision,
         "artifact_contract_id": "ARTIFACT-CONTRACT-001",
@@ -443,7 +472,7 @@ def main() -> int:
         "gate_contract_version": GATE_CONTRACT_VERSION,
         "locked_files": {
             relative: sha256_text(outputs[relative])
-            for relative in APP_LOCKED_FILES
+            for relative in APP_LOCKED_FILES_V4
         },
     }
     outputs[".sdd/framework.lock.json"] = json.dumps(lock, indent=2, sort_keys=True) + "\n"

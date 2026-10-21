@@ -16,7 +16,7 @@ from pathlib import Path
 
 from artifacts import required_check_manifest
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(os.environ.get("SDD_REPOSITORY_ROOT", Path(__file__).resolve().parents[1])).resolve()
 MANIFEST = ROOT / ".sdd/required-checks.json"
 MAX_COMMAND_SECONDS = 600
 SECRET_NAME = re.compile(r"(?:TOKEN|SECRET|PASSWORD|PRIVATE.?KEY|CREDENTIAL)", re.IGNORECASE)
@@ -136,6 +136,7 @@ def github_metadata(sha: str | None) -> dict[str, object]:
         "run_url": run_url,
         "event_name": env.get("GITHUB_EVENT_NAME", "local"),
         "ref": env.get("GITHUB_REF", "local"),
+        "ref_protected": env.get("GITHUB_REF_PROTECTED", "false").lower() == "true",
         "event_head_sha": event_head_sha,
         "event_base_sha": event_base_sha,
         "tested_commit_sha": sha,
