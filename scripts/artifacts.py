@@ -55,6 +55,10 @@ KEY_RE = re.compile(r"^([a-z][a-z0-9-]*):\s*(.*?)\s*$")
 FRAMEWORK_REVISION_RE = re.compile(r"^[a-f0-9]{40}$")
 SHA256_RE = re.compile(r"^sha256:[a-f0-9]{64}$")
 GATE_RESULTS = {"not-run", "passed", "failed", "blocked", "passed-with-accepted-risk", "not-applicable"}
+GATE_IDS = {
+    "G-INTENT", "G-SETUP", "G-REQ", "G-FEAS", "G-COVERAGE",
+    "G-CX", "G-ARCH", "G-IMPL", "G-RELEASE", "G-OPERATE",
+}
 
 
 def is_app_project(root: Path) -> bool:
@@ -633,10 +637,18 @@ def command_validate(_: argparse.Namespace) -> int:
         gate_id = data.get("gate-id", "")
         declares_handoff_gate = gate_id in APP_HANDOFFS
         gate_record_type = data.get("type") in {"gate-record", "lifecycle-gate-record"}
-        if declares_handoff_gate and not gate_record_type:
+        has_gate_metadata = any(key in data for key in ("gate-id", "gate-result", "handoff-manifest"))
+        if has_gate_metadata and not gate_record_type:
             problems.append(
-                f"{rel}: {gate_id} gate metadata requires type 'gate-record' or 'lifecycle-gate-record'"
+                f"{rel}: gate metadata requires type 'gate-record' or 'lifecycle-gate-record'"
             )
+        if gate_record_type and gate_id not in GATE_IDS:
+            problems.append(
+                f"{rel}: gate record must declare a recognized gate-id; expected one of "
+                f"{', '.join(sorted(GATE_IDS))}"
+            )
+        if "handoff-manifest" in data and gate_id not in APP_HANDOFFS:
+            problems.append(f"{rel}: handoff-manifest is supported only for G-REQ or G-ARCH records")
         if gate_record_type or declares_handoff_gate:
             gate_records.append((path, data))
         artifact_id = data.get("id", "")

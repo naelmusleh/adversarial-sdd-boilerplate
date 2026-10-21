@@ -82,36 +82,36 @@ related-artifacts: FRAMEWORK-SPEC-001, GATE-CATALOG-001, FRAMEWORK-BACKLOG-001, 
 
 | Finding | Disposition | Rationale / decision evidence | Change made or follow-up | Target revision/link | Owner and revisit trigger if deferred/risk |
 | --- | --- | --- | --- | --- | --- |
-| FRAMEWORK-ADV-008/FINDING-001 | unresolved | Gate claim validation must cover the semantic gate identity even if artifact metadata is malformed. | Correct validator and add a negative fixture. | Pending | N/A |
-| FRAMEWORK-ADV-008/FINDING-002 | unresolved | Malformed values must fail with controlled actionable diagnostics. | Add type guard and malformed-type fixtures. | Pending | N/A |
-| FRAMEWORK-ADV-008/FINDING-003 | unresolved | Framework pin must identify the source used to generate the app. | Add dirty-source protection/provenance and regression tests. | Pending | N/A |
-| FRAMEWORK-ADV-008/FINDING-004 | unresolved | Acceptance evidence must be inspectable and reproducible. | Add a versioned bounded tabletop record for FW-TASK-016. | Pending | N/A |
+| FRAMEWORK-ADV-008/FINDING-001 | resolved in reviewed scope | A passed gate record must carry a recognized gate ID; gate metadata on non-gate artifact types is rejected, and G-REQ/G-ARCH claims remain collected for handoff validation. | Added recognized gate-ID/type checks and a missing-ID negative fixture. Independent source reviewer confirmed missing/misspelled IDs and type reclassification fail closed. | Pending commit; changed files `scripts/artifacts.py`, `tests/test_artifacts.py` | N/A |
+| FRAMEWORK-ADV-008/FINDING-002 | resolved | Wrong-typed `review_inputs.purpose` now produces a controlled diagnostic before membership checks; negative fixture is present. | Implemented and exercised in local test suite at `8c47b52`. | `3119388` and local verification at `8c47b52` | N/A |
+| FRAMEWORK-ADV-008/FINDING-003 | resolved for covered paths | Dirty tracked or relevant untracked framework inputs are rejected; unrelated untracked files are permitted; archive initialization requires explicit revision. | Implemented and regression-tested in local test suite at `8c47b52`. Archive-source provenance remains bounded by the supplied explicit revision. | `3119388` and local verification at `8c47b52` | N/A |
+| FRAMEWORK-ADV-008/FINDING-004 | resolved as inspectable paper evidence | The seven-scenario commit/push tabletop is durable and explicitly does not claim live Git, remote, hosted CI, or branch-protection evidence. | Added `FRAMEWORK-EXERCISE-002` and linked it from FW-TASK-016. Independent reviewer confirmed the tabletop is inspectable and its limits are clear. | `8c47b52` | N/A |
 
 No owner residual-risk approval used for this review.
 
 ## Rerun and verification
 
-- **Rerun date:** Pending.
-- **Verifier and reviewer mode:** Pending; disclose any author/reviewer overlap.
-- **Scope:** Must cover all four findings and the complete original FW-TASK-015/016 scope.
-- **Target revision:** Pending.
+- **Rerun date:** 2026-10-20.
+- **Verifier and reviewer mode:** `/root/sdd_governance`, independent read-only source review of the changed gate validation logic; no author overlap on the implementation. The reviewer did not execute tests or re-review the complete original task scope in this incremental rerun.
+- **Scope:** Focused re-review of FINDING-001, including missing/misspelled gate IDs, gate metadata on other artifact types, and G-REQ/G-ARCH handoff collection. The earlier rerun separately reviewed the other findings and recorded their resolution; local verification covers the combined code at `8c47b52`.
+- **Target revision:** Current proposed remediation changes after `8c47b52`; exact commit to be recorded after commit.
 
 | Finding | Rerun state | Evidence confirming resolution or explaining remaining risk |
 | --- | --- | --- |
-| FRAMEWORK-ADV-008/FINDING-001 | not-resolved | Pending remediation and fixture. |
-| FRAMEWORK-ADV-008/FINDING-002 | not-resolved | Pending remediation and fixtures. |
-| FRAMEWORK-ADV-008/FINDING-003 | not-resolved | Pending remediation and regression tests. |
-| FRAMEWORK-ADV-008/FINDING-004 | not-resolved | Pending tabletop record. |
+| FRAMEWORK-ADV-008/FINDING-001 | resolved in focused source review; execution verified by reviser | Independent review confirms missing/misspelled IDs and retyped gate metadata fail closed. New missing-ID fixture plus the retyping fixture pass in the full 29-test local suite. Broader test execution was performed by the reviser, not the reviewer. |
+| FRAMEWORK-ADV-008/FINDING-002 | resolved; reviser-executed | Wrong-typed-purpose fixture passes; full suite executed locally. |
+| FRAMEWORK-ADV-008/FINDING-003 | resolved for tested initializer modes; reviser-executed | Dirty relevant inputs reject, unrelated untracked files pass, and explicit-revision archive mode is covered; full suite executed locally. |
+| FRAMEWORK-ADV-008/FINDING-004 | resolved as paper tabletop | Independent reviewer confirmed artifact inspectability from prior rerun; scope does not include live publication/CI/settings. |
 
-- **New findings:** None assessed; rerun has not occurred.
-- **Verification limits:** The critic did not run tests or inspect hosted repository settings. Local tests were run separately by the reviser after this review and are not represented as critic execution.
+- **New findings:** None in focused review of the changed gate validation paths.
+- **Verification limits:** Reviewer did not run tests or inspect hosted repository settings and did not rerun the full original scope. Local tests and artifact validation are reviser-executed evidence, not independent execution. Hosted CI and repository protection remain unverified.
 
 ## Final gate result
 
-- **Result:** **FAIL — revision required.**
-- **Why this result follows the criteria:** Two major acceptance gaps remain: a G-REQ/G-ARCH PASS claim can evade manifest enforcement by changing its artifact type, and FW-TASK-016 tabletop evidence is not durably inspectable. Two additional minor robustness/provenance findings remain. No findings have been resolved or rerun.
+- **Result:** **PENDING — full-scope rerun required.**
+- **Why this result follows the criteria:** The four recorded findings have remediation and bounded resolution evidence, including independent focused source review of the remaining validator bypass. The reviewer has not rerun the complete original FW-TASK-015/016 acceptance scope, so the G-IMPL gate and both backlog tasks remain open pending that review and owner disposition.
 - **Approval:** Not granted.
-- **Next action / owner:** Framework implementation agent resolves all four findings, records exact checks and the tabletop, then requests a full-scope independent rerun. Framework owner reviews the resulting evidence; neither FW-TASK-015 nor FW-TASK-016 is complete yet.
+- **Next action / owner:** Framework implementation agent commits and pushes the verified remediation, then requests a full-scope independent rerun. Framework owner reviews that evidence; neither FW-TASK-015 nor FW-TASK-016 is complete yet.
 
 ## References
 
