@@ -3,9 +3,9 @@ id: FRAMEWORK-GATE-CONTRACT-001
 type: framework-contract
 title: Versioned ten-gate evidence and transition contract
 status: draft
-version: 1.1
+version: 1.2
 created: 2026-10-20
-updated: 2026-10-20
+updated: 2026-10-21
 related-artifacts: FRAMEWORK-SPEC-001, GATE-CATALOG-001, FRAMEWORK-BACKLOG-001, WORKFLOW-AI-ENGINEERING-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXAMPLE-GATE-CONTRACT-001, FRAMEWORK-EXERCISE-GATE-CONTRACT-001, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009
 ---
 
@@ -13,7 +13,7 @@ related-artifacts: FRAMEWORK-SPEC-001, GATE-CATALOG-001, FRAMEWORK-BACKLOG-001, 
 
 ## 1. Purpose and authority
 
-**Version history:** Contract v1.0 was approved for implementation after the bounded independent G-IMPL review in [FRAMEWORK-ADV-009](../adversarial-reviews/FRAMEWORK-ADV-009.md). This v1.1 draft adds an explicit feasibility state-change trigger so conditional work has a machine-addressable re-evaluation event, as required by FW-TASK-018 acceptance criterion 3. Version 1.1 remains draft until the amended schema/contract receives independent review. Neither approval claims app enforcement; that remains FW-TASK-018 work.
+**Version history:** Contract v1.0 was approved for implementation after the bounded independent G-IMPL review in [FRAMEWORK-ADV-009](../adversarial-reviews/FRAMEWORK-ADV-009.md). The v1.1 draft adds an explicit feasibility state-change trigger and canonical scope-digest binding. This v1.2 draft adds owner-approved trusted CI provenance requirements for G-IMPL PASS after the forged command-evidence bypass documented in [FRAMEWORK-ADV-013](../adversarial-reviews/FRAMEWORK-ADV-013.md) and [DECISION-019](../decisions/DECISION-LOG-001.md). Versions 1.1 and 1.2 remain drafts until their schemas, initializer, validator, workflows, compatibility rules, and evidence receive independent review. No draft version is a normative app guarantee before that review and explicit approval.
 
 This is the normative, versioned evidence and transition contract for the ten application lifecycle gates. It defines what a gate consumes and emits, how its result is supported, which work it permits, and when downstream evidence must be invalidated. It does not implement validation or prove that a reviewer is independent, evidence is truthful, a product is feasible, or an application is production-ready. Machine validation proves only the structural and relational rules implemented by the validator version recorded in the app's framework lock.
 
@@ -65,7 +65,9 @@ The schema's `evidence.type` is one of:
 
 Evidence must be tied to criterion IDs. A criterion may require multiple evidence types; no evidence type is automatically sufficient. Hashes, signatures, and immutable URLs protect identity/provenance but do not certify adequacy or truth.
 
-For contract v1.1, `evidence.scope_ref` is the `sha256:` digest of the canonical JSON serialization of the run's complete `scope` object (UTF-8, keys sorted, compact separators, non-ASCII preserved). For `command-execution` and `ci-run`, `details.scope` must equal that digest. Evidence source revisions must match the gate-run source snapshot. A G-IMPL check must match its linked evidence on scope, command/procedure, tool/runtime version, and declared pass condition. These checks bind evidence claims to a scope and revision; they do not prove the command ran or that a reviewer is independent.
+For contract v1.1 and later, `evidence.scope_ref` is the `sha256:` digest of the canonical JSON serialization of the run's complete `scope` object (UTF-8, keys sorted, compact separators, non-ASCII preserved). For `command-execution` and `ci-run`, `details.scope` must equal that digest. Evidence source revisions must match the gate-run source snapshot. A G-IMPL check must match its linked evidence on scope, command/procedure, tool/runtime version, and declared pass condition.
+
+For contract v1.2, a new app may claim G-IMPL PASS only when every required check for the selected task is executed in CI and is linked to a cryptographically verified provider attestation of the exact required-check report. The verifier MUST validate the artifact subject digest, provider/repository, approved signer-workflow identity, protected branch ref, source commit SHA, current required-check-manifest digest, required check IDs, commands/scopes/pass conditions, and successful outcomes. A structurally valid `command-execution`, typed `ci-run`, run URL, copied output, local command, or hand-authored report is insufficient. Missing `gh` verification capability, credentials for a private repository, provider access, attestation, or required fields leaves G-IMPL `in-progress` or `blocked`; it is never a pass. Attestation proves that the named provider workflow signed the report bytes and provenance claims; it does not prove the checks are semantically adequate, test code is non-malicious, reviewer identity is authentic, or branch protection is active. Repository protection must be observed separately. New apps use framework lock v4 and contract v1.2 only after review/approval; existing v1.0/v1.1/v2/v3 app locks keep their pinned behavior until explicit migration.
 
 ## 5. Gate results, transitions, and authority
 
@@ -118,14 +120,14 @@ For G-COVERAGE, the schema requires an explicit applicability decision and ratio
 
 ## 8. Migration and compatibility
 
-Contract v1.0 remains supported for apps whose version-2 framework lock pins v1.0 and its v1.0 schema digest. New initialized apps will pin v1.1 only after the amendment review approves it. Version 1.1 adds `state_change_trigger` to conditional feasibility dependencies and binds evidence to the canonical scope digest; v1.0 records remain validated against the unchanged v1.0 schema and do not acquire the new fields retroactively. Existing legacy apps without a gate contract pin retain their prior validation behavior; they do not gain the new gate guarantees by implication. A record that declares `handoff-manifest` opts into strict handoff validation and must carry a valid lock and manifest. Existing records are not rewritten or retroactively promoted. Migration creates new versioned records, preserves previous artifacts, links superseded IDs, and states which historical claims remain unverified. Unsupported contract versions fail closed; each additive minor version requires an explicit compatibility policy, schema, independent review, and app lock update.
+Contract v1.0 remains supported for apps whose framework lock pins v1.0 and its schema digest. Contract v1.1 adds `state_change_trigger` to conditional feasibility dependencies and binds evidence to the canonical scope digest. Draft v1.2 additionally requires cryptographically verified CI report attestations for G-IMPL PASS in lock-v4 apps. Neither v1.1 nor v1.2 is adopted by new apps until its amendment, schema, validator, workflow, and compatibility policy receive independent review and explicit approval. Older locks retain their exact snapshots and do not acquire guarantees by implication. A record that declares `handoff-manifest` opts into strict handoff validation and must carry a valid lock and manifest. Existing records are not rewritten or retroactively promoted. Migration creates new versioned records, preserves previous artifacts, links superseded IDs, and states which historical claims remain unverified. Unsupported contract versions fail closed; each additive minor version requires an explicit compatibility policy, schema, independent review, and app lock update.
 
 ## 9. Source-of-truth map and implementation boundary
 
 | Concern | Normative source | Consumer/derived artifact | Planned enforcement boundary |
 |---|---|---|---|
 | Gate semantics, criteria, states, transitions | This contract | GATE-CATALOG-001 cross-reference, app gate record | FW-TASK-018 app-local validator; semantic judgment remains human. |
-| JSON record shape | Contract-versioned companion schemas: v1.0 `schemas/gate-run-v1.schema.json`; v1.1 `schemas/gate-run-v1.1.schema.json` | Generated app template and `.sdd/gate-runs/<record_id>.json`; new apps pin approved v1.0 until v1.1 review passes | FW-TASK-018 uses a dependency-free evaluator for the exact schema keywords present; unknown keywords fail closed. It also performs repository-local relational checks. This is not a claim of general JSON Schema library compatibility. |
+| JSON record shape | Contract-versioned companion schemas: v1.0 `schemas/gate-run-v1.schema.json`; v1.1 `schemas/gate-run-v1.1.schema.json`; draft v1.2 `schemas/gate-run-v1.2.schema.json` | Generated app template and `.sdd/gate-runs/<record_id>.json`; new apps pin only a reviewed/approved contract version | FW-TASK-018 uses a dependency-free evaluator for the exact schema keywords present; unknown keywords fail closed. It also performs repository-local relational checks. This is not a claim of general JSON Schema library compatibility. |
 | Criterion-to-source traceability | `FRAMEWORK-GATE-TRACEABILITY-001.md` companion | Review/maintenance map | FW-TASK-018/019 linkage checks where deterministic; other mappings are human-reviewed. |
 | Version and compatibility | Contract front matter + app lock | Generated app framework lock | FW-TASK-015 pin/initializer; FW-TASK-018 version enforcement; migration is explicit. |
 | Gate procedures | `GATE-CATALOG-001` and each `workflows/*.md` | Agent operating steps | Workflow text must link to criterion IDs; update in same reviewed contract migration. |

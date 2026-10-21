@@ -3,9 +3,9 @@ id: FRAMEWORK-CI-RELEASE-POLICY-001
 type: framework-operating-policy
 title: App check, CI provenance, and release evidence policy
 status: draft
-version: 1.0
+version: 1.1
 created: 2026-10-20
-updated: 2026-10-20
+updated: 2026-10-21
 related-artifacts: FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-011
 ---
 
@@ -17,7 +17,7 @@ This policy governs the generated app workflow and the framework Verify Pipeline
 
 ## App-owned required-check manifest
 
-New app initializations use framework lock version 3 and receive:
+Currently approved app initializations use framework lock version 3 and receive:
 
 - `.sdd/required-checks.json`: app-owned, editable policy data. It begins `unconfigured` with no checks; this is honest for an ideation-stage app and cannot support a passing G-IMPL gate.
 - `.sdd/schemas/required-checks-v1.schema.json`: framework schema copied and digest-locked.
@@ -34,7 +34,17 @@ Each workflow attempt records provider/repository, workflow identity and revisio
 
 The generated workflow uploads the evidence report and outputs as a run-attempt artifact, including after a required check fails where artifact storage remains available. The standard retention is 90 days; gate records must copy/link the required durable evidence into the app's approved evidence store before relying on it beyond that retention. A failed, cancelled, skipped, missing, or SHA-mismatched required check is non-pass. A GitHub run URL includes the run attempt and must be linked with the exact tested SHA.
 
-The evidence report is a provenance and output-integrity record, not a cryptographic attestation or proof that a command's claims are semantically true. Tests and scripts can print misleading output. Code review and independent gate review remain required. The hosted runner has outbound network access; read-only repository permissions and no injected secrets reduce impact but do not prevent malicious pull-request code from disclosing checked-out source or causing external side effects. Repository owners must account for that provider constraint when enabling this workflow on private repositories; the generated template does not claim network isolation.
+The lock-v3 evidence report is a provenance and output-integrity record, not a cryptographic attestation or proof that a command's claims are semantically true. Tests and scripts can print misleading output. Code review and independent gate review remain required. The hosted runner has outbound network access; read-only repository permissions and no injected secrets reduce impact but do not prevent malicious pull-request code from disclosing checked-out source or causing external side effects. Repository owners must account for that provider constraint when enabling this workflow on private repositories; the generated template does not claim network isolation.
+
+## Draft contract v1.2: trusted G-IMPL attestations
+
+After independent review and explicit contract approval, new app initializations use lock version 4 and contract v1.2. They receive `.sdd/trusted-ci.json` plus its locked schema/template. An app owner must configure the exact GitHub repository, protected branch ref, and signer workflow before activating trust; this trust policy is app-owned scope and is included in the gate-run snapshot. Apps without this configuration cannot pass G-IMPL.
+
+The generated workflow runs required checks in a low-privilege job with no `id-token` or attestation-write permission. A separate attester job runs only after a successful `push` to a provider-reported protected ref; it downloads only the check-report artifact and signs that report with GitHub Artifact Attestations. It does not check out or execute app code. The report itself must contain successful required checks, exact checked-out SHA, repository, workflow/ref, protected-ref observation, and manifest digest. PR and local runs may produce diagnostic reports but never trusted attestations.
+
+For lock-v4 G-IMPL PASS, the app validator requires all required checks to be CI-executable and linked to the exact signed report. It invokes `gh attestation verify` with the configured repository, signer workflow, source commit, and protected ref; missing CLI/auth/network, invalid signature, wrong subject/repository/workflow/ref/SHA, stale manifest digest, failed or missing check, or malformed report fails closed. The signed report must also match the record's required check IDs, commands, scopes, pass conditions, and results. The validator does not accept `command-execution` or a hand-authored `ci-run` record as a substitute. Existing lock-v1/v2/v3 apps keep their pinned behavior until a reviewed migration writes new gate records; framework contract text does not retroactively change their guarantees.
+
+This attestation establishes that GitHub signed the report bytes for the named repository/workflow/source provenance. It does not prove the workflow or tests are semantically correct, establish reviewer identity, or prove branch protection will prevent a malicious direct push. The workflow's code and check commands remain reviewable repository inputs. Repository protection must still be observed and recorded independently. The signing job's OIDC/attestation permissions are isolated from test execution; any change that combines them or exposes them to untrusted PR code requires a new security review.
 
 ## Workflow security boundary
 
