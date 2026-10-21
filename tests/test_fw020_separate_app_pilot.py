@@ -558,6 +558,20 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             output,
         )
 
+        missing_file_root, _ = self._case(setup_pass)
+        evidence = self._record(missing_file_root, "G-SETUP")[1]["evidence"][0]
+        (missing_file_root / evidence["details"]["stdout_ref"]).unlink()
+        missing_file = subprocess.run(
+            ["python3", "scripts/artifacts.py", "validate"], cwd=missing_file_root,
+            text=True, capture_output=True,
+        )
+        output = missing_file.stdout + missing_file.stderr
+        self.assertNotEqual(missing_file.returncode, 0, output)
+        self.assertIn(
+            "command evidence 'FLAGLITE-SETUP-OBSERVED-VALIDATION' output reference is invalid",
+            output,
+        )
+
     def test_feasibility_supported_scope_reduced_blocked_conditional_and_owner_risk_routes(self) -> None:
         changes = {}
         def supported(d: dict[str, object]) -> None:
@@ -733,6 +747,10 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
              "passed G-OPERATE requires an explicit telemetry_gaps declaration"),
             ("G-OPERATE", lambda d: d["gate_data"].update({"degradation_limits": []}),
              "$.gate_data.degradation_limits: array has fewer than 1 items"),
+            ("G-OPERATE", lambda d: d["gate_data"].update({"degradation_limits": [
+                {"condition": "state growth", "threshold": "", "response": "stop"}
+            ]}),
+             "$.gate_data.degradation_limits[0].threshold: string is shorter than minimum length 1"),
         )
         for gate_id, change, expected in cases:
             def mutate(root: Path, gate_id=gate_id, change=change) -> None:
@@ -847,7 +865,7 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         self.assertEqual(record["gate_result"], "in-progress")
 
     def test_skipped_unavailable_or_failed_required_check_cannot_support_impl_pass(self) -> None:
-        for check_result in ("not-run", "skipped", "unavailable", "failed"):
+        for check_result in ("not-run", "skipped", "unavailable", "failed", "interrupted"):
             def mutate(root: Path, check_result=check_result) -> None:
                 path, record = self._record(root, "G-IMPL")
                 record["gate_result"] = "passed"
@@ -873,7 +891,7 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
                 output = result.stdout + result.stderr
                 self.assertNotEqual(result.returncode, 0, output)
                 self.assertIn("[G-IMPL]", output)
-                if check_result in {"skipped", "unavailable"}:
+                if check_result in {"skipped", "unavailable", "interrupted"}:
                     expected = "$.gate_data.required_checks[0].result: value is not one of the allowed values"
                 else:
                     expected = "$.gate_data.required_checks[0].result: value does not equal required constant 'passed'"
