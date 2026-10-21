@@ -736,6 +736,46 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             output,
         )
 
+    def test_gcx_accepts_hash_bound_png_shape_without_claiming_gate_pass(self) -> None:
+        def mutate(root: Path) -> None:
+            path, record = self._record(root, "G-CX")
+            capture_path = root / "docs/evidence/fw020/synthetic-capture.png"
+            capture_path.parent.mkdir(parents=True, exist_ok=True)
+            capture_bytes = bytes.fromhex(
+                "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
+                "0000000b49444154789c636000020000050001a5f645400000000049454e44ae426082"
+            )
+            capture_path.write_bytes(capture_bytes)
+            evidence_id = "SYNTHETIC-PNG-CAPTURE-001"
+            record["gate_data"]["interaction_evidence_ids"] = [evidence_id]
+            record["evidence"] = [{
+                "evidence_id": evidence_id,
+                "type": "interaction-capture",
+                "criterion_ids": [],
+                "observed_at": "2026-10-21T15:30:00Z",
+                "observed_by": "synthetic fixture",
+                "source_revision": self.source_revision,
+                "scope_ref": "synthetic capture scope",
+                "locator": capture_path.relative_to(root).as_posix(),
+                "record_sha256": "sha256:" + hashlib.sha256(capture_bytes).hexdigest(),
+                "limitations": ["synthetic raster fixture; not product interaction evidence"],
+                "details": {
+                    "target_ref": "synthetic-only://fixture-screen",
+                    "capture_method": "test PNG fixture",
+                    "tool_version": "synthetic fixture",
+                    "viewport_or_device": "1x1 fixture",
+                    "runtime": "not-run",
+                    "captured_at": "2026-10-21T15:30:00Z",
+                    "limitations": ["not rendered from a product runtime"],
+                },
+            }]
+            self._save(path, record)
+
+        root, result = self._case(mutate)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        _, record = self._record(root, "G-CX")
+        self.assertEqual(record["gate_result"], "in-progress")
+
     def test_untestable_requirement_finding_blocks_greq_pass(self) -> None:
         def mutate(root: Path) -> None:
             path, record = self._record(root, "G-REQ")
