@@ -124,7 +124,23 @@ TARGET=../example-app
 mkdir -p "$TARGET/tests" "$TARGET/docs" "$TARGET/framework"
 cp -R docs/framework "$TARGET/docs/"
 cp -R docs/constitution "$TARGET/docs/"
-cp -R docs/templates "$TARGET/docs/"
+mkdir -p "$TARGET/docs/templates"
+python3 - "$TARGET" <<'PY'
+from pathlib import Path
+import shutil
+import sys
+
+source = Path("docs/templates")
+destination = Path(sys.argv[1]) / "docs/templates"
+for item in source.rglob("*"):
+    if not item.is_file():
+        continue
+    target = destination / item.relative_to(source)
+    if target.exists() or target.is_symlink():
+        continue
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(item, target)
+PY
 cp -R workflows "$TARGET/"
 cp -R framework/capabilities "$TARGET/framework/"
 ```
@@ -147,7 +163,7 @@ dist/
 EOF
 ```
 
-These commands add the same reusable lifecycle/gate contracts and neutral app shell to the newly created app directory. They do not copy product requirements from another app. Inspect the output before proceeding; the initializer refuses non-empty targets, and the copy commands above target only the just-generated directory.
+These commands add the reusable lifecycle/gate contracts and neutral app shell to the newly created app directory. Template copying is no-clobber: the initializer-rendered, lock-digested app gate template remains byte-for-byte intact, while missing shared templates are added. They do not copy product requirements from another app. Inspect the output before proceeding; the initializer refuses non-empty targets, and the copy commands above target only the just-generated directory.
 
 Initialize Git in the app directory and create its first commit only after reviewing the generated files. If using GitHub, create a new repository for this app and add it as the app repository's remote; do not reuse the template remote.
 

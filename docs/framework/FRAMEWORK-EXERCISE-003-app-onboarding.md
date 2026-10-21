@@ -38,7 +38,9 @@ Exercise the FW-TASK-021 startup path against empty, partial, existing, changed,
 
 ## Execution record
 
-Execution is pending. Record exact source commit, runtime, commands, generated file list, validator output, invalid-target preservation result, and deviations here after running the fresh-copy exercise. Keep the synthetic scenarios labeled as framework evidence and do not use them to pass G-INTENT/G-SETUP for a real application.
+The first fresh-copy attempt exposed a real defect in the README's framework-template copy sequence: ordinary recursive copying replaced the app-rendered `.template` file whose digest is pinned by `.sdd/framework.lock.json`. The generated app validator rejected the changed digest with a file-specific diagnostic. A follow-up attempt showed macOS `cp -Rn` exits non-zero when it correctly skips that existing file, so the README now uses a Python-standard-library no-clobber copy loop instead. CAP-004 requires post-composition validation. Rerun against the committed correction is pending; neither failed attempt is counted as a pass.
+
+After rerun, record the exact source commit, runtime, commands, generated file list, validator output, preserved lock-file digest, invalid-target preservation result, and any deviations. Keep synthetic scenarios labeled as framework evidence and do not use them to pass G-INTENT/G-SETUP for a real application.
 
 ## Limitations
 

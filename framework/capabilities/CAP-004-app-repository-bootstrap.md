@@ -36,6 +36,7 @@ CAP-004 locally generates a documented app-repository starter from template-sour
 - Validate all source templates and the local artifact helper exist before writing any output.
 - The copied helper discovers the app's root canonical SDD files and artifact directories, excludes non-artifact project instructions and Impeccable outputs, and writes new artifacts only into app-owned directories.
 - The framework lock records the immutable source revision and digests of the copied helper, both handoff templates, the gate-record template, and generated SDD validation workflow. Handoff validation checks frozen artifacts; changing these files requires a reviewed lock update.
+- The README's framework-template composition uses no-clobber copying so shared templates do not overwrite initializer-rendered, lock-digested app files. Revalidate the app after composing the framework folders.
 - The generated workflow runs SDD validation only. The app must separately define stack-specific code checks and configure required status checks in repository settings before calling them merge-blocking or release controls.
 - Keep canonical SDD `design.md` separate from Impeccable generated output; the generated app instructions require isolated staging for the `document` command.
 - Do not embed requirements or owner-specific decisions from another application.
