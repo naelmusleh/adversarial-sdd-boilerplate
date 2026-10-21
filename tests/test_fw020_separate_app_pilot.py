@@ -250,19 +250,21 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
 
     def test_stale_digest_revision_identity_waiver_and_cross_app_substitution_fail(self) -> None:
         cases = (
-            ("digest", lambda d: d["scope"]["artifact_refs"][0].update(sha256="sha256:" + "0" * 64)),
-            ("revision", lambda d: d["source_snapshot"].update(commit_sha="a" * 40)),
-            ("identity", lambda d: d.update(application_id="OTHER-APP")),
-            ("waiver", lambda d: d.update(gate_result="passed-with-accepted-risk")),
+            ("digest", lambda d: d["scope"]["artifact_refs"][0].update(sha256="sha256:" + "0" * 64), "artifact digest is stale"),
+            ("revision", lambda d: d["source_snapshot"].update(commit_sha="a" * 40), "source_snapshot file 'docs/framework/examples/gate-contract-v1/inputs/FIXTURE-INPUT-001.md' revision does not match commit_sha"),
+            ("identity", lambda d: d.update(application_id="OTHER-APP"), "application_id does not match the app mission artifact identity 'FLAGLITE'"),
+            ("waiver", lambda d: d.update(gate_result="passed-with-accepted-risk"), "$.accepted_risk: expected JSON type object"),
         )
-        for label, change in cases:
+        for label, change, expected in cases:
             def mutate(root: Path, change=change) -> None:
                 path, record = self._record(root, "G-INTENT")
                 change(record)
                 self._save(path, record)
             with self.subTest(case=label):
                 _, result = self._case(mutate)
-                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                output = result.stdout + result.stderr
+                self.assertNotEqual(result.returncode, 0, output)
+                self.assertIn(expected, output)
 
     def test_invalid_accepted_risk_and_not_applicable_results_fail_closed(self) -> None:
         def empty_waiver(root: Path) -> None:
@@ -323,14 +325,18 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             record["gate_data"]["platform_applicability"][0]["platform"] = "android"
             self._save(path, record)
         _, result = self._case(substituted)
-        self.assertIn("platform_applicability platform 'android' is outside scope.platforms", result.stdout + result.stderr)
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn("G-COVERAGE platform_applicability platform 'android' is outside scope.platforms", output)
 
         def out_of_scope_journey(root: Path) -> None:
             path, record = self._record(root, "G-COVERAGE")
             record["gate_data"]["journeys"][0]["requirement_ids"] = ["OTHER-REQ-999"]
             self._save(path, record)
         _, result = self._case(out_of_scope_journey)
-        self.assertIn("out-of-scope requirement", result.stdout + result.stderr)
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn("journey 'FIXTURE-JOURNEY-001' references out-of-scope requirement 'OTHER-REQ-999'", output)
 
     def test_feasibility_dependency_conflicts_and_out_of_scope_tasks_fail_with_targeted_diagnostics(self) -> None:
         def conflicting_effect(root: Path) -> None:
@@ -721,13 +727,14 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
 
         def failed_push(root: Path) -> None:
             path, record = self._record(root, "G-IMPL")
-            record["gate_result"] = "passed"
             record["change_control"].update({"push_result": "failed", "remote": None, "branch_ref": None})
             self._save(path, record)
-        _, result = self._case(failed_push)
+        root, result = self._case(failed_push)
         output = result.stdout + result.stderr
-        self.assertNotEqual(result.returncode, 0, output)
-        self.assertIn("[G-IMPL]", output)
+        self.assertEqual(result.returncode, 0, output)
+        _, record = self._record(root, "G-IMPL")
+        self.assertEqual(record["change_control"]["push_result"], "failed")
+        self.assertEqual(record["gate_result"], "in-progress")
 
     def test_skipped_unavailable_or_failed_required_check_cannot_support_impl_pass(self) -> None:
         for check_result in ("not-run", "skipped", "unavailable", "failed"):
