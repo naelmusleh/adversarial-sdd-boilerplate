@@ -3,11 +3,11 @@ id: FRAMEWORK-ADV-013
 type: adversarial-review
 title: FW-TASK-020 separate-app ten-gate adversarial pilot
 status: in-review
-version: 2.5
+version: 2.6
 created: 2026-10-21
 updated: 2026-10-21
 reviewed-artifact: FW-TASK-020
-reviewed-version: framework revision d95689aed614a4f3548fea8a828367e4d2bc60e3
+reviewed-version: framework revision 0f775c9408e89d915a711a359301e3f89416b684
 related-artifacts: FRAMEWORK-ADV-011, FRAMEWORK-ADV-012, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-BACKLOG-001, DECISION-LOG-001
 ---
 
@@ -17,8 +17,8 @@ related-artifacts: FRAMEWORK-ADV-011, FRAMEWORK-ADV-012, FRAMEWORK-GATE-CONTRACT
 
 - **Active gate:** G-IMPL for the harness and pilot evidence; G-RELEASE is limited to its non-production hosted-check/attestation rehearsal.
 - **Selected task and scope:** FW-TASK-020 only. Owner disposition DECISION-020 accepts synthetic PASS fixtures for G-INTENT/G-SETUP only. The harness now binds G-SETUP to both app initialization and validation output, and a unit test mocks GitHub CLI HTTP 401 to exercise fail-closed attestation verification. Keep the app synthetic, preserve all ten product gate records as `in-progress`, and avoid product code or production claims.
-- **Acceptance evidence:** Focused pilot and attestation suites, complete Python suite, artifact validation, diff checks, exact-commit hosted Verify Pipeline result, owner disposition DECISION-020, G-SETUP contract checklist reconciliation, and fresh independent review of the updated matrix and limits.
-- **Known blockers:** Mocked provider-auth failure does not establish real GitHub availability; no live hosted run was canceled. Genuine capture critique and operational telemetry/state-growth need a product; these gates remain explicitly `in-progress` in this product-free pilot.
+- **Acceptance evidence:** Focused pilot and attestation suites, complete Python suite, artifact validation, diff checks, exact-commit hosted Verify Pipeline result, owner disposition DECISION-020, G-SETUP contract checklist reconciliation, and fresh independent review of the updated matrix and limits. Local checks: 25 focused tests, 89 Python tests, 48 artifacts, clean diff check. Verify Pipeline run [39666601856](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39666601856) passed all three required jobs on exact revision `0f775c9408e89d915a711a359301e3f89416b684`.
+- **Known blockers:** Fresh independent review `/root/fw020_review` on exact revision `0f775c9408e89d915a711a359301e3f89416b684` returned **BLOCK — FW-TASK-020 remains incomplete**. Mocked HTTP 401 and interrupted/cancelled schema mutations do not establish actual provider outage or run-interruption behavior; no live run was canceled. Product G-CX rendering/critique, G-OPERATE telemetry/state-growth, and product-level G-FEAS evidence are unavailable in this product-free pilot. Standalone attestation verification also remains unverified.
 
 ## Scope and method
 
@@ -34,7 +34,7 @@ related-artifacts: FRAMEWORK-ADV-011, FRAMEWORK-ADV-012, FRAMEWORK-GATE-CONTRACT
 | Gate | Synthetic PASS fixture in this pilot | Disposition and boundary |
 |---|---|---|
 | G-INTENT | Yes | Validator-bound synthetic mission, explicit exclusions, and fixture owner approval. Exercises reference/digest relationships only; identity and product intent are not authenticated. |
-| G-SETUP | Yes | Actual local validator command after synthetic G-INTENT PASS, with durable output. Exercises only the disposable app setup; does not establish product environment readiness or completeness of setup commands. |
+| G-SETUP | Yes | Synthetic G-INTENT PASS followed by initialized-app setup; retains initializer, `artifacts.py list`, and `artifacts.py validate` stdout/stderr, exact framework/runtime pin, and GSET-01/02/03 evidence mapping. Exercises only the disposable app setup; does not establish readiness for a real product stack or completeness of its setup commands. |
 | G-REQ | No | A PASS requires testable product requirements and an independent review of those requirements. The only requirement is a synthetic fixture identifier, so a PASS would fabricate substantive evidence. The harness tests rejection of an open blocking finding. |
 | G-FEAS | No | Supported route now has criterion-linked synthetic fixture evidence, and reduced-scope, blocked, conditional, and owner-risk route shapes are exercised. No product dependency research or owner scope decision exists; these are route probes, not a gate PASS. |
 | G-COVERAGE | No | Platform and journey mismatch attacks are tested. No real product journeys, failure modes, or surface inventory exists to support PASS. |
