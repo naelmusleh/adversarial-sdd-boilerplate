@@ -313,9 +313,10 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
     lock_path = root / APP_FRAMEWORK_LOCK
     has_manifest = any((root / path).exists() for path in APP_HANDOFFS.values())
     problems: list[str] = []
-    # Pre-lock app repositories retain legacy gate-record semantics. Once a
-    # lock or handoff manifest is present, enforce the versioned handoff rules.
-    if not lock_path.exists() and not has_manifest:
+    # Pre-lock app repositories retain legacy gate-record semantics unless a
+    # record explicitly claims versioned handoff evidence.
+    declares_handoff = any("handoff-manifest" in data for _, data in gate_records)
+    if not lock_path.exists() and not has_manifest and not declares_handoff:
         return problems
     revision = ""
     if lock_path.exists():

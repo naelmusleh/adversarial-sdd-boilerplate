@@ -3,7 +3,7 @@ id: FRAMEWORK-ADV-008
 type: adversarial-review
 title: Independent G-IMPL review of versioned app handoffs and commit-push controls
 status: revision-required
-version: 0.2
+version: 0.3
 created: 2026-10-20
 updated: 2026-10-20
 reviewed-artifact: FRAMEWORK-BACKLOG-001
@@ -98,6 +98,16 @@ related-artifacts: FRAMEWORK-SPEC-001, GATE-CATALOG-001, FRAMEWORK-BACKLOG-001, 
 - **Owner decision required:** No, provided the existing legacy-compatibility acceptance criterion governs.
 - **Initial disposition:** unresolved.
 
+### FRAMEWORK-ADV-008/FINDING-007 — Declared but absent handoff can evade strict validation
+
+- **Severity:** Major; blocking for FW-TASK-015 criterion 3.
+- **Target location:** `scripts/artifacts.py`, `application_governance_problems` legacy opt-in guard.
+- **Evidence:** The no-lock/no-manifest compatibility return occurs before inspecting whether a gate record itself declares `handoff-manifest`. A passed G-REQ/G-ARCH record can claim the versioned handoff while the referenced file and lock are absent, then avoid strict validation.
+- **Impact / failure mode:** The validator can accept a false versioned handoff claim while preserving legacy compatibility.
+- **Recommendation:** Preserve legacy behavior only when records do not claim handoff evidence; treat an explicit manifest link as opt-in and require the lock and populated valid manifest. Add a negative pointer-only fixture alongside the unlinked legacy PASS fixture.
+- **Owner decision required:** No; the accepted legacy boundary is no-lock/no-manifest and no declared handoff.
+- **Initial disposition:** unresolved.
+
 ## Disposition and revision
 
 | Finding | Disposition | Rationale / decision evidence | Change made or follow-up | Target revision/link | Owner and revisit trigger if deferred/risk |
@@ -108,6 +118,7 @@ related-artifacts: FRAMEWORK-SPEC-001, GATE-CATALOG-001, FRAMEWORK-BACKLOG-001, 
 | FRAMEWORK-ADV-008/FINDING-004 | resolved as inspectable paper evidence | The seven-scenario commit/push tabletop is durable and explicitly does not claim live Git, remote, hosted CI, or branch-protection evidence. | Added `FRAMEWORK-EXERCISE-002` and linked it from FW-TASK-016. Independent reviewer confirmed the tabletop is inspectable and its limits are clear. | `8c47b52` | N/A |
 | FRAMEWORK-ADV-008/FINDING-005 | unresolved | Explicit revision must identify the exact files used in a Git-backed initialization. | Require a supplied revision to match checkout `HEAD`; add a mismatch regression fixture. | Pending | N/A |
 | FRAMEWORK-ADV-008/FINDING-006 | unresolved | No-lock apps must remain compatible with the legacy contract. | Scope strict gate handoff enforcement to versioned adoption and add a legacy PASS fixture. | Pending | N/A |
+| FRAMEWORK-ADV-008/FINDING-007 | unresolved | An explicit versioned handoff claim cannot be accepted without its lock and populated manifest. | Make a declared handoff link opt into strict validation; add pointer-only negative fixture. | Pending | N/A |
 
 No owner residual-risk approval used for this review.
 
@@ -116,7 +127,7 @@ No owner residual-risk approval used for this review.
 - **Rerun date:** 2026-10-20.
 - **Verifier and reviewer mode:** `/root/sdd_governance`, independent read-only full-scope review at frozen HEAD `44d7d922a82b298275a9dada1bc0eee356e683dc`; no author overlap on the reviewed implementation. The reviewer did not execute tests.
 - **Scope:** Full review of FW-TASK-015/016 acceptance criteria and earlier findings. The reviewer identified two additional gaps (FINDING-005/006), so the rerun failed. Local verification after remediation is reviser evidence and is not attributed to the reviewer.
-- **Target revision:** `44d7d922a82b298275a9dada1bc0eee356e683dc` (reviewed); remediation currently uncommitted.
+- **Target revision:** `3e7d8805d83167e55b382ab02c422fe9d765792d` (reviewed); the reviewer identified ADV-008/FINDING-007. Its remediation is currently uncommitted.
 
 | Finding | Rerun state | Evidence confirming resolution or explaining remaining risk |
 | --- | --- | --- |
@@ -126,16 +137,17 @@ No owner residual-risk approval used for this review.
 | FRAMEWORK-ADV-008/FINDING-004 | resolved as paper tabletop | Independent reviewer confirmed artifact inspectability from prior rerun; scope does not include live publication/CI/settings. |
 | FRAMEWORK-ADV-008/FINDING-005 | not-resolved at reviewed revision | A Git checkout could accept an explicit revision different from HEAD and mislabel copied source. |
 | FRAMEWORK-ADV-008/FINDING-006 | not-resolved at reviewed revision | Legacy PASS records without a lock/manifest could be rejected by newly adopted validation. |
+| FRAMEWORK-ADV-008/FINDING-007 | not-resolved at reviewed revision | A PASS record with an explicit but missing handoff link bypasses strict checks through the legacy early return. |
 
-- **New findings:** FRAMEWORK-ADV-008/FINDING-005 (major provenance mismatch) and FINDING-006 (major legacy compatibility gap).
+- **New findings:** FRAMEWORK-ADV-008/FINDING-007 (major declared-handoff bypass). The rerun also resolved FINDING-005 and FINDING-006 within their reviewed scope.
 - **Verification limits:** Reviewer did not run tests or inspect hosted repository settings. Local tests and artifact validation are reviser-executed evidence, not independent execution. Hosted CI and repository protection remain unverified.
 
 ## Final gate result
 
 - **Result:** **FAIL — revision required.**
-- **Why this result follows the criteria:** The rerun verified prior fixes but found an explicit-revision mismatch that breaks exact provenance and a potential no-lock legacy compatibility break. These block FW-TASK-015 acceptance; therefore the combined G-IMPL gate and both backlog tasks remain open pending remediation, local regression checks, and another full-scope independent rerun.
+- **Why this result follows the criteria:** The rerun resolved the revision-mismatch and legacy-compatibility findings, but found that a record explicitly claiming a missing handoff manifest bypasses strict validation. This blocks FW-TASK-015 acceptance; therefore the combined G-IMPL gate and both backlog tasks remain open pending remediation, local regression checks, and another full-scope independent rerun.
 - **Approval:** Not granted.
-- **Next action / owner:** Framework implementation agent finishes F005/F006 remediation, executes local checks, commits and pushes the change, then requests a full-scope independent rerun. Framework owner reviews the resulting evidence; neither FW-TASK-015 nor FW-TASK-016 is complete yet.
+- **Next action / owner:** Framework implementation agent finishes F007 remediation, executes local checks, commits and pushes the change, then requests a full-scope independent rerun. Framework owner reviews the resulting evidence; neither FW-TASK-015 nor FW-TASK-016 is complete yet.
 
 ## References
 

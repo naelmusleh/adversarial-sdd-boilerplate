@@ -395,6 +395,20 @@ class ArtifactValidationTests(unittest.TestCase):
             result = run_validation(root)
             self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_legacy_passed_record_declaring_missing_handoff_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            write_app_fixture(
+                root,
+                functional_row="| FR-001 | The system MUST save the item. | A persisted item is visible after reload. |",
+                quality_row="| NFR-001 | The service MUST respond within one second. | A measured request completes within one second. |",
+            )
+            write_gate_record(root, "G-REQ", ".sdd/G-REQ-HANDOFF.json")
+            result = run_validation(root)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("requires a versioned .sdd/framework.lock.json", result.stderr)
+            self.assertIn("has no populated .sdd/G-REQ-HANDOFF.json", result.stderr)
+
     def test_frozen_greq_handoff_and_gate_record_pass(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
