@@ -3,9 +3,9 @@ id: DECISION-LOG-001
 type: decision-log
 title: Reusable template decisions
 status: active
-version: 0.1
+version: 0.2
 created: 2026-10-10
-updated: 2026-10-10
+updated: 2026-10-21
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001
 ---
 
@@ -15,6 +15,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001
 | --- | --- | --- | --- | --- |
 | DECISION-017 | 2026-10-08 | The framework core is usable from a local checkout without ChatGPT Desktop or any single AI provider. Markdown and local helper scripts are the canonical procedures; humans and any available agent may execute them. | Integrations remain optional adapters unless a particular application records an approved tool-specific decision. | FRAMEWORK-SPEC-001, TOOL-CATALOG-001 |
 | DECISION-018 | 2026-10-10 | License the public framework distribution under the MIT License. | The owner selected MIT. This decision does not publish the package; the package must first be reviewed and explicitly approved for public release. | FRAMEWORK-SPEC-001, LICENSE |
+| DECISION-019 | 2026-10-21 | Require trusted CI attestation for G-IMPL PASS. | Repository owner Nael Musleh selected provider-verifiable attestation bound to the exact source revision, required-check manifest, and trusted workflow identity. Local command evidence may aid diagnosis but cannot support G-IMPL PASS. Apps without configured and successfully verified trusted provenance remain `in-progress` or `blocked`. This authorizes a versioned framework-contract and new-app initializer change; it does not authorize migrating existing apps or claim that an attestation proves test quality, repository protection, or production readiness. Revisit when a provider-neutral verifier is available or the configured CI provider/trust boundary changes. | FRAMEWORK-GATE-CONTRACT-001, GATE-CATALOG-001, FRAMEWORK-CI-RELEASE-POLICY-001, FRAMEWORK-ADV-013, FRAMEWORK-BACKLOG-001 |
 
 ## Decision discipline
 

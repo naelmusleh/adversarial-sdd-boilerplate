@@ -3,7 +3,7 @@ id: FRAMEWORK-ADV-013
 type: adversarial-review
 title: FW-TASK-020 separate-app ten-gate adversarial pilot
 status: in-review
-version: 1.2
+version: 1.3
 created: 2026-10-21
 updated: 2026-10-21
 reviewed-artifact: FW-TASK-020
@@ -80,11 +80,8 @@ related-artifacts: FRAMEWORK-ADV-011, FRAMEWORK-ADV-012, FRAMEWORK-GATE-CONTRACT
 
 **Provisional: structurally useful, with one demonstrated evidence-integrity bypass still open.** The pilot has G-INTENT/G-SETUP positive paths, targeted gate-negative cases, and explicit limits; the new G-IMPL probe demonstrates that copied output can pass as typed command evidence. Other gates stay in-progress because this pilot has no product evidence that warrants PASS. FW-TASK-020 remains in progress until the provenance bypass is mitigated or owner-dispositioned, an independent reviewer accepts the final scope/evidence, and exact hosted verification completes. This pilot does not establish that the framework can build a production-grade application.
 
-## Owner decision required
+## Owner disposition and implementation requirement
 
-Choose one bounded disposition and record its rationale and revisit condition:
+**DECISION-019 — trusted CI attestation required (2026-10-21).** The repository owner selected provider-verifiable attestation bound to the exact source revision, required-check manifest, and trusted workflow identity. Local command output may support diagnostics but cannot support G-IMPL PASS. New apps without configured and successfully verified provenance must remain `in-progress` or `blocked`; existing initialized apps are not silently migrated. Revisit when a provider-neutral verifier is available or the configured provider/trust boundary changes. The decision does not claim an attestation proves test quality, branch protection, or production readiness.
 
-1. **Require trusted runner/provider attestation (recommended):** G-IMPL PASS requires verifiable CI provenance tied to the exact source revision and required-check manifest; local command evidence can support investigation but cannot satisfy PASS. Apps without a configured trusted provider remain `in-progress` or `blocked`. Scope is G-IMPL evidence provenance; revisit when a provider-neutral signed runner is available.
-2. **Accept a procedural evidence boundary:** Close this pilot only after explicitly narrowing its claim: local/typed command evidence is structurally checked but not authenticated, and an agent able to fabricate evidence can bypass G-IMPL. This does not support a claim that G-IMPL is deterministically enforced against evidence fabrication. Revisit before relying on G-IMPL PASS for release authorization or when trusted provenance becomes available.
-
-The decision is pending. Do not treat these options as owner authorization or as permission to change the normative contract.
+Implementation is not complete merely because the decision is recorded. The validator must cryptographically verify the provider attestation and inspect the signed report for exact repository, signer workflow, protected ref, source SHA, required-check manifest digest, required check IDs, and successful results. Missing verifier, unavailable provider, malformed report, signature/identity mismatch, or stale inputs fail closed. App owners must observe and configure branch protection separately; the framework must not infer it from workflow YAML.
