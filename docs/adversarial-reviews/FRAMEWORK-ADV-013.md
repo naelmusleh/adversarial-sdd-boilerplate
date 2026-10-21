@@ -3,11 +3,11 @@ id: FRAMEWORK-ADV-013
 type: adversarial-review
 title: FW-TASK-020 separate-app ten-gate adversarial pilot
 status: in-review
-version: 1.4
+version: 1.5
 created: 2026-10-21
 updated: 2026-10-21
 reviewed-artifact: FW-TASK-020
-reviewed-version: framework revision d9c135bc7e3aa3842cd374f5508ea7fa0f7d0390
+reviewed-version: framework revision d95689aed614a4f3548fea8a828367e4d2bc60e3
 related-artifacts: FRAMEWORK-ADV-011, FRAMEWORK-ADV-012, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-BACKLOG-001
 ---
 
@@ -67,6 +67,11 @@ related-artifacts: FRAMEWORK-ADV-011, FRAMEWORK-ADV-012, FRAMEWORK-GATE-CONTRACT
 
 ## Latest FW-TASK-020 rerun and independent review
 
+- **Exact framework revision:** `d95689aed614a4f3548fea8a828367e4d2bc60e3`.
+- **Separate-app pilot:** all 17 tests passed. Synthetic app source revision `916cf1b42768654d7c89327207a270001c6386bc`; ten gate-record revision `2e0335713a9eecd606eb00e2cca154db1848be60`; all ten gate results remained `in-progress`; app remote is absent; no product source exists; synthetic only. The metadata is retained at `/tmp/fw020-trust-root-pilot-d956.json`; the disposable app itself was removed by test teardown.
+- **Local framework checks:** full Python suite, 85 tests passed; `python3 scripts/artifacts.py validate`, 47 artifacts validated; `git diff --check` passed.
+- **Hosted framework checks:** Verify Pipeline run `39544551851` completed successfully on exact framework revision `d95689a`; `Initializer Regression Gate`, `Metadata & Artifact Audit`, and `TypeScript Static Code Analysis` all concluded `success`.
+- **Independent reviewer `/root/review_fw018_final`:** confirmed the new null accepted-risk and unauthorized G-CX waiver tests assert their intended diagnostics and found no regression in canonical signer enforcement. Overall FW-TASK-020 verdict remains **BLOCK**: no real app-hosted attestation has been observed, and the full gate-specific bypass/valid-path matrix (including G-FEAS routes) remains incomplete. The app-selected signer revision remains an immutable revision in the canonical repository, not an independently signed allowlist.
 - **Exact framework revision:** `d9c135bc7e3aa3842cd374f5508ea7fa0f7d0390`.
 - **Separate-app pilot:** all 16 tests passed. Synthetic app source revision `eb248b04edcfd80df96c851477f5623e7b2ba8aa`; ten gate-record revision `2411446e1840e7f6099d1f50c880e2671484a897`; all ten gate results remained `in-progress`; app remote is absent; no product source exists; synthetic only. The temporary app was removed by test teardown; these SHA values and test-generated metadata are the retained pilot record, not a retained app repository.
 - **Local framework checks:** full Python suite, 84 tests passed; `python3 scripts/artifacts.py validate`, 47 artifacts validated; `git diff --check` passed.
