@@ -3,10 +3,10 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 3.0
+version: 3.1
 created: 2026-10-07
-updated: 2026-10-20
-related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001
+updated: 2026-10-21
+related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001
 ---
 
 # FRAMEWORK-BACKLOG-001 — Remaining work to complete Adversarial SDD Framework v1
@@ -459,6 +459,105 @@ FW-TASK-011 and FW-TASK-013 remain proposed v2 work and are deferred until prior
 - **Pilot hardening and verification (2026-10-21):** On exact framework revision `d9c135bc7e3aa3842cd374f5508ea7fa0f7d0390`, the 16-test separate-app pilot passed, with ten gate records all `in-progress`, no app remote or product source, and synthetic-only scope. App source revision: `eb248b04edcfd80df96c851477f5623e7b2ba8aa`; gate-record revision: `2411446e1840e7f6099f1d50c880e2671484a897`. The ten invalid fixtures now use contract v1.2, refresh source/scope bindings, remove a gate-specific required field, and assert its exact missing-property diagnostic. Full Python suite: 84 tests passed; artifact validation: 47 artifacts; `git diff --check` passed. Hosted Verify Pipeline run `39544046204` passed all three checks on that exact framework SHA. These are framework checks, not an app-hosted attestation.
 - **Final wrap checkpoint (2026-10-21):** On framework revision `d95689aed614a4f3548fea8a828367e4d2bc60e3`, the separate-app pilot passed 17 tests, the full Python suite passed 85 tests, `python3 scripts/artifacts.py validate` reported 47 artifacts, and `git diff --check` passed. Pilot metadata records app source `916cf1b42768654d7c89327207a270001c6386bc` and gate records `2e0335713a9eecd606eb00e2cca154db1848be60`; all ten gates remain `in-progress`, the app has no remote or product source, and the run is synthetic. The new focused cases reject `accepted_risk: null` and a G-CX not-applicable waiver made by a non-accountable owner with their intended diagnostics. Hosted Verify Pipeline run `39544551851` passed all three framework checks on exact revision `d95689a`; it is not an app-hosted attestation. Independent reviewer `/root/review_fw018_final` confirmed these tests exercise their intended cases and found no regression in canonical signer enforcement, but retained **BLOCK**: the complete gate-specific bypass/valid-path matrix (including G-FEAS route variants) is not evidenced and no real app-hosted provider attestation exists. The task remains in progress; this checkpoint does not establish production readiness.
 - **State:** **In progress — implementation is pushed; remaining acceptance evidence is outstanding.** Independent review `/root/review_fw018_final` returned **BLOCK** because no real app-hosted attestation has been observed and the complete per-gate bypass/valid-path matrix is not yet demonstrated. The synthetic no-remote pilot cannot produce provider attestation; keep G-IMPL `in-progress` and do not claim end-to-end provider verification without an exact app-hosted run. Broader pilot coverage and final independent review remain. All synthetic observations stay separate from product evidence; the no-remote pilot models, but does not observe, a real push outage.
+
+## Owner-prioritized comparative learning candidates — v2
+
+The following candidates capture net-new process improvements drawn from the review of [Fadi88/one-man-startup](https://github.com/Fadi88/one-man-startup). They are proposals, not approved framework requirements or existing capabilities. Do not start implementation until v2 scope and requirement IDs are approved. Preserve the current versioned gate contract, fail-closed validation, exact-revision evidence, app-owned source of truth, and explicit owner authority while evaluating each candidate.
+
+**Recommended order:** FW-TASK-021 → FW-TASK-022 → FW-TASK-023. FW-TASK-024 can be designed alongside these but must not weaken any mandatory control. FW-TASK-025 can be specified after its app-specific applicability rules are agreed. This sequence is independent of FW-TASK-020's unresolved pilot evidence; FW-TASK-020 remains blocked and must not be relabeled complete to start discovery work.
+
+### FW-TASK-021 — Guided, progressive new-application intake and bootstrap
+
+- **Priority:** P1 — highest user-facing setup value; builds on the existing lean initializer.
+- **Goal:** Help an owner move from a product idea to a truthful, validated app-repository starting state with fewer unnecessary questions and no inherited template state.
+- **Requirements:** Assign v2 requirement IDs only after v2 scope is opened and approved.
+- **Dependencies:** CAP-004 and the app-project validator; owner-approved v2 scope. FW-TASK-020 completion is not a dependency for research or design, but its unresolved evidence limitations remain explicit.
+- **Work:** Evolve `workflows/product-discovery.md`, the app setup instructions, and CAP-004 as needed. Begin with a bounded environment/repository inspection (target path and contents, repository identity and remotes when observable, current stack when source exists, and available local prerequisites). Run an adaptive intake for product intent, intended users and problem evidence, outcome, platforms and regions, data sensitivity, integrations/providers, operational and cost constraints, license, and repository visibility only where applicable. Look up facts that can be reliably verified; cite source and date. Ask the owner only for decisions or unavailable evidence. Group dependent questions, offer a reasoned recommendation where useful, and let the owner identify an item as unknown rather than forcing a guess. If intake runs again, revisit only changed or newly relevant branches. Select one canonical home for the durable setup summary; do not create a second task tracker or duplicate canonical decisions.
+- **Acceptance criteria:**
+  1. A clean, empty target can be initialized from minimal owner input without inventing a user, provider, stack, budget, platform, region, decision, or gate outcome.
+  2. An existing source repository is inspected before setup questions; discovered facts are distinguished from owner statements, research findings, and agent inference, and inaccessible facts remain explicitly unknown.
+  3. The intake identifies blocking owner decisions, researchable unknowns, external access needs, and nonblocking unknowns separately, with affected requirements/tasks or next discovery action where known.
+  4. A repeat setup asks only questions affected by the changed product context and preserves previously accepted decisions unless the owner reopens them or new evidence invalidates them.
+  5. Generated starter artifacts have stable IDs, correct source/framework revision pins, draft/in-progress states, no stale sample decisions/history/credentials, and no fabricated gate PASS; `python3 scripts/artifacts.py validate` succeeds on the generated repository.
+  6. The owner sees a concise review of captured intent, unresolved items, decisions requested, generated files, and the next permitted action before any initial commit, remote creation, push, publication, or other outward action.
+  7. A fresh-copy regression exercise checks both generated content and removed template-only state; its rubric covers minimal input, partial/unknown input, an existing codebase, repeat setup after one context change, and invalid target safety.
+  8. A recorded synthetic setup run is explicitly labeled as framework-workflow evidence and is not accepted as product/user evidence or as a G-INTENT/G-SETUP approval.
+- **Evidence:** Versioned intake contract and templates; clean-copy initialization record; generated repository listing and validator output; rubric and transcript/output inspection; independent review of question burden, state provenance, cleanup, and false gate-pass risks.
+- **State:** **TODO — proposed v2; owner-prioritized, not yet authorized as implementation scope.**
+
+### FW-TASK-022 — Surface system and service dependencies before specification lock
+
+- **Priority:** P1 — reduces costly requirement and architecture rework.
+- **Goal:** Identify candidate systems, models, services, providers, data sources, and operational prerequisites early enough to shape requirements without presenting a candidate as an available capability.
+- **Requirements:** Assign v2 requirement IDs only after v2 scope is opened and approved.
+- **Dependencies:** FW-TASK-021 intake design; WORKFLOW-DISCOVERY-001 and WORKFLOW-FEASIBILITY-001. Formal G-FEAS remains in its current lifecycle position and retains its current pass policy.
+- **Work:** Add a bounded pre-spec dependency-discovery pass to product discovery. For each material requirement, identify possible technical/service dependencies and examine availability, permissions, data rights, supported regions/platforms, pricing and usage limits, security/privacy obligations, operational owner, failure behavior, and fallback where applicable. Record evidence, date, source, confidence, unresolved access, affected requirement/task IDs, and what finding would change the recommendation. Route researchable unknowns to research, owner choices to a decision record, and unavailable capabilities to an explicit alternative or blocked dependency. Feed the results into the requirements draft and the later G-FEAS register; do not turn exploratory research into a formal feasibility PASS.
+- **Acceptance criteria:**
+  1. A product idea with a dependency on an unavailable or unverified provider identifies that dependency before the specification is treated as settled and does not claim the provider exists, is approved, or meets a target without evidence.
+  2. The record distinguishes evidence-backed supported, unsupported, unknown, constrained, and not-applicable claims and links each material item to affected requirements and downstream tasks.
+  3. Cost, account/permission setup, data transfer, legal/privacy, platform/store, operational ownership, and fallback are assessed only when relevant; absent evidence is reported, not inferred.
+  4. The discovery pass can continue independent work while blocking only dependent promises/tasks; each blocker has an owner or research route and a state-change trigger.
+  5. Product requirements are revised to reflect verified constraints before the formal G-FEAS decision; only the existing gate contract can authorize G-FEAS PASS.
+  6. Tests/fixtures cover an available dependency with primary evidence, an unavailable provider, missing credentials/permissions, a cost constraint, and an explicitly non-applicable dependency; each asserts the expected classification and downstream effect.
+- **Evidence:** Updated discovery workflow and feasibility handoff contract; source-linked sample register; positive/negative fixtures with exact diagnostics or routing outcomes; independent review for false capability claims and accidental early PASS.
+- **State:** **TODO — proposed v2; depends on FW-TASK-021 for the polished intake handoff.**
+
+### FW-TASK-023 — Govern assumptions and falsifiable product experiments
+
+- **Priority:** P1 — makes uncertainty actionable and prevents hypotheses becoming facts through repetition.
+- **Goal:** Give material unknowns and product bets an owner, evidence path, decision consequence, and revisit date, then carry outcomes into requirements and backlog state.
+- **Requirements:** Assign v2 requirement IDs only after v2 scope is opened and approved.
+- **Dependencies:** FW-TASK-021 and FW-TASK-022; canonical app decision and artifact model.
+- **Work:** Define a compact assumption record with stable ID, claim, source/type (owner statement, observed fact, external evidence, or inference), confidence and limits, impact if wrong, confirmation/disproof method, accountable owner, due/review date, affected requirements/tasks, blocking state, and disposition. Define a separate experiment record for market, user, pricing, platform, or technical bets with hypothesis, prediction, explicit “wrong if” condition, method, sample/data limits, privacy handling, read date, decision rule, and linked outcome. Reuse canonical specification and decision records; avoid parallel trackers. Expired or contradicted assumptions must re-open linked decisions and hold dependent work until re-evaluated. Synthetic runs cannot establish real user demand or outcomes.
+- **Acceptance criteria:**
+  1. Every material unresolved assumption has a testable confirmation/disproof path, accountable owner, date, impact, and trace links; unowned, overdue, or unsupported claims cannot silently support a gate PASS.
+  2. An experiment without a prediction or falsifier is rejected as incomplete; a result is accepted only with its method, source data limits, observation date, and actual outcome recorded.
+  3. Expired, disproved, or materially changed assumptions identify dependent requirements/tasks and trigger their documented re-evaluation; unaffected work can continue.
+  4. A product decision cites the evidence and experiment result it used, but the experiment does not itself authorize scope, spend, publication, release, or a gate transition.
+  5. Synthetic evidence is typed and labeled so validators/reviewers cannot mistake it for customer research, provider verification, or production outcomes.
+  6. Schema and negative tests reject missing owners/dates/methods, invalid status transitions, broken requirement links, overdue open items, and fabricated experiment results.
+- **Evidence:** Versioned templates/schema, validator changes, fixture matrix, sample assumption/experiment lifecycle, exact test output, and independent review of expiry and synthetic-evidence boundaries.
+- **State:** **TODO — proposed v2.**
+
+### FW-TASK-024 — Add risk-scaled work tracks without weakening invariant controls
+
+- **Priority:** P2 — streamlines routine work after onboarding and evidence paths are established.
+- **Goal:** Route small fixes, user-visible features, and high-uncertainty product bets through proportionate workflows while preserving the controls required for their risk.
+- **Requirements:** Assign v2 requirement IDs only after v2 scope is opened and approved.
+- **Dependencies:** FW-TASK-021 through FW-TASK-023; the current lifecycle, gate catalog, and CI/release policy remain authoritative.
+- **Work:** Define a `fix`, `feature`, and `bet` classification with observable entry criteria, required artifacts, role/review path, and return conditions. A fix is a bounded defect correction with a testable existing contract; a feature changes user-visible behavior or product capability; a bet introduces material uncertainty in market, platform, pricing, or business model and needs evidence/experiment before commitment. Classification selects the smallest applicable workflow and review scope; it does not remove stable requirement traceability, relevant security/privacy/data controls, exact-revision verification, required CI attestation, commit/push evidence, or release authorization. Ambiguous or higher-risk changes escalate to the deeper path. Changes in existing apps must record why any gate/artifact is applicable or excluded under current contracts.
+- **Acceptance criteria:**
+  1. A routing matrix maps each track to lifecycle artifacts, gates, reviews, verification, and handoff outputs and explains how existing-app scope differs from a new-product lifecycle.
+  2. A typo-only change, a data-handling bug fix, a user-visible feature, and a new-market/platform bet route to distinct appropriate depth; adding security, personal data, payments, migrations, or public release escalates the applicable controls regardless of initial label.
+  3. No track permits a free-text claim to bypass required artifact validation, review findings, required checks/attestation, source revision binding, owner-authorized commit/push policy, or G-RELEASE authorization.
+  4. The workflow reports why a step is inapplicable and the evidence supporting that scope decision; a skipped step cannot be recorded as passed.
+  5. Adversarial routing tests cover ambiguous changes, attempts to classify a feature as a fix, risk escalation after implementation begins, and a bet incorrectly routed directly to coding.
+  6. The owner can identify the selected track, its required evidence, and its next step from repository records without relying on chat history.
+- **Evidence:** Track-routing workflow, applicability matrix, adversarial routing fixtures, tabletop outputs, and independent review confirming no weakened hard gate.
+- **State:** **TODO — proposed v2; do not implement before the invariant-control review is approved.**
+
+### FW-TASK-025 — Specify reversible, evidence-backed writes to real application data
+
+- **Priority:** P2 — mandatory for apps that mutate durable user or business data; not applicable to every app change.
+- **Goal:** Make migrations, backfills, bulk edits, and other material data changes demonstrably scoped, auditable, verifiable, and recoverable before production execution.
+- **Requirements:** Assign v2 requirement IDs only after v2 scope is opened and approved.
+- **Dependencies:** FW-TASK-021 through FW-TASK-023 as applicable; G-ARCH/G-RELEASE data contracts, data classification, and recovery evidence.
+- **Work:** Define a stack-neutral data-change procedure and app-owned adapter contract. Require a stable change ID; explicit target selection and expected row counts; a protected before-image/change journal created before applying writes; a rehearsal against a representative copy; read-back of intended changes; checks that out-of-scope records were not changed; and an executable, journaled undo/recovery rehearsal. Require the record to state the exact scope proven and any limits (large tables, eventual consistency, unavailable full scans); partial sampling cannot be described as full verification. Redact sensitive values from logs and evidence. Production application requires the owner's authorization for that specific change, an approved same-session backup where relevant, and a named operator; no procedure may infer permission from a passing test or HTTP response.
+- **Acceptance criteria:**
+  1. The contract applies only when an app mutates persistent user/business data and distinguishes ordinary test fixtures from real-data operations.
+  2. A rehearsal proves the selected target changed as intended, records before/after counts or equivalent scope evidence, checks unaffected data according to the declared verification method, and returns a machine-readable outcome with differences.
+  3. A failed or partial proof causes a safe stop and documented undo; undo itself is recorded and its result is read back.
+  4. Tests cover wrong target selection, duplicate/replayed change IDs, partial application, journal failure, changed unrelated records, failed undo, and sensitive-data redaction.
+  5. Large-data limitations are explicit and prevent unsupported “all rows verified” claims; the app owner approves any residual verification limit before production use.
+  6. The release/operations record links the migration artifact digest, tested source revision, rehearsal evidence, backup/recovery proof where applicable, operator, and specific owner authorization.
+- **Evidence:** Stack-neutral procedure, app adapter contract, disposable data rehearsal, failure/undo fixtures, security review of evidence handling, and G-RELEASE linkage test.
+- **State:** **TODO — proposed v2; activate only for app profiles with persistent user/business data writes.**
+
+### Comparative review dispositions
+
+- **Already represented; preserve and test rather than duplicate:** stable artifact/requirement/task links; explicit G-INTENT exclusions and owner approval; formal G-FEAS dependency and cost probes; bounded specialist/reviewer inputs; separate app source of truth; exact commit/push/CI/release state distinctions; residual-risk authority; artifact validation and server-side CI evidence. These are present in the current contracts or workflows and remain stronger than prompt-only declarations.
+- **Not adopted as stated:** multi-tool adapter generation for Claude, Gemini, or Copilot; a large fixed role catalog; any gate mode that allows mandatory security, data, CI, provenance, review, or release controls to be skipped; 100% coverage as a universal app requirement; a static score claiming framework superiority; and a CI status that reports accepted failures as ordinary green.
+- **Source and evidence boundary:** The external comparison informed candidate discovery only. It is not evidence that these candidates are implemented here or that the external project has validated them in production.
 
 ## Explicitly not in the v1 backlog
 
