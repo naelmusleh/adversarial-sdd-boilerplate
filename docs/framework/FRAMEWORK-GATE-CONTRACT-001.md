@@ -2,16 +2,18 @@
 id: FRAMEWORK-GATE-CONTRACT-001
 type: framework-contract
 title: Versioned ten-gate evidence and transition contract
-status: draft
+status: approved
 version: 1.0
 created: 2026-10-20
 updated: 2026-10-20
-related-artifacts: FRAMEWORK-SPEC-001, GATE-CATALOG-001, FRAMEWORK-BACKLOG-001, WORKFLOW-AI-ENGINEERING-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXAMPLE-GATE-CONTRACT-001, FRAMEWORK-EXERCISE-GATE-CONTRACT-001, FRAMEWORK-ADV-008
+related-artifacts: FRAMEWORK-SPEC-001, GATE-CATALOG-001, FRAMEWORK-BACKLOG-001, WORKFLOW-AI-ENGINEERING-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXAMPLE-GATE-CONTRACT-001, FRAMEWORK-EXERCISE-GATE-CONTRACT-001, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009
 ---
 
 # FRAMEWORK-GATE-CONTRACT-001 — Versioned ten-gate evidence and transition contract
 
 ## 1. Purpose and authority
+
+**Approval:** Contract v1.0 was approved for FW-TASK-018 implementation after the bounded independent G-IMPL review in [FRAMEWORK-ADV-009](../adversarial-reviews/FRAMEWORK-ADV-009.md). Approval does not claim runtime enforcement; app adoption remains gated on FW-TASK-018.
 
 This is the normative, versioned evidence and transition contract for the ten application lifecycle gates. It defines what a gate consumes and emits, how its result is supported, which work it permits, and when downstream evidence must be invalidated. It does not implement validation or prove that a reviewer is independent, evidence is truthful, a product is feasible, or an application is production-ready. Machine validation proves only the structural and relational rules implemented by the validator version recorded in the app's framework lock.
 
