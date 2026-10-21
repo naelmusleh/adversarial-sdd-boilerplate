@@ -948,6 +948,20 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         def missing_remote_claimed_pass(root: Path) -> None:
             path, record = self._record(root, "G-IMPL")
             record["gate_result"] = "passed"
+            record["gate_data"]["selected_task_id"] = "FIXTURE-TASK-001"
+            record["gate_data"]["criterion_check_mappings"] = [
+                {"criterion_id": item["criterion_id"], "check_ids": ["MISSING-REMOTE-CHECK"], "manual_method": None}
+                for item in record["criteria_results"]
+            ]
+            record["gate_data"]["required_checks"] = [{
+                "check_id": "MISSING-REMOTE-CHECK", "command_or_procedure": "synthetic CI check",
+                "tool_runtime_version": "synthetic runtime", "source_revision": self.source_revision,
+                "scope": "synthetic missing-remote attack", "pass_condition": "success",
+                "result": "passed", "evidence_id": "MISSING-REMOTE-EVIDENCE",
+            }]
+            record["gate_data"]["review_evidence_ids"] = ["MISSING-REMOTE-EVIDENCE"]
+            for criterion in record["criteria_results"]:
+                criterion.update({"outcome": "pass", "evidence_ids": ["MISSING-REMOTE-EVIDENCE"]})
             record["change_control"].update({"push_result": "not-applicable", "remote": None,
                                              "branch_ref": None, "authorization_ref": None})
             self._save(path, record)
