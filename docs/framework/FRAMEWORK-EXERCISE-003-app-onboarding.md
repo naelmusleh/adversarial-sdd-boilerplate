@@ -2,7 +2,7 @@
 id: FRAMEWORK-EXERCISE-003
 type: framework-exercise
 title: Progressive application onboarding and bootstrap regression exercise
-status: draft
+status: in-review
 version: 1.0
 created: 2026-10-21
 updated: 2026-10-21
@@ -38,9 +38,15 @@ Exercise the FW-TASK-021 startup path against empty, partial, existing, changed,
 
 ## Execution record
 
-The first fresh-copy attempt exposed a real defect in the README's framework-template copy sequence: ordinary recursive copying replaced the app-rendered `.template` file whose digest is pinned by `.sdd/framework.lock.json`. The generated app validator rejected the changed digest with a file-specific diagnostic. A follow-up attempt showed macOS `cp -Rn` exits non-zero when it correctly skips that existing file, so the README now uses a Python-standard-library no-clobber copy loop instead. CAP-004 requires post-composition validation. Rerun against the committed correction is pending; neither failed attempt is counted as a pass.
+**Filesystem/bootstrap run — 2026-10-21:** At framework source revision `e0a5c25034c32d1787276138fc0d7773c5aaa586` using Python 3.13.2, the initializer created 25 files in an empty temporary target. The README's no-clobber template composition was exercised against the same copied framework folders; all files listed by `.sdd/framework.lock.json` retained their original SHA-256 digests. The complete composed app tree contained 106 files and its copied helper reported `Validated 23 artifact(s).` The five canonical app documents had the requested `REPAIR` identity, remained `draft`, and contained no `<APP>` or `TARJEM-` stale sample markers. A non-empty target returned exit code 2 and its sentinel file hash and directory contents were unchanged.
 
-After rerun, record the exact source commit, runtime, commands, generated file list, validator output, preserved lock-file digest, invalid-target preservation result, and any deviations. Keep synthetic scenarios labeled as framework evidence and do not use them to pass G-INTENT/G-SETUP for a real application.
+**Existing-repository fixture:** A synthetic source tree with README, AGENTS, `pyproject.toml`, `src/inventory.py`, CI workflow, Git branch `main`, and no remote was inventoried. The workflow directs the agent to inspect these facts and not invoke the initializer. This was fixture inspection, not an observed AI interview.
+
+**Question-flow cases:** Minimal/unknown input, an existing accepted intent with one changed platform constraint, and the owner-facing pre-publication summary were walked against the frozen rubric as tabletop cases only. No real owner interview or independent model run occurred. Their outcomes remain unverified until an independent reviewer checks the dialogue burden and provenance behavior. Keep all synthetic observations labeled as framework-process evidence; they do not pass G-INTENT/G-SETUP for any real application.
+
+**Framework checks — 2026-10-21:** `python3 -m unittest discover -s tests -v` passed all 85 tests; `python3 scripts/artifacts.py validate` reported 48 artifacts; `git diff --check` passed. These checks ran after the no-clobber correction and exercise record were committed at `e0a5c25034c32d1787276138fc0d7773c5aaa586` (the final exercise/checkpoint edits themselves are a follow-up evidence change).
+
+**Earlier failed attempts:** Ordinary recursive template copying overwrote the generated locked gate template and was rejected by app validation. macOS `cp -Rn` then returned non-zero on the expected no-clobber collision. The documented Python-standard-library copier fixed both issues; the passing run above is after that correction.
 
 ## Limitations
 
