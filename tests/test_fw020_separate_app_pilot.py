@@ -551,7 +551,8 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
                 "security_accessibility_platform_evidence_ids": ["PILOT-RELEASE-CI"],
                 "owner_authorization_id": "PILOT-OWNER-AUTH", "support_owner": "synthetic owner"})
             record["evidence"].append({
-                "evidence_id": "PILOT-RELEASE-CI", "type": "ci-run", "criterion_ids": [],
+                "evidence_id": "PILOT-RELEASE-CI", "type": "ci-run",
+                "criterion_ids": [item["criterion_id"] for item in record["criteria_results"]],
                 "observed_at": "2026-10-21T13:30:00Z", "observed_by": "synthetic CI",
                 "source_revision": self.source_revision, "scope_ref": "synthetic release",
                 "locator": "synthetic-run", "record_sha256": "sha256:" + "e" * 64,
