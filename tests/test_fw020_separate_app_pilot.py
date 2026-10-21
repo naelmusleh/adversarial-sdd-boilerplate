@@ -628,6 +628,7 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         self.assertTrue(any("no rendered" in item.lower() for item in record["gate_data"]["limitations"]))
 
         def fabricate_passing_critique(root: Path) -> None:
+            mutate(root)
             path, record = self._record(root, "G-CX")
             record["gate_result"] = "passed"
             for criterion in record["criteria_results"]:
