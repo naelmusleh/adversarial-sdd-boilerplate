@@ -169,6 +169,24 @@ class TrustedCiAttestationTests(unittest.TestCase):
             self.assertIn("--source-digest", seen_command)
             self.assertIn(source_sha, seen_command)
 
+            def authentication_failure(command, **kwargs):
+                if command[0] == "/usr/bin/gh":
+                    return subprocess.CompletedProcess(command, 1, "", "HTTP 401: Bad credentials")
+                return real_run(command, **kwargs)
+
+            with patch("scripts.artifacts.shutil.which", return_value="/usr/bin/gh"), patch(
+                "scripts.artifacts.subprocess.run", side_effect=authentication_failure,
+            ):
+                auth_problems = _trusted_gimpl_attestation_problems(
+                    root, record, evidence, source_sha, policy, manifest["checks"], "fixture",
+                )
+
+            self.assertTrue(
+                any("GitHub attestation verification failed: HTTP 401: Bad credentials" in problem
+                    for problem in auth_problems),
+                auth_problems,
+            )
+
     def test_missing_provider_verifier_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

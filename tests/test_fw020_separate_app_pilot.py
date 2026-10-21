@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -44,12 +45,22 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         cls.framework_revision = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, text=True, capture_output=True
         ).stdout.strip()
-        subprocess.run([
+        initialize_command = [
             "python3", str(ROOT / "scripts/init_app_project.py"),
             "--name", "FlagLite Governance Pilot (Synthetic)",
             "--prefix", "FLAGLITE", "--target", str(cls.app),
             "--include-lifecycle-records", "--framework-revision", cls.framework_revision,
-        ], cwd=ROOT, check=True, text=True, capture_output=True)
+        ]
+        cls.initialization_command = initialize_command
+        initialization = subprocess.run(
+            initialize_command, cwd=ROOT, check=False, text=True, capture_output=True,
+        )
+        if initialization.returncode != 0:
+            raise RuntimeError(initialization.stdout + initialization.stderr)
+        cold_start_dir = cls.app / "docs/evidence/fw020-setup"
+        cold_start_dir.mkdir(parents=True, exist_ok=True)
+        (cold_start_dir / "initializer-stdout.txt").write_text(initialization.stdout, encoding="utf-8")
+        (cold_start_dir / "initializer-stderr.txt").write_text(initialization.stderr, encoding="utf-8")
         mission_path = cls.app / "mission.md"
         mission_text = mission_path.read_text(encoding="utf-8")
         mission_text = mission_text.replace(
@@ -477,7 +488,11 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             self._save(intent_path, intent)
 
             output_dir = root / "docs/evidence/fw020-setup"
-            output_dir.mkdir(parents=True)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            listing = subprocess.run(
+                ["python3", "scripts/artifacts.py", "list"], cwd=root,
+                text=True, capture_output=True,
+            )
             execution = subprocess.run(
                 ["python3", "scripts/artifacts.py", "validate"], cwd=root,
                 text=True, capture_output=True,
@@ -486,7 +501,12 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             stderr_path = output_dir / "stderr.txt"
             stdout_path.write_text(execution.stdout, encoding="utf-8")
             stderr_path.write_text(execution.stderr, encoding="utf-8")
+            listing_stdout_path = output_dir / "list-stdout.txt"
+            listing_stderr_path = output_dir / "list-stderr.txt"
+            listing_stdout_path.write_text(listing.stdout, encoding="utf-8")
+            listing_stderr_path.write_text(listing.stderr, encoding="utf-8")
             self.assertEqual(execution.returncode, 0, execution.stdout + execution.stderr)
+            self.assertEqual(listing.returncode, 0, listing.stdout + listing.stderr)
 
             setup_path, setup = self._record(root, "G-SETUP")
             setup.update({"record_id": "FLAGLITE-GATE-RUN-SETUP-002", "record_version": 2,
@@ -500,35 +520,104 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
                 "source_revision": self.source_revision,
             })
             evidence_id = "FLAGLITE-SETUP-OBSERVED-VALIDATION"
-            criterion_ids = [item["criterion_id"] for item in setup["criteria_results"]]
+            listing_evidence_id = "FLAGLITE-SETUP-OBSERVED-DISCOVERY"
+            initializer_id = "FLAGLITE-SETUP-OBSERVED-INITIALIZER"
+            evidence_by_criterion = {
+                "GSET-01": [initializer_id],
+                "GSET-02": [initializer_id],
+                "GSET-03": [initializer_id, listing_evidence_id, evidence_id],
+            }
             for criterion in setup["criteria_results"]:
-                criterion.update({"outcome": "pass", "evidence_ids": [evidence_id],
+                criterion.update({"outcome": "pass", "evidence_ids": evidence_by_criterion[criterion["criterion_id"]],
                                   "rationale": "Synthetic pilot: observed app-local validator execution."})
-            setup["gate_data"]["cold_start_evidence_ids"] = [evidence_id]
-            setup["evidence"] = [{
-                "evidence_id": evidence_id, "type": "command-execution", "criterion_ids": criterion_ids,
-                "observed_at": "2026-10-21T13:20:00Z", "observed_by": "synthetic pilot runner",
-                "source_revision": self.source_revision, "scope_ref": "initialized synthetic app baseline",
-                "locator": stdout_path.relative_to(root).as_posix(),
-                "record_sha256": "sha256:" + hashlib.sha256(stdout_path.read_bytes()).hexdigest(),
-                "limitations": ["synthetic app setup only; no product readiness claim"],
-                "details": {"command": "python3 scripts/artifacts.py validate", "exit_code": 0,
-                            "stdout_ref": stdout_path.relative_to(root).as_posix(),
-                            "stderr_ref": stderr_path.relative_to(root).as_posix(),
-                            "runtime_versions": ["Python 3.13"],
-                            "started_at": "2026-10-21T13:19:00Z", "completed_at": "2026-10-21T13:20:00Z",
-                            "scope": "initialized synthetic app baseline"},
-            }]
+            setup["gate_data"].update({
+                "repository_boundary": "separate disposable synthetic app; no remote or product source",
+                "source_of_truth_map": [
+                    {"artifact": "synthetic app setup evidence", "canonical_path": "docs/evidence/fw020-setup/"},
+                    {"artifact": "synthetic app lifecycle state", "canonical_path": ".sdd/gate-runs/"},
+                ],
+                "owners_and_access": [{
+                    "owner": "synthetic fixture owner", "prerequisite": "no external repository access",
+                    "status": "not-applicable",
+                }],
+                "toolchain": [{"tool": "Python", "version": sys.version.split()[0]}],
+                "cold_start_evidence_ids": [initializer_id, listing_evidence_id, evidence_id],
+            })
+            initializer_stdout = output_dir / "initializer-stdout.txt"
+            initializer_stderr = output_dir / "initializer-stderr.txt"
+            setup["evidence"] = [
+                {
+                    "evidence_id": initializer_id, "type": "command-execution",
+                    "criterion_ids": ["GSET-01", "GSET-02", "GSET-03"],
+                    "observed_at": "2026-10-21T13:10:00Z", "observed_by": "synthetic pilot runner",
+                    "source_revision": self.source_revision, "scope_ref": "clean synthetic app initialization",
+                    "locator": initializer_stdout.relative_to(root).as_posix(),
+                    "record_sha256": "sha256:" + hashlib.sha256(initializer_stdout.read_bytes()).hexdigest(),
+                    "limitations": ["synthetic app setup only; no product readiness or external access claim"],
+                    "details": {
+                        "command": json.dumps(self.initialization_command),
+                        "exit_code": 0, "stdout_ref": initializer_stdout.relative_to(root).as_posix(),
+                        "stderr_ref": initializer_stderr.relative_to(root).as_posix(),
+                        "runtime_versions": [f"Python {sys.version.split()[0]}"],
+                        "started_at": "2026-10-21T13:09:00Z", "completed_at": "2026-10-21T13:10:00Z",
+                        "scope": "separate disposable synthetic app initialization",
+                    },
+                },
+                {
+                    "evidence_id": listing_evidence_id, "type": "command-execution",
+                    "criterion_ids": ["GSET-03"],
+                    "observed_at": "2026-10-21T13:15:00Z", "observed_by": "synthetic pilot runner",
+                    "source_revision": self.source_revision, "scope_ref": "initialized synthetic app artifact discovery",
+                    "locator": listing_stdout_path.relative_to(root).as_posix(),
+                    "record_sha256": "sha256:" + hashlib.sha256(listing_stdout_path.read_bytes()).hexdigest(),
+                    "limitations": ["synthetic app setup only; no product readiness claim"],
+                    "details": {"command": "python3 scripts/artifacts.py list", "exit_code": listing.returncode,
+                                "stdout_ref": listing_stdout_path.relative_to(root).as_posix(),
+                                "stderr_ref": listing_stderr_path.relative_to(root).as_posix(),
+                                "runtime_versions": [f"Python {sys.version.split()[0]}"],
+                                "started_at": "2026-10-21T13:14:00Z", "completed_at": "2026-10-21T13:15:00Z",
+                                "scope": "initialized synthetic app artifact discovery"},
+                },
+                {
+                    "evidence_id": evidence_id, "type": "command-execution", "criterion_ids": ["GSET-03"],
+                    "observed_at": "2026-10-21T13:20:00Z", "observed_by": "synthetic pilot runner",
+                    "source_revision": self.source_revision, "scope_ref": "initialized synthetic app baseline",
+                    "locator": stdout_path.relative_to(root).as_posix(),
+                    "record_sha256": "sha256:" + hashlib.sha256(stdout_path.read_bytes()).hexdigest(),
+                    "limitations": ["synthetic app setup only; no product readiness claim"],
+                    "details": {"command": "python3 scripts/artifacts.py validate", "exit_code": 0,
+                                "stdout_ref": stdout_path.relative_to(root).as_posix(),
+                                "stderr_ref": stderr_path.relative_to(root).as_posix(),
+                                "runtime_versions": [f"Python {sys.version.split()[0]}"],
+                                "started_at": "2026-10-21T13:19:00Z", "completed_at": "2026-10-21T13:20:00Z",
+                                "scope": "initialized synthetic app baseline"},
+                },
+            ]
             self._save(root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-SETUP-002.json", setup)
 
-        _, result = self._case(setup_pass)
+        setup_root, result = self._case(setup_pass)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("Validated", result.stdout)
+        setup_record_path = setup_root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-SETUP-002.json"
+        setup_record = json.loads(setup_record_path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            setup_record["gate_data"]["cold_start_evidence_ids"],
+                ["FLAGLITE-SETUP-OBSERVED-INITIALIZER", "FLAGLITE-SETUP-OBSERVED-DISCOVERY",
+                 "FLAGLITE-SETUP-OBSERVED-VALIDATION"],
+        )
+        linked_by_criterion = {item["criterion_id"]: item["evidence_ids"] for item in setup_record["criteria_results"]}
+        self.assertEqual(linked_by_criterion["GSET-01"], ["FLAGLITE-SETUP-OBSERVED-INITIALIZER"])
+        self.assertEqual(linked_by_criterion["GSET-02"], ["FLAGLITE-SETUP-OBSERVED-INITIALIZER"])
+        self.assertEqual(linked_by_criterion["GSET-03"], [
+            "FLAGLITE-SETUP-OBSERVED-INITIALIZER", "FLAGLITE-SETUP-OBSERVED-DISCOVERY",
+            "FLAGLITE-SETUP-OBSERVED-VALIDATION",
+        ])
 
         failed_root, _ = self._case(setup_pass)
         setup_path = failed_root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-SETUP-002.json"
         setup = json.loads(setup_path.read_text(encoding="utf-8"))
-        setup["evidence"][0]["details"]["exit_code"] = 1
+        validation_evidence = next(item for item in setup["evidence"] if item["evidence_id"] == "FLAGLITE-SETUP-OBSERVED-VALIDATION")
+        validation_evidence["details"]["exit_code"] = 1
         self._save(setup_path, setup)
         failed = subprocess.run(
             ["python3", "scripts/artifacts.py", "validate"], cwd=failed_root,
@@ -544,8 +633,9 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         missing_output_root, _ = self._case(setup_pass)
         output_path = missing_output_root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-SETUP-002.json"
         setup = json.loads(output_path.read_text(encoding="utf-8"))
-        setup["evidence"][0]["details"]["stdout_ref"] = None
-        setup["evidence"][0]["details"]["stderr_ref"] = None
+        validation_evidence = next(item for item in setup["evidence"] if item["evidence_id"] == "FLAGLITE-SETUP-OBSERVED-VALIDATION")
+        validation_evidence["details"]["stdout_ref"] = None
+        validation_evidence["details"]["stderr_ref"] = None
         self._save(output_path, setup)
         missing_output = subprocess.run(
             ["python3", "scripts/artifacts.py", "validate"], cwd=missing_output_root,
@@ -560,7 +650,8 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
 
         missing_file_root, _ = self._case(setup_pass)
         setup_pass_path = missing_file_root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-SETUP-002.json"
-        evidence = json.loads(setup_pass_path.read_text(encoding="utf-8"))["evidence"][0]
+        setup_record = json.loads(setup_pass_path.read_text(encoding="utf-8"))
+        evidence = next(item for item in setup_record["evidence"] if item["evidence_id"] == "FLAGLITE-SETUP-OBSERVED-VALIDATION")
         (missing_file_root / evidence["details"]["stdout_ref"]).unlink()
         missing_file = subprocess.run(
             ["python3", "scripts/artifacts.py", "validate"], cwd=missing_file_root,
@@ -587,7 +678,8 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         altered_output_root, _ = self._case(setup_pass)
         altered_setup_path = altered_output_root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-SETUP-002.json"
         altered_setup = json.loads(altered_setup_path.read_text(encoding="utf-8"))
-        stdout_file = altered_output_root / altered_setup["evidence"][0]["details"]["stdout_ref"]
+        validation_evidence = next(item for item in altered_setup["evidence"] if item["evidence_id"] == "FLAGLITE-SETUP-OBSERVED-VALIDATION")
+        stdout_file = altered_output_root / validation_evidence["details"]["stdout_ref"]
         stdout_file.write_text("replaced output; the original command result is no longer reproducible\n", encoding="utf-8")
         altered = subprocess.run(
             ["python3", "scripts/artifacts.py", "validate"], cwd=altered_output_root,
@@ -1040,7 +1132,7 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         self.assertIn("published checkpoint requires non-empty change_control.authorization_ref", output)
 
     def test_skipped_unavailable_or_failed_required_check_cannot_support_impl_pass(self) -> None:
-        for check_result in ("not-run", "skipped", "unavailable", "failed", "interrupted"):
+        for check_result in ("not-run", "skipped", "unavailable", "failed", "interrupted", "cancelled"):
             def mutate(root: Path, check_result=check_result) -> None:
                 path, record = self._record(root, "G-IMPL")
                 record["gate_result"] = "passed"
@@ -1066,7 +1158,7 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
                 output = result.stdout + result.stderr
                 self.assertNotEqual(result.returncode, 0, output)
                 self.assertIn("[G-IMPL]", output)
-                if check_result in {"skipped", "unavailable", "interrupted"}:
+                if check_result in {"skipped", "unavailable", "interrupted", "cancelled"}:
                     expected = "$.gate_data.required_checks[0].result: value is not one of the allowed values"
                 else:
                     expected = "$.gate_data.required_checks[0].result: value does not equal required constant 'passed'"
