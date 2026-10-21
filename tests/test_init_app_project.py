@@ -93,7 +93,7 @@ class InitAppProjectTests(unittest.TestCase):
                 "--target",
                 str(target),
                 "--framework-url",
-                "https://github.com/example/adversarial-sdd",
+                "https://github.com/naelmusleh/adversarial-sdd-boilerplate",
                 *extra,
             ],
             cwd=self.template_root,
@@ -101,6 +101,14 @@ class InitAppProjectTests(unittest.TestCase):
             text=True,
             check=False,
         )
+
+    def test_lock_v4_initializer_rejects_unenrolled_framework_fork(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "app"
+            result = self.invoke(target, "--framework-url", "https://github.com/example/adversarial-sdd")
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("separately reviewed trust-root enrollment", result.stderr)
+            self.assertFalse(target.exists())
 
     def test_default_generates_only_core_project_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -139,7 +147,11 @@ class InitAppProjectTests(unittest.TestCase):
             self.assertEqual(trust_policy["signer_digest"], lock["framework_revision"])
             generated_workflow = (target / ".github/workflows/sdd-contract-validation.yml").read_text(encoding="utf-8")
             self.assertIn(f"sdd-trusted-ci-attest.yml@{lock['framework_revision']}", generated_workflow)
-            self.assertIn("framework-repository: example/adversarial-sdd", generated_workflow)
+            self.assertIn("framework-repository: naelmusleh/adversarial-sdd-boilerplate", generated_workflow)
+            self.assertEqual(
+                trust_policy["signer_workflow"],
+                "naelmusleh/adversarial-sdd-boilerplate/.github/workflows/sdd-trusted-ci-attest.yml",
+            )
             self.assertNotIn("python3 scripts/ci_checks.py", generated_workflow)
             self.assertNotIn("<FRAMEWORK_REVISION>", generated_workflow)
             req_template = json.loads((target / ".sdd/G-REQ-HANDOFF.json.template").read_text(encoding="utf-8"))

@@ -27,6 +27,9 @@ APP_STABLE_FILENAMES = {
 REQUIRED = ("id", "type", "title", "status", "version", "created", "updated")
 FRAMEWORK_CONTRACT = Path("docs/framework/ARTIFACT-CONTRACT-001.json")
 APP_FRAMEWORK_LOCK = Path(".sdd/framework.lock.json")
+CANONICAL_FRAMEWORK_URL = "https://github.com/naelmusleh/adversarial-sdd-boilerplate"
+CANONICAL_FRAMEWORK_REPOSITORY = "naelmusleh/adversarial-sdd-boilerplate"
+CANONICAL_ATTESTER = CANONICAL_FRAMEWORK_REPOSITORY + "/.github/workflows/sdd-trusted-ci-attest.yml"
 APP_HANDOFFS = {
     "G-REQ": Path(".sdd/G-REQ-HANDOFF.json"),
     "G-ARCH": Path(".sdd/G-ARCH-CONTRACT.json"),
@@ -1618,14 +1621,15 @@ def trusted_ci_policy(root: Path) -> tuple[dict[str, object] | None, list[str]]:
                 problems.append(f"{APP_TRUSTED_CI.as_posix()}: protected_ref is not a valid fully qualified branch ref")
     lock, lock_error = load_json_object(root / APP_FRAMEWORK_LOCK)
     if lock_error is None and isinstance(lock, dict) and lock.get("lock_version") == 4:
-        framework_url = lock.get("framework_repository")
-        parsed_framework = urlparse(framework_url) if isinstance(framework_url, str) else None
-        framework_repo = parsed_framework.path.strip("/") if parsed_framework and parsed_framework.netloc.lower() == "github.com" else ""
+        if lock.get("framework_repository") != CANONICAL_FRAMEWORK_URL:
+            problems.append(
+                f"{APP_FRAMEWORK_LOCK.as_posix()}: lock-v4 trusted CI requires the canonical framework repository "
+                f"{CANONICAL_FRAMEWORK_URL}"
+            )
         if policy.get("signer_digest") != lock.get("framework_revision"):
             problems.append(f"{APP_TRUSTED_CI.as_posix()}: signer_digest must match the immutable framework revision in {APP_FRAMEWORK_LOCK.as_posix()}")
-        expected_signer = f"{framework_repo}/.github/workflows/sdd-trusted-ci-attest.yml" if framework_repo else None
-        if not expected_signer or policy.get("signer_workflow") != expected_signer:
-            problems.append(f"{APP_TRUSTED_CI.as_posix()}: signer_workflow must be the framework-owned reusable attester")
+        if policy.get("signer_workflow") != CANONICAL_ATTESTER:
+            problems.append(f"{APP_TRUSTED_CI.as_posix()}: signer_workflow must be the canonical framework-owned reusable attester")
     return policy, problems
 
 
@@ -1860,6 +1864,11 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
         repository = lock.get("framework_repository")
         if not isinstance(repository, str) or not repository.startswith("https://github.com/"):
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: framework_repository must be an HTTPS GitHub repository URL")
+        if lock_version == 4 and repository != CANONICAL_FRAMEWORK_URL:
+            problems.append(
+                f"{APP_FRAMEWORK_LOCK.as_posix()}: lock-v4 trusted CI requires the canonical framework repository "
+                f"{CANONICAL_FRAMEWORK_URL}"
+            )
         locked_files = lock.get("locked_files")
         expected_locked_files = (
             APP_LOCKED_FILES_V1 if lock_version == 1 else APP_LOCKED_FILES_V2 if lock_version == 2

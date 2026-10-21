@@ -11,7 +11,7 @@
     "provider": { "const": "github-actions" },
     "repository": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
     "protected_ref": { "type": ["string", "null"], "pattern": "^refs/heads/[A-Za-z0-9._/-]+$" },
-    "signer_workflow": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/\\.github/workflows/sdd-trusted-ci-attest\\.yml$" },
+    "signer_workflow": { "const": "naelmusleh/adversarial-sdd-boilerplate/.github/workflows/sdd-trusted-ci-attest.yml" },
     "signer_digest": { "type": "string", "pattern": "^[a-f0-9]{40}$" }
   },
   "allOf": [

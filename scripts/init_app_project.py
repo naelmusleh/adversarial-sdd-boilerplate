@@ -372,6 +372,14 @@ def main() -> int:
         return 2
     framework_url = f"https://github.com/{repo_parts[0]}/{repo_name}"
     framework_repository = f"{repo_parts[0]}/{repo_name}"
+    if framework_url != "https://github.com/naelmusleh/adversarial-sdd-boilerplate":
+        print(
+            "Framework lock v4 trusted CI is enrolled only for "
+            "https://github.com/naelmusleh/adversarial-sdd-boilerplate. "
+            "A framework fork requires a separately reviewed trust-root enrollment.",
+            file=sys.stderr,
+        )
+        return 2
 
     target = args.target.expanduser().absolute()
     if target.is_symlink():
@@ -447,7 +455,6 @@ def main() -> int:
     outputs[".sdd/trusted-ci.json.template"] = (
         (ROOT / ".sdd" / "trusted-ci.json.template").read_text(encoding="utf-8")
         .replace("<FRAMEWORK_REVISION>", framework_revision)
-        .replace("<FRAMEWORK_REPOSITORY>", framework_repository)
     )
     outputs[".sdd/trusted-ci.json"] = outputs[".sdd/trusted-ci.json.template"]
     outputs["scripts/ci_checks.py"] = (ROOT / "scripts" / "ci_checks.py").read_text(encoding="utf-8")

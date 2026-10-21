@@ -20,6 +20,18 @@ GATES = (
     "G-INTENT", "G-SETUP", "G-REQ", "G-FEAS", "G-COVERAGE",
     "G-CX", "G-ARCH", "G-IMPL", "G-RELEASE", "G-OPERATE",
 )
+INVALID_REQUIRED_GATE_DATA = {
+    "G-INTENT": "non_goals",
+    "G-SETUP": "cold_start_evidence_ids",
+    "G-REQ": "review_evidence_ids",
+    "G-FEAS": "probes",
+    "G-COVERAGE": "journeys",
+    "G-CX": "interaction_evidence_ids",
+    "G-ARCH": "verification_contracts",
+    "G-IMPL": "required_checks",
+    "G-RELEASE": "owner_authorization_id",
+    "G-OPERATE": "telemetry_gaps",
+}
 
 
 class SeparateAppAdversarialPilotTests(unittest.TestCase):
@@ -200,6 +212,9 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
                 runs = root / ".sdd/gate-runs"
                 record = json.loads(source.read_text(encoding="utf-8"))
                 gate_id = record["gate_id"]
+                record["contract_version"] = "1.2"
+                record["gate_result"] = "in-progress"
+                record["gate_data"].pop(INVALID_REQUIRED_GATE_DATA[gate_id], None)
                 record["record_id"] = f"FLAGLITE-GATE-RUN-NEG-{gate_id[2:]}-001"
                 record["application_id"] = "FLAGLITE"
                 record["repository"]["url_or_path"] = str(root)
@@ -208,13 +223,27 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
                     ref["source_revision"] = self.source_revision
                 for ref in record.get("scope", {}).get("artifact_refs", []):
                     ref["source_revision"] = self.source_revision
+                scope_hash = json_sha256(record.get("scope"))
+                for evidence in record.get("evidence", []):
+                    if isinstance(evidence, dict):
+                        evidence["scope_ref"] = scope_hash
+                        details = evidence.get("details")
+                        if evidence.get("type") == "command-execution" and isinstance(details, dict):
+                            details["scope"] = scope_hash
+                if gate_id == "G-REQ":
+                    record["gate_data"]["decision_ids"] = ["FLAGLITE-DECISION-001"]
+                if gate_id == "G-RELEASE":
+                    record["gate_data"]["release_window"] = "synthetic-window"
                 (runs / f"{record['record_id']}.json").write_text(json.dumps(record, indent=2) + "\n")
 
             with self.subTest(fixture=source.name):
                 _, result = self._case(mutate)
                 output = result.stdout + result.stderr
                 self.assertNotEqual(result.returncode, 0, output)
-                self.assertIn(f"[{json.loads(source.read_text(encoding='utf-8'))['gate_id']}]", output)
+                fixture = json.loads(source.read_text(encoding="utf-8"))
+                gate_id = fixture["gate_id"]
+                self.assertIn(f"[{gate_id}]", output)
+                self.assertIn(f"$.gate_data.{INVALID_REQUIRED_GATE_DATA[gate_id]}", output)
 
     def test_stale_digest_revision_identity_waiver_and_cross_app_substitution_fail(self) -> None:
         cases = (

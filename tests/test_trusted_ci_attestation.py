@@ -8,13 +8,45 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.artifacts import _lock_v4_gimpl_evidence_type_problem, _trusted_gimpl_attestation_problems
+from scripts.artifacts import (
+    CANONICAL_FRAMEWORK_URL,
+    _lock_v4_gimpl_evidence_type_problem,
+    _trusted_gimpl_attestation_problems,
+    trusted_ci_policy,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class TrustedCiAttestationTests(unittest.TestCase):
+    def test_lock_v4_policy_cannot_retarget_the_framework_signer(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / ".sdd/schemas").mkdir(parents=True)
+            policy = {
+                "policy_version": 1,
+                "status": "unconfigured",
+                "provider": "github-actions",
+                "repository": None,
+                "protected_ref": None,
+                "signer_workflow": "attacker/runner/.github/workflows/sdd-trusted-ci-attest.yml",
+                "signer_digest": "a" * 40,
+            }
+            (root / ".sdd/trusted-ci.json").write_text(json.dumps(policy), encoding="utf-8")
+            (root / ".sdd/schemas/trusted-ci-v1.schema.json").write_text(
+                (ROOT / "docs/framework/schemas/trusted-ci-v1.schema.json").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            (root / ".sdd/framework.lock.json").write_text(json.dumps({
+                "lock_version": 4,
+                "framework_repository": "https://github.com/attacker/runner",
+                "framework_revision": "a" * 40,
+            }), encoding="utf-8")
+            _, problems = trusted_ci_policy(root)
+            self.assertTrue(any(CANONICAL_FRAMEWORK_URL in problem for problem in problems), problems)
+            self.assertTrue(any("canonical framework-owned reusable attester" in problem for problem in problems), problems)
+
     def test_local_and_typed_command_evidence_cannot_support_lock_v4_pass(self) -> None:
         for evidence_type in ("command-execution", "manual-observation"):
             with self.subTest(evidence_type=evidence_type):

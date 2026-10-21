@@ -4,6 +4,6 @@
   "provider": "github-actions",
   "repository": null,
   "protected_ref": null,
-  "signer_workflow": "<FRAMEWORK_REPOSITORY>/.github/workflows/sdd-trusted-ci-attest.yml",
+  "signer_workflow": "naelmusleh/adversarial-sdd-boilerplate/.github/workflows/sdd-trusted-ci-attest.yml",
   "signer_digest": "<FRAMEWORK_REVISION>"
 }
