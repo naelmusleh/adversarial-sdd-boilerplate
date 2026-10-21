@@ -31,6 +31,7 @@ PREFIX_BY_GATE = {
     "G-ARCH": "GARCH", "G-IMPL": "GIMPL", "G-RELEASE": "GREL",
     "G-OPERATE": "GOP",
 }
+SYNTHETIC_MISSION = "---\nid: SYNTHETIC-MISSION-001\ntype: mission\ntitle: Synthetic mission fixture\nstatus: draft\nversion: 1.0\n---\n\nSynthetic content for validator tests only.\n"
 
 
 class GateContractFixtureTests(unittest.TestCase):
@@ -86,6 +87,7 @@ class GateContractFixtureTests(unittest.TestCase):
             root = Path(temporary)
             (root / "specification.md").write_text("Synthetic requirement: FIXTURE-REQ-001\n", encoding="utf-8")
             (root / "backlog.md").write_text("Synthetic task: FIXTURE-TASK-001\n", encoding="utf-8")
+            (root / "mission.md").write_text(SYNTHETIC_MISSION, encoding="utf-8")
             (root / "decisions").mkdir()
             (root / "decisions/DECISION-LOG.md").write_text("Synthetic decision: FIXTURE-DECISION-001\n", encoding="utf-8")
             input_path = root / "docs/framework/examples/gate-contract-v1/inputs/FIXTURE-INPUT-001.md"
@@ -93,12 +95,84 @@ class GateContractFixtureTests(unittest.TestCase):
             shutil.copy2(FIXTURES / "inputs/FIXTURE-INPUT-001.md", input_path)
             gate_runs = root / ".sdd/gate-runs"
             gate_runs.mkdir(parents=True)
-            baseline = record.get("_baseline_record")
+            record_to_write = json.loads(json.dumps(record))
+            baseline = record_to_write.pop("_baseline_record", None)
             if isinstance(baseline, dict):
                 (gate_runs / f"{baseline['record_id']}.json").write_text(json.dumps(baseline, indent=2) + "\n", encoding="utf-8")
-            record_path = gate_runs / f"{record['record_id']}.json"
-            record_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+            record_path = gate_runs / f"{record_to_write['record_id']}.json"
+            record_path.write_text(json.dumps(record_to_write, indent=2) + "\n", encoding="utf-8")
             return validate_gate_run_records(root, schema, "SYNTHETIC")
+
+    def test_intent_pass_requires_current_mission_artifact_and_owner_digest_approval(self) -> None:
+        schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+        base = json.loads((FIXTURES / "valid/G-INTENT.json").read_text(encoding="utf-8"))
+        base["application_id"] = "SYNTHETIC"
+        baseline = json.loads(json.dumps(base))
+        baseline["record_id"] = "SYNTHETIC-INTENT-BASE-001"
+        baseline["gate_result"] = "in-progress"
+
+        mission_digest = "sha256:" + hashlib.sha256(SYNTHETIC_MISSION.encode("utf-8")).hexdigest()
+        mission_ref = {
+            "artifact_id": "SYNTHETIC-MISSION-001", "version": "1.0", "path": "mission.md",
+            "sha256": mission_digest, "source_revision": base["source_snapshot"]["commit_sha"],
+        }
+        decision_id = "SYNTHETIC-INTENT-APPROVAL-001"
+        record = json.loads(json.dumps(base))
+        record.update({"record_id": "SYNTHETIC-INTENT-PASS-002", "record_version": 2,
+                       "supersedes_run_id": baseline["record_id"], "created_at": "2026-10-20T13:00:00Z",
+                       "gate_result": "passed", "_baseline_record": baseline})
+        record["scope"]["artifact_refs"].append(mission_ref)
+        record["source_snapshot"]["files"].append(mission_ref)
+        evidence_id = "EVIDENCE-MISSION-001"
+        record["evidence"] = [{
+            "evidence_id": evidence_id, "type": "artifact-reference",
+            "criterion_ids": [item["criterion_id"] for item in record["criteria_results"]],
+            "observed_at": "2026-10-20T12:30:00Z", "observed_by": "fixture-owner",
+            "source_revision": record["source_snapshot"]["commit_sha"], "scope_ref": "synthetic mission scope",
+            "locator": "mission.md", "record_sha256": mission_digest,
+            "limitations": ["synthetic fixture only; not product evidence"],
+            "details": {"artifact_id": "SYNTHETIC-MISSION-001", "version": "1.0", "path": "mission.md", "sha256": mission_digest},
+        }]
+        record["authority"]["owner_decisions"] = [{
+            "decision_id": decision_id, "decision_maker": "fixture-owner", "role": "synthetic accountable owner",
+            "decided_at": "2026-10-20T12:30:00Z",
+            "choice": f"approve-intent: SYNTHETIC-MISSION-001; digest={mission_digest}",
+            "affected_ids": ["SYNTHETIC-MISSION-001"], "rationale": "fixture-only pass-path exercise",
+            "revisit_condition": "synthetic fixture only",
+        }]
+        for criterion in record["criteria_results"]:
+            criterion.update({"outcome": "pass", "evidence_ids": [evidence_id], "owner_decision_ids": [decision_id]})
+        self.assertEqual(self._validate_in_isolated_app(record, schema), [])
+
+        wrong_owner_digest = json.loads(json.dumps(record))
+        wrong_owner_digest["authority"]["owner_decisions"][0]["choice"] = "approve-intent: SYNTHETIC-MISSION-001; digest=sha256:" + "0" * 64
+        errors = self._validate_in_isolated_app(wrong_owner_digest, schema)
+        self.assertTrue(any("accountable-owner approval bound to mission ID and exact mission digest" in error for error in errors), errors)
+
+        missing_criterion_link = json.loads(json.dumps(record))
+        missing_criterion_link["criteria_results"][0]["owner_decision_ids"] = []
+        errors = self._validate_in_isolated_app(missing_criterion_link, schema)
+        self.assertTrue(any("must link the exact owner mission approval" in error for error in errors), errors)
+
+        forged = json.loads(json.dumps(record))
+        forged["scope"]["artifact_refs"] = [ref for ref in forged["scope"]["artifact_refs"] if ref["path"] != "mission.md"]
+        forged["source_snapshot"]["files"] = [ref for ref in forged["source_snapshot"]["files"] if ref["path"] != "mission.md"]
+        forged["evidence"] = [{
+            "evidence_id": "EVIDENCE-FORGED-001", "type": "manual-observation",
+            "criterion_ids": [item["criterion_id"] for item in forged["criteria_results"]],
+            "observed_at": "2026-10-20T12:30:00Z", "observed_by": "fixture-owner",
+            "source_revision": forged["source_snapshot"]["commit_sha"], "scope_ref": "synthetic scope",
+            "locator": "synthetic-only://missing-observation", "record_sha256": "sha256:" + "a" * 64,
+            "limitations": ["no mission evidence exists"],
+            "details": {"observer": "fixture-owner", "procedure": "claim pass", "observed_at": "2026-10-20T12:30:00Z",
+                        "scope": "synthetic", "result": "claimed pass", "limitations": ["no actual observation"]},
+        }]
+        for criterion in forged["criteria_results"]:
+            criterion["evidence_ids"] = ["EVIDENCE-FORGED-001"]
+        forged["authority"]["owner_decisions"] = []
+        errors = self._validate_in_isolated_app(forged, schema)
+        self.assertTrue(any("requires artifact-reference evidence for the current mission.md" in error for error in errors), errors)
+        self.assertTrue(any("requires accountable-owner approval bound to mission ID and exact mission digest" in error for error in errors), errors)
 
     def test_full_validator_accepts_all_ten_in_progress_fixtures_and_rejects_four_bypass_classes_per_gate(self) -> None:
         schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))

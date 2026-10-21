@@ -1149,6 +1149,36 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
         # Gate profile evidence IDs must resolve to evidence records of the declared type.
         gate_data = record.get("gate_data", {})
         if isinstance(gate_data, dict):
+            if gate_id == "G-INTENT" and record.get("gate_result") in {"passed", "passed-with-accepted-risk"}:
+                mission_id = f"{application_id}-MISSION-001"
+                mission_evidence = next((
+                    item for item in evidence
+                    if isinstance(item, dict)
+                    and item.get("type") == "artifact-reference"
+                    and isinstance(item.get("details"), dict)
+                    and item["details"].get("artifact_id") == mission_id
+                    and item["details"].get("path") == "mission.md"
+                ), None)
+                mission_path = root / "mission.md"
+                mission_digest = file_sha256(mission_path) if mission_path.is_file() else None
+                if mission_evidence is None:
+                    problems.append(f"{relative}: passed G-INTENT requires artifact-reference evidence for the current mission.md")
+                approval = next((
+                    decision for decision in decisions
+                    if isinstance(decision, dict)
+                    and decision.get("decision_maker") == owner_identity
+                    and decision.get("choice") == f"approve-intent: {mission_id}; digest={mission_digest}"
+                    and mission_id in decision.get("affected_ids", [])
+                ), None)
+                if approval is None:
+                    problems.append(f"{relative}: passed G-INTENT requires accountable-owner approval bound to mission ID and exact mission digest")
+                for criterion in results:
+                    if not isinstance(criterion, dict):
+                        continue
+                    if mission_evidence is not None and mission_evidence.get("evidence_id") not in criterion.get("evidence_ids", []):
+                        problems.append(f"{relative}: passed G-INTENT criterion {criterion.get('criterion_id')} must link current mission artifact evidence")
+                    if approval is not None and approval.get("decision_id") not in criterion.get("owner_decision_ids", []):
+                        problems.append(f"{relative}: passed G-INTENT criterion {criterion.get('criterion_id')} must link the exact owner mission approval")
             for requirement_id in gate_data.get("requirement_ids", []):
                 if not _id_occurs_in_paths(root, requirement_id, ("specification.md",)):
                     problems.append(f"{relative}: gate_data requirement ID '{requirement_id}' does not resolve in specification.md")
