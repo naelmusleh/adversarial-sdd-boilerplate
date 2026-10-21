@@ -3,10 +3,10 @@ id: WORKFLOW-QUALITY-001
 type: workflow
 title: Implementation verification and technical quality gates
 status: draft
-version: 0.2
+version: 0.3
 created: 2026-10-07
-updated: 2026-10-11
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, WORKFLOW-LIFECYCLE-001
+updated: 2026-10-20
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, WORKFLOW-LIFECYCLE-001, FRAMEWORK-GATE-CONTRACT-001
 ---
 
 # WORKFLOW-QUALITY-001 — Implementation verification and technical quality gates

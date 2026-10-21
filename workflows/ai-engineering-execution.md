@@ -3,10 +3,10 @@ id: WORKFLOW-AI-ENGINEERING-001
 type: workflow
 title: Execute one approved application backlog item
 status: draft
-version: 0.1
+version: 0.2
 created: 2026-10-07
-updated: 2026-10-07
-related-artifacts: CAP-003, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001
+updated: 2026-10-20
+related-artifacts: CAP-003, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001
 ---
 
 # AI engineering execution workflow

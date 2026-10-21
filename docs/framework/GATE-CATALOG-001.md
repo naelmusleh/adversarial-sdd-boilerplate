@@ -3,27 +3,29 @@ id: GATE-CATALOG-001
 type: framework-gate-catalog
 title: Lifecycle gate contracts for application projects
 status: draft
-version: 0.5
+version: 0.6
 created: 2026-10-07
 updated: 2026-10-11
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-001, FRAMEWORK-002, WORKFLOW-QUALITY-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-001, FRAMEWORK-002, WORKFLOW-QUALITY-001, FRAMEWORK-GATE-CONTRACT-001
 ---
 
 # GATE-CATALOG-001 — Lifecycle gate contracts for application projects
 
 ## Purpose
 
-Define the evidence and outcome vocabulary for transitions in the application lifecycle. The catalog is the canonical definition of gate semantics. Stage-specific workflows explain how to prepare the evidence and act on the result.
+Provide the human-readable lifecycle overview and stage summaries. **FRAMEWORK-GATE-CONTRACT-001 v1.0 is the normative source for gate-run fields, criterion IDs, evidence provenance, results, transitions, authority, and migration.** This catalog summarizes those rules; stage-specific workflows explain how to prepare evidence and act on a result. If this catalog or a workflow conflicts with the versioned contract, the conflict blocks adoption and must be resolved in a reviewed contract update; a summary cannot silently redefine normative semantics.
 
 ## Gate outcome vocabulary
 
-- **Not ready:** required input/evidence is missing; assessment has not begun.
-- **In progress:** evidence is being gathered or reviewed.
-- **Passed:** every required criterion for this gate is met and its evidence is linked.
-- **Failed:** one or more blocking findings remain or a required criterion is unmet.
-- **Blocked:** an owner decision, external access, dependency, or unavailable validation environment is required.
-- **Passed with accepted risk:** permitted only when the gate allows an exception and the authorized owner records the finding, scope, risk, mitigation, expiry/revisit condition, and explicit acceptance.
-- **Not applicable:** the project records why the gate does not apply and who accepted the scope exclusion.
+- `not-ready`: required input/evidence is missing; assessment has not begun.
+- `in-progress`: evidence is being gathered or reviewed.
+- `passed`: every required criterion is met with criterion-linked evidence and authority.
+- `failed`: assessment ran and a criterion failed or a blocking finding remains.
+- `blocked`: an external decision, dependency, or unavailable evidence prevents a valid conclusion.
+- `passed-with-accepted-risk`: permitted only for policy-eligible non-blocking findings with exact owner-authorized risk evidence.
+- `not-applicable`: an authorized scope decision excludes the gate and records rationale.
+
+These are gate results, not artifact lifecycle statuses. Records are append-only; reruns create a new linked run and do not rewrite previous results. Full state-transition rules and constraints are defined in [FRAMEWORK-GATE-CONTRACT-001](FRAMEWORK-GATE-CONTRACT-001.md).
 
 A score, a completed checklist without evidence, a prototype, or an implementer's assertion is not a gate result by itself. A later-stage gate cannot clear a failed earlier gate by implication.
 
@@ -63,6 +65,8 @@ G-CX is mandatory even when no plugin, desktop agent, or paid design tool is ava
 For projects using Impeccable, preserve its critique report and rerun evidence alongside the same gate record. For either method, static design review does not establish runtime behavior or device accessibility; route those checks to implementation verification.
 
 ## Universal gate record
+
+For contract v1.0, use the universal record and JSON Schema in [FRAMEWORK-GATE-CONTRACT-001](FRAMEWORK-GATE-CONTRACT-001.md) and `schemas/gate-run-v1.schema.json`. The Markdown template below remains a legacy human-readable scaffold until the explicit app initializer/validator migration in FW-TASK-018; it does not by itself conform to or enforce the v1.0 machine schema.
 
 Every gate record includes:
 

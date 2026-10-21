@@ -3,10 +3,10 @@ id: WORKFLOW-FEASIBILITY-001
 type: workflow
 title: Early feasibility and architecture readiness
 status: draft
-version: 0.2
+version: 0.3
 created: 2026-10-07
-updated: 2026-10-08
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, WORKFLOW-LIFECYCLE-001
+updated: 2026-10-20
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, WORKFLOW-LIFECYCLE-001, FRAMEWORK-GATE-CONTRACT-001
 ---
 
 # WORKFLOW-FEASIBILITY-001 — Early feasibility and architecture readiness

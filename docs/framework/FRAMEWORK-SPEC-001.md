@@ -3,10 +3,10 @@ id: FRAMEWORK-SPEC-001
 type: framework-specification
 title: Adversarial SDD Framework v1 scope and behavior
 status: draft
-version: 0.12
+version: 0.13
 created: 2026-10-07
 updated: 2026-10-20
-related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-BACKLOG-001
+related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001
 ---
 
 # FRAMEWORK-SPEC-001 — Adversarial SDD Framework v1 scope and behavior
@@ -191,6 +191,8 @@ The framework is **proven through launch** only after an owner-authorized applic
 - [FRAMEWORK-BACKLOG-001](FRAMEWORK-BACKLOG-001.md)
 - [DECISION-017](../decisions/DECISION-LOG-001.md#decision-017) — tool-neutral local-first framework requirement.
 - [GATE-CATALOG-001](GATE-CATALOG-001.md)
+- [FRAMEWORK-GATE-CONTRACT-001](FRAMEWORK-GATE-CONTRACT-001.md)
+- [FRAMEWORK-GATE-TRACEABILITY-001](FRAMEWORK-GATE-TRACEABILITY-001.md)
 - [TOOL-CATALOG-001](TOOL-CATALOG-001.md)
 - [CAP-001](../../framework/capabilities/CAP-001-artifact-management.md)
 - [CAP-002](../../framework/capabilities/CAP-002-adversarial-review.md)

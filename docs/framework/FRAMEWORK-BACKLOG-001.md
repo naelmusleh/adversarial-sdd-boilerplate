@@ -3,10 +3,10 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 2.8
+version: 3.0
 created: 2026-10-07
 updated: 2026-10-20
-related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007
+related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001
 ---
 
 # FRAMEWORK-BACKLOG-001 — Remaining work to complete Adversarial SDD Framework v1
@@ -349,7 +349,7 @@ FW-TASK-011 and FW-TASK-013 remain proposed v2 work and are deferred until prior
 
 - **Goal:** Turn the ten lifecycle gates from primarily prose-defined checkpoints into a versioned, unambiguous contract that states exactly what evidence each gate consumes and produces, what can be machine-checked, what requires accountable human judgment, and what downstream work is permitted.
 - **Requirements:** FR-FW-003, FR-FW-004, FR-FW-005, FR-FW-008, FR-FW-009, FR-FW-014; NFR-FW-002, NFR-FW-003, NFR-FW-005, NFR-FW-006.
-- **Dependencies:** GATE-CATALOG-001 and the ten lifecycle workflows; FW-TASK-015 for the app-local framework revision/contract pin; FW-TASK-016 for the commit/push operating boundary. FW-TASK-015 and FW-TASK-016 are currently in progress: their outstanding checks and reviews must be resolved before this contract is adopted by initialized apps. Existing framework CI work in FW-TASK-012 must be reused or explicitly extended, not duplicated.
+- **Dependencies:** GATE-CATALOG-001 and the ten lifecycle workflows; FW-TASK-015 for the app-local framework revision/contract pin; FW-TASK-016 for the commit/push operating boundary. FW-TASK-015 and FW-TASK-016 are complete for bounded G-IMPL scope per FRAMEWORK-ADV-008; hosted CI and branch-protection evidence remain unverified and are not inferred. New initialized apps adopt this contract only after FW-TASK-018 integrates its versioned schema/validator/template into the app lock and workflow. Existing framework CI work in FW-TASK-012 must be reused or explicitly extended, not duplicated.
 - **Active gate:** G-IMPL for the framework specification, catalog, schemas, and templates; independent adversarial review is required before the contract becomes the implementation source of truth.
 - **Approved scope:** Define the normative, versioned model for G-INTENT, G-SETUP, G-REQ, G-FEAS, G-COVERAGE, G-CX, G-ARCH, G-IMPL, G-RELEASE, and G-OPERATE. Preserve the distinction between a structurally valid record and a substantively justified gate result. This task defines policy and schema; it does not implement validator enforcement, deploy an app, or claim that reviewer independence or evidence truth can be proven by a schema.
 - **Work:**
@@ -382,7 +382,8 @@ FW-TASK-011 and FW-TASK-013 remain proposed v2 work and are deferred until prior
   8. A separate adversarial review freezes the contract version and tests ambiguous transitions, stale evidence, unsupported claims, improper waivers, premature architecture selection, false independence claims, and platform/applicability gaps. Blocking findings are resolved and the full affected scope is rerun before adoption.
   9. The contract version, compatibility policy, app migration behavior, and update procedure are explicit; old app records are not retroactively promoted or silently rewritten.
 - **Evidence:** Versioned ten-gate contract/schema; gate-to-artifact/check traceability matrix; valid/invalid fixtures; updated catalog/workflow/template cross-reference map; independent adversarial review and rerun; artifact validation; focused schema/contract tests where executable.
-- **State:** **Planned — blocked on completion/review of FW-TASK-015 and FW-TASK-016.** The previous synthetic FlagLite stress test is a discovery signal only; it is not a durable app artifact, a full lifecycle pilot, or acceptance evidence for this task.
+- **Implementation checkpoint (2026-10-20):** Drafted [FRAMEWORK-GATE-CONTRACT-001](FRAMEWORK-GATE-CONTRACT-001.md) v1.0, [FRAMEWORK-GATE-TRACEABILITY-001](FRAMEWORK-GATE-TRACEABILITY-001.md), `schemas/gate-run-v1.schema.json`, 10 per-gate valid-shape plus 10 per-gate invalid JSON fixtures, changed-hash/stale-revision relational cases, and [FRAMEWORK-EXERCISE-GATE-CONTRACT-001](FRAMEWORK-EXERCISE-GATE-CONTRACT-001.md) for the independent attack review. Updated the gate catalog, workflow cross-references, app record template migration note, framework spec references, and repository operating contract. Local checks currently pass 34 Python tests; artifact validation reports `Validated 41 artifact(s).`; `git diff --check` passes; schema and fixture JSON parse. The runtime has no Draft 2020-12 schema validator installed, so no full JSON Schema execution is claimed; fixture integrity checks are standard-library checks, and FW-TASK-018 must execute full schema/relational positive-negative validation before app adoption.
+- **State:** **In progress — G-IMPL; independent adversarial review required.** FW-TASK-015/016 prerequisites passed for bounded G-IMPL scope. Contract remains draft until the version-1.0 review freezes the semantics and resolves all blockers. Adoption by initialized apps remains gated on FW-TASK-018 initializer/validator integration; previous synthetic FlagLite findings are discovery signals only, not task acceptance evidence.
 
 ### FW-TASK-018 — Implement fail-closed validation for all ten gate records
 
