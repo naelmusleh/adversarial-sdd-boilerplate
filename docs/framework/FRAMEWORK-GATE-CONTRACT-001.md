@@ -44,6 +44,8 @@ Every new or migrated gate run is a separate immutable JSON record conforming to
 
 Records are append-only JSON files stored by app-local validators at `.sdd/gate-runs/<record_id>.json`. Corrections create a new `record_id` or record version that links and supersedes the prior record; they do not overwrite an accepted record. For a changed requirement, source artifact, code path, platform, environment, or criterion, the new run lists the changed inputs and invalidated downstream run IDs. Previous runs remain historical evidence and cannot be relabeled as current. A passing downstream record pins each latest upstream gate run in `scope.artifact_refs`; when an upstream run is superseded, any downstream pass still referencing the older run is stale and fails validation until rerun.
 
+For G-REQ and G-ARCH PASS, the app validator requires an independent reviewer record with a passing result, context disclosure, and `author_overlap: "none"`. This rejects an explicitly self-overlapping reviewer declaration; the value is still a self-reported assertion and does not authenticate reviewer identity or prove cognitive independence.
+
 ## 4. Evidence types and minimum provenance
 
 The schema's `evidence.type` is one of:

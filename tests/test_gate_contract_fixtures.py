@@ -7,7 +7,7 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
-from scripts.artifacts import _latest_gate_runs, _published_checkpoint_problems, file_sha256, json_sha256, schema_definition_problems, validate_gate_run_records, validate_schema_value
+from scripts.artifacts import _has_independent_reviewer, _latest_gate_runs, _published_checkpoint_problems, file_sha256, json_sha256, schema_definition_problems, validate_gate_run_records, validate_schema_value
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,6 +35,13 @@ SYNTHETIC_MISSION = "---\nid: SYNTHETIC-MISSION-001\ntype: mission\ntitle: Synth
 
 
 class GateContractFixtureTests(unittest.TestCase):
+    def test_independent_gate_review_rejects_explicit_author_overlap(self) -> None:
+        reviewer = {"mode": "independent", "result": "pass", "context_disclosure": "synthetic context",
+                    "author_overlap": "same-agent"}
+        self.assertFalse(_has_independent_reviewer([reviewer]))
+        reviewer["author_overlap"] = "none"
+        self.assertTrue(_has_independent_reviewer([reviewer]))
+
     def test_schema_and_ten_gate_fixtures_are_parseable_and_aligned(self) -> None:
         schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
         schema_v11 = json.loads((ROOT / "docs/framework/schemas/gate-run-v1.1.schema.json").read_text(encoding="utf-8"))

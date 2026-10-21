@@ -1,0 +1,415 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import re
+import shutil
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+GATE_FIXTURES = ROOT / "docs/framework/examples/gate-contract-v1"
+GATES = (
+    "G-INTENT", "G-SETUP", "G-REQ", "G-FEAS", "G-COVERAGE",
+    "G-CX", "G-ARCH", "G-IMPL", "G-RELEASE", "G-OPERATE",
+)
+
+
+class SeparateAppAdversarialPilotTests(unittest.TestCase):
+    """Run the app-local validator against a disposable initialized application."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.temporary = tempfile.TemporaryDirectory(prefix="fw020-flaglite-")
+        cls.app = Path(cls.temporary.name) / "flaglite"
+        cls.framework_revision = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, text=True, capture_output=True
+        ).stdout.strip()
+        subprocess.run([
+            "python3", str(ROOT / "scripts/init_app_project.py"),
+            "--name", "FlagLite Governance Pilot (Synthetic)",
+            "--prefix", "FLAGLITE", "--target", str(cls.app),
+            "--include-lifecycle-records", "--framework-revision", cls.framework_revision,
+        ], cwd=ROOT, check=True, text=True, capture_output=True)
+        subprocess.run(["git", "init", "-q"], cwd=cls.app, check=True)
+        cls._git(cls.app, "add", ".")
+        cls._git(cls.app, "commit", "-m", "chore: initialize synthetic FW020 app")
+
+        (cls.app / "specification.md").write_text(
+            (cls.app / "specification.md").read_text(encoding="utf-8")
+            + "\n## Synthetic validator fixture IDs (not product requirements)\n"
+            + "- FIXTURE-REQ-001: Disposable FW020 structural reference only.\n",
+            encoding="utf-8",
+        )
+        (cls.app / "backlog.md").write_text(
+            (cls.app / "backlog.md").read_text(encoding="utf-8")
+            + "\n## Synthetic validator fixture tasks (not product work)\n"
+            + "- FIXTURE-TASK-001: Disposable FW020 structural reference only.\n",
+            encoding="utf-8",
+        )
+        input_target = cls.app / "docs/framework/examples/gate-contract-v1/inputs"
+        shutil.copytree(GATE_FIXTURES / "inputs", input_target, dirs_exist_ok=True)
+        cls.source_revision = cls._git(cls.app, "rev-parse", "HEAD").stdout.strip()
+        cls._git(cls.app, "add", "specification.md", "backlog.md", "docs/framework/examples/gate-contract-v1/inputs")
+        cls._git(cls.app, "commit", "-m", "test: add synthetic fixture references")
+        cls.source_revision = cls._git(cls.app, "rev-parse", "HEAD").stdout.strip()
+
+        runs = cls.app / ".sdd/gate-runs"
+        runs.mkdir(parents=True)
+        for source in sorted((GATE_FIXTURES / "valid").glob("G-*.json")):
+            record = json.loads(source.read_text(encoding="utf-8"))
+            gate_id = record["gate_id"]
+            record["record_id"] = f"FLAGLITE-GATE-RUN-{gate_id[2:]}-001"
+            record["application_id"] = "FLAGLITE"
+            record["repository"]["url_or_path"] = str(cls.app)
+            record["source_snapshot"]["commit_sha"] = cls.source_revision
+            for ref in record["source_snapshot"].get("files", []):
+                ref["source_revision"] = cls.source_revision
+            for ref in record["scope"].get("artifact_refs", []):
+                ref["source_revision"] = cls.source_revision
+            if gate_id == "G-REQ":
+                record["gate_data"]["decision_ids"] = ["FLAGLITE-DECISION-001"]
+            (runs / f"{record['record_id']}.json").write_text(
+                json.dumps(record, indent=2) + "\n", encoding="utf-8"
+            )
+        cls._git(cls.app, "add", ".sdd/gate-runs")
+        cls._git(cls.app, "commit", "-m", "test: add ten in-progress gate fixtures")
+        cls.baseline = Path(cls.temporary.name) / "baseline"
+        shutil.copytree(cls.app, cls.baseline, ignore=shutil.ignore_patterns(".git"))
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.temporary.cleanup()
+
+    @staticmethod
+    def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", "-c", "user.name=Synthetic Pilot", "-c", "user.email=pilot@example.invalid", *args],
+            cwd=cwd, check=True, text=True, capture_output=True,
+        )
+
+    def _case(self, mutate=None) -> tuple[Path, subprocess.CompletedProcess[str]]:
+        temporary = tempfile.TemporaryDirectory(prefix="fw020-case-")
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name) / "app"
+        shutil.copytree(self.baseline, root)
+        if mutate is not None:
+            mutate(root)
+        result = subprocess.run(
+            ["python3", "scripts/artifacts.py", "validate"], cwd=root,
+            text=True, capture_output=True,
+        )
+        return root, result
+
+    @staticmethod
+    def _record(root: Path, gate_id: str) -> tuple[Path, dict[str, object]]:
+        path = root / ".sdd/gate-runs" / f"FLAGLITE-GATE-RUN-{gate_id[2:]}-001.json"
+        return path, json.loads(path.read_text(encoding="utf-8"))
+
+    @staticmethod
+    def _save(path: Path, record: dict[str, object]) -> None:
+        path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+
+    def _attach_synthetic_observation(self, record: dict[str, object], evidence_id: str = "PILOT-OBSERVATION") -> None:
+        criterion_ids = [item["criterion_id"] for item in record["criteria_results"]]
+        for criterion in record["criteria_results"]:
+            criterion["evidence_ids"] = [evidence_id]
+        record["evidence"] = [{
+            "evidence_id": evidence_id, "type": "manual-observation", "criterion_ids": criterion_ids,
+            "observed_at": "2026-10-21T12:00:00Z", "observed_by": "synthetic pilot",
+            "source_revision": self.source_revision, "scope_ref": "synthetic fixture scope",
+            "locator": "synthetic-only://pilot-observation", "record_sha256": "sha256:" + "d" * 64,
+            "limitations": ["synthetic structural fixture; not product evidence"],
+            "details": {"observer": "synthetic pilot", "procedure": "schema and relationship exercise",
+                        "observed_at": "2026-10-21T12:00:00Z", "scope": "synthetic fixture",
+                        "result": "not product evidence", "limitations": ["synthetic only"]},
+        }]
+
+    def test_app_is_separate_disposable_pinned_and_has_ten_truthful_in_progress_gates(self) -> None:
+        lock = json.loads((self.baseline / ".sdd/framework.lock.json").read_text(encoding="utf-8"))
+        self.assertEqual(lock["framework_revision"], self.framework_revision)
+        self.assertTrue((self.app / ".git").is_dir())
+        self.assertEqual(self._git(self.app, "remote", "-v").stdout, "")
+        self.assertFalse(any((self.app / folder).exists() for folder in ("src", "services", "apps")))
+        runs = list((self.baseline / ".sdd/gate-runs").glob("*.json"))
+        self.assertEqual(len(runs), 10)
+        self.assertEqual({json.loads(path.read_text())["gate_result"] for path in runs}, {"in-progress"})
+        _, result = self._case()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Validated", result.stdout)
+
+    def test_each_gate_rejects_free_text_pass_without_criterion_evidence(self) -> None:
+        for gate_id in GATES:
+            def mutate(root: Path, gate_id=gate_id) -> None:
+                path, record = self._record(root, gate_id)
+                record["gate_result"] = "passed"
+                for criterion in record["criteria_results"]:
+                    criterion["outcome"] = "pass"
+                self._save(path, record)
+
+            with self.subTest(gate=gate_id):
+                _, result = self._case(mutate)
+                output = result.stdout + result.stderr
+                self.assertNotEqual(result.returncode, 0, output)
+                self.assertIn(f"$.criteria_results[0].evidence_ids: array has fewer than 1 items", output)
+                self.assertIn(f"[{gate_id}]", output)
+
+    def test_all_ten_invalid_gate_fixtures_fail_in_the_separate_app(self) -> None:
+        invalid_dir = GATE_FIXTURES / "invalid"
+        for source in sorted(invalid_dir.glob("G-*.json")):
+            def mutate(root: Path, source=source) -> None:
+                runs = root / ".sdd/gate-runs"
+                record = json.loads(source.read_text(encoding="utf-8"))
+                gate_id = record["gate_id"]
+                record["record_id"] = f"FLAGLITE-GATE-RUN-NEG-{gate_id[2:]}-001"
+                record["application_id"] = "FLAGLITE"
+                record["repository"]["url_or_path"] = str(root)
+                record["source_snapshot"]["commit_sha"] = self.source_revision
+                for ref in record["source_snapshot"].get("files", []):
+                    ref["source_revision"] = self.source_revision
+                for ref in record.get("scope", {}).get("artifact_refs", []):
+                    ref["source_revision"] = self.source_revision
+                (runs / f"{record['record_id']}.json").write_text(json.dumps(record, indent=2) + "\n")
+
+            with self.subTest(fixture=source.name):
+                _, result = self._case(mutate)
+                output = result.stdout + result.stderr
+                self.assertNotEqual(result.returncode, 0, output)
+                self.assertIn(f"[{json.loads(source.read_text(encoding='utf-8'))['gate_id']}]", output)
+
+    def test_stale_digest_revision_identity_waiver_and_cross_app_substitution_fail(self) -> None:
+        cases = (
+            ("digest", lambda d: d["scope"]["artifact_refs"][0].update(sha256="sha256:" + "0" * 64)),
+            ("revision", lambda d: d["source_snapshot"].update(commit_sha="a" * 40)),
+            ("identity", lambda d: d.update(application_id="OTHER-APP")),
+            ("waiver", lambda d: d.update(gate_result="passed-with-accepted-risk")),
+        )
+        for label, change in cases:
+            def mutate(root: Path, change=change) -> None:
+                path, record = self._record(root, "G-INTENT")
+                change(record)
+                self._save(path, record)
+            with self.subTest(case=label):
+                _, result = self._case(mutate)
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_unknown_feasibility_cannot_unblock_and_coverage_cannot_substitute_platform(self) -> None:
+        def unblocked(root: Path) -> None:
+            path, record = self._record(root, "G-FEAS")
+            record["gate_data"]["probes"][0]["task_dependencies"][0]["state"] = "unblocked"
+            record["dependency_effects"][0]["state"] = "unblocked"
+            self._save(path, record)
+        _, result = self._case(unblocked)
+        self.assertIn("cannot leave task", result.stdout + result.stderr)
+
+        def substituted(root: Path) -> None:
+            path, record = self._record(root, "G-COVERAGE")
+            record["scope"]["platforms"] = ["ios"]
+            record["gate_data"]["platform_applicability"][0]["platform"] = "android"
+            self._save(path, record)
+        _, result = self._case(substituted)
+        self.assertIn("platform_applicability platform 'android' is outside scope.platforms", result.stdout + result.stderr)
+
+        def out_of_scope_journey(root: Path) -> None:
+            path, record = self._record(root, "G-COVERAGE")
+            record["gate_data"]["journeys"][0]["requirement_ids"] = ["OTHER-REQ-999"]
+            self._save(path, record)
+        _, result = self._case(out_of_scope_journey)
+        self.assertIn("out-of-scope requirement", result.stdout + result.stderr)
+
+    def _synthetic_intent_pass(self, root: Path) -> tuple[dict[str, object], dict[str, object]]:
+        base_path, base = self._record(root, "G-INTENT")
+        record = json.loads(json.dumps(base))
+        record.update({
+            "record_id": "FLAGLITE-GATE-RUN-INTENT-002", "record_version": 2,
+            "supersedes_run_id": base["record_id"], "created_at": "2026-10-21T13:00:00Z",
+            "gate_result": "passed",
+        })
+        digest = "sha256:" + hashlib.sha256((root / "mission.md").read_bytes()).hexdigest()
+        mission_ref = {
+            "artifact_id": "FLAGLITE-MISSION-001", "version": "0.1", "path": "mission.md",
+            "sha256": digest, "source_revision": self.source_revision,
+        }
+        record["scope"]["artifact_refs"].append(mission_ref)
+        record["source_snapshot"]["files"].append(mission_ref)
+        evidence_id = "EVIDENCE-MISSION-001"
+        decision_id = "OWNER-INTENT-001"
+        record["evidence"] = [{
+            "evidence_id": evidence_id, "type": "artifact-reference",
+            "criterion_ids": [item["criterion_id"] for item in record["criteria_results"]],
+            "observed_at": "2026-10-21T12:30:00Z", "observed_by": "fixture-owner",
+            "source_revision": self.source_revision, "scope_ref": "synthetic fixture",
+            "locator": "mission.md", "record_sha256": digest,
+            "limitations": ["synthetic only; not product evidence"],
+            "details": {"artifact_id": "FLAGLITE-MISSION-001", "version": "0.1", "path": "mission.md", "sha256": digest},
+        }]
+        record["authority"]["owner_decisions"] = [{
+            "decision_id": decision_id, "decision_maker": "fixture-owner", "role": "synthetic fixture owner",
+            "decided_at": "2026-10-21T12:30:00Z",
+            "choice": f"approve-intent: FLAGLITE-MISSION-001; digest={digest}",
+            "affected_ids": ["FLAGLITE-MISSION-001"], "rationale": "synthetic pass-path test",
+            "revisit_condition": "fixture only",
+        }]
+        for criterion in record["criteria_results"]:
+            criterion.update({"outcome": "pass", "evidence_ids": [evidence_id], "owner_decision_ids": [decision_id]})
+        return record, base
+
+    def test_intent_synthetic_positive_pass_and_forged_manual_evidence_boundary(self) -> None:
+        def positive(root: Path) -> None:
+            record, _ = self._synthetic_intent_pass(root)
+            (root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-INTENT-002.json").write_text(json.dumps(record, indent=2) + "\n")
+        _, result = self._case(positive)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+        def forged(root: Path) -> None:
+            record, _ = self._synthetic_intent_pass(root)
+            record["scope"]["artifact_refs"] = [ref for ref in record["scope"]["artifact_refs"] if ref["path"] != "mission.md"]
+            record["source_snapshot"]["files"] = [ref for ref in record["source_snapshot"]["files"] if ref["path"] != "mission.md"]
+            record["authority"]["owner_decisions"] = []
+            evidence_id = "EVIDENCE-FORGED-001"
+            record["evidence"] = [{
+                "evidence_id": evidence_id, "type": "manual-observation",
+                "criterion_ids": [item["criterion_id"] for item in record["criteria_results"]],
+                "observed_at": "2026-10-21T12:30:00Z", "observed_by": "agent",
+                "source_revision": self.source_revision, "scope_ref": "synthetic scope",
+                "locator": "synthetic-only://missing-evidence", "record_sha256": "sha256:" + "a" * 64,
+                "limitations": ["no mission evidence exists"],
+                "details": {"observer": "agent", "procedure": "claim pass", "observed_at": "2026-10-21T12:30:00Z",
+                            "scope": "synthetic", "result": "claimed pass", "limitations": ["no observation"]},
+            }]
+            for criterion in record["criteria_results"]:
+                criterion.update({"evidence_ids": [evidence_id], "owner_decision_ids": []})
+            (root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-INTENT-002.json").write_text(json.dumps(record, indent=2) + "\n")
+        _, result = self._case(forged)
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn("requires artifact-reference evidence for the current mission.md", output)
+        self.assertIn("requires accountable-owner approval bound to mission ID and exact mission digest", output)
+
+    def test_feasibility_supported_scope_reduced_blocked_conditional_and_owner_risk_routes(self) -> None:
+        changes = {}
+        def supported(d: dict[str, object]) -> None:
+            probe = d["gate_data"]["probes"][0]
+            probe.update({"classification": "supported", "observed_at": "2026-10-21T12:00:00Z", "confidence": "medium",
+                          "status": "evidence-recorded", "limitations": ["synthetic route-shape only; no product evidence"]})
+            probe["task_dependencies"][0].update({"state": "unblocked", "condition": "", "safe_work_boundary": ""})
+            d["dependency_effects"][0].update(probe["task_dependencies"][0])
+        changes["supported route (synthetic only)"] = supported
+        def scope_reduced(d: dict[str, object]) -> None:
+            d["scope"]["requirement_ids"] = []
+            d["gate_data"]["probes"][0]["requirement_ids"] = []
+        changes["scope-reduced requirement"] = scope_reduced
+        changes["unknown remains blocked"] = lambda d: None
+        def conditional(d: dict[str, object]) -> None:
+            probe = d["gate_data"]["probes"][0]
+            probe["classification"] = "constrained"
+            dependency = {"task_id": "FIXTURE-TASK-001", "state": "conditional",
+                          "condition": "owner accepts documented limit", "safe_work_boundary": "no provider integration or rollout"}
+            probe["task_dependencies"] = [dependency]
+            d["dependency_effects"] = [dict(dependency)]
+        changes["conditional safe work"] = conditional
+        def risk(d: dict[str, object]) -> None:
+            d["authority"]["owner_decisions"] = [{
+                "decision_id": "FIXTURE-RISK-001", "decision_maker": "fixture-owner", "role": "synthetic owner",
+                "decided_at": "2026-10-21T12:00:00Z", "choice": "accept residual uncertainty; dependent task stays blocked",
+                "affected_ids": ["FIXTURE-TASK-001"], "rationale": "fixture only", "revisit_condition": "new evidence",
+            }]
+        changes["owner risk leaves unknown blocked"] = risk
+        for name, change in changes.items():
+            def mutate(root: Path, change=change) -> None:
+                path, record = self._record(root, "G-FEAS")
+                change(record["gate_data"].update({}) if False else record)
+                self._save(path, record)
+            with self.subTest(route=name):
+                root, result = self._case(mutate)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                if name == "owner risk leaves unknown blocked":
+                    _, record = self._record(root, "G-FEAS")
+                    self.assertEqual(record["gate_data"]["probes"][0]["classification"], "unknown")
+                    self.assertEqual(record["gate_data"]["probes"][0]["task_dependencies"][0]["state"], "blocked")
+
+    def test_product_interaction_without_capture_is_explicitly_unverified_in_progress(self) -> None:
+        def mutate(root: Path) -> None:
+            path, record = self._record(root, "G-CX")
+            evidence_id = "EVIDENCE-UNVERIFIED-CX-001"
+            record["gate_data"]["interaction_evidence_ids"] = [evidence_id]
+            record["gate_data"]["limitations"] = ["No rendered or runtime capture exists; synthetic manual observation only."]
+            for criterion in record["criteria_results"]:
+                criterion["evidence_ids"] = [evidence_id]
+            record["evidence"] = [{
+                "evidence_id": evidence_id, "type": "manual-observation",
+                "criterion_ids": [item["criterion_id"] for item in record["criteria_results"]],
+                "observed_at": "2026-10-21T12:00:00Z", "observed_by": "synthetic fixture",
+                "source_revision": self.source_revision, "scope_ref": "synthetic interaction",
+                "locator": "synthetic-only://no-rendered-capture", "record_sha256": "sha256:" + "b" * 64,
+                "limitations": ["not visual/runtime evidence"],
+                "details": {"observer": "synthetic fixture", "procedure": "schema path exercise",
+                            "observed_at": "2026-10-21T12:00:00Z", "scope": "synthetic only",
+                            "result": "unverified", "limitations": ["no rendered or runtime capture"]},
+            }]
+            self._save(path, record)
+        root, result = self._case(mutate)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        _, record = self._record(root, "G-CX")
+        self.assertEqual(record["gate_result"], "in-progress")
+        self.assertTrue(any("no rendered" in item.lower() for item in record["gate_data"]["limitations"]))
+
+    def test_gate_specific_evidence_bypasses_are_rejected(self) -> None:
+        cases = (
+            ("G-SETUP", lambda d: d["gate_data"].update({"cold_start_evidence_ids": ["MISSING-COLD-START"]}), "gate_data.cold_start_evidence_ids references unknown evidence ID"),
+            ("G-REQ", lambda d: d["gate_data"].update({"review_evidence_ids": ["MISSING-REVIEW-EVIDENCE"]}), "gate_data.review_evidence_ids references unknown evidence ID"),
+            ("G-OPERATE", lambda d: d["gate_data"].update({"runbook_evidence_ids": ["MISSING-RUNBOOK"]}), "gate_data.runbook_evidence_ids references unknown evidence ID"),
+        )
+        for gate_id, change, expected in cases:
+            def mutate(root: Path, gate_id=gate_id, change=change) -> None:
+                path, record = self._record(root, gate_id)
+                self._attach_synthetic_observation(record)
+                change(record)
+                self._save(path, record)
+
+            with self.subTest(gate=gate_id):
+                _, result = self._case(mutate)
+                output = result.stdout + result.stderr
+                self.assertNotEqual(result.returncode, 0, output)
+                self.assertIn(expected, output)
+
+    def test_textual_independent_review_claim_and_failed_push_do_not_pass(self) -> None:
+        def self_review(root: Path) -> None:
+            path, record = self._record(root, "G-REQ")
+            record["gate_result"] = "passed"
+            evidence_id = "SELF-REVIEW"
+            criterion_ids = [item["criterion_id"] for item in record["criteria_results"]]
+            for criterion in record["criteria_results"]:
+                criterion.update({"outcome": "pass", "evidence_ids": [evidence_id]})
+            record["gate_data"]["review_evidence_ids"] = ["SELF-REVIEW"]
+            record["authority"]["reviewers"] = [{"identity": "same-agent", "role": "agent author", "mode": "independent",
+                "result": "pass", "author_overlap": "same-agent", "context_disclosure": "same author reviewed own work", "limitations": ["synthetic"]}]
+            record["evidence"] = [{"evidence_id": evidence_id, "type": "review-finding",
+                "criterion_ids": criterion_ids,
+                "observed_at": "2026-10-21T12:00:00Z", "observed_by": "same-agent", "source_revision": self.source_revision,
+                "scope_ref": "synthetic", "locator": "self-review", "record_sha256": "sha256:" + "c" * 64,
+                "limitations": ["synthetic only"], "details": {"reviewer": "same-agent", "mode": "independent",
+                "author_overlap": "same-agent", "context_disclosure": "same author reviewed own work", "finding_id": "SELF-FINDING",
+                "severity": "informational", "location": "synthetic fixture", "disposition": "not-applicable"}}]
+            self._save(path, record)
+        _, result = self._case(self_review)
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn("passed G-REQ requires an independent reviewer result, context disclosure, and author_overlap 'none'", output)
+
+        def failed_push(root: Path) -> None:
+            path, record = self._record(root, "G-IMPL")
+            record["gate_result"] = "passed"
+            record["change_control"].update({"push_result": "failed", "remote": None, "branch_ref": None})
+            self._save(path, record)
+        _, result = self._case(failed_push)
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn("[G-IMPL]", output)
+
+
+if __name__ == "__main__":
+    unittest.main()

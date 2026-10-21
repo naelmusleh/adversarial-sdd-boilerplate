@@ -814,6 +814,22 @@ def _published_checkpoint_problems(
     return problems
 
 
+def _has_independent_reviewer(reviewers: object) -> bool:
+    """Require an explicit no-author-overlap declaration for independent reviews."""
+    if not isinstance(reviewers, list):
+        return False
+    return any(
+        isinstance(item, dict)
+        and item.get("mode") == "independent"
+        and item.get("result") == "pass"
+        and isinstance(item.get("context_disclosure"), str)
+        and bool(item["context_disclosure"].strip())
+        and isinstance(item.get("author_overlap"), str)
+        and item["author_overlap"].strip().casefold() == "none"
+        for item in reviewers
+    )
+
+
 def _ci_change_control_reference_problems(change_control: object, evidence: object, label: str) -> list[str]:
     if not isinstance(change_control, dict) or not isinstance(evidence, dict):
         return [f"{label}: CI evidence and change_control record are required"]
@@ -1361,12 +1377,12 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                         problems.extend(validate_handoff_manifest(root, gate_id, framework_revision))
                 if gate_id == "G-REQ":
                     reviewers = record.get("authority", {}).get("reviewers", [])
-                    if not any(isinstance(item, dict) and item.get("mode") == "independent" and item.get("result") == "pass" and item.get("context_disclosure") for item in reviewers):
-                        problems.append(f"{relative}: passed G-REQ requires an independent reviewer result with context disclosure")
+                    if not _has_independent_reviewer(reviewers):
+                        problems.append(f"{relative}: passed G-REQ requires an independent reviewer result, context disclosure, and author_overlap 'none'")
             if gate_id == "G-ARCH" and record.get("gate_result") in {"passed", "passed-with-accepted-risk"}:
                 reviewers = record.get("authority", {}).get("reviewers", [])
-                if not any(isinstance(item, dict) and item.get("mode") == "independent" and item.get("result") == "pass" and item.get("context_disclosure") for item in reviewers):
-                    problems.append(f"{relative}: passed G-ARCH requires an independent reviewer result with context disclosure")
+                if not _has_independent_reviewer(reviewers):
+                    problems.append(f"{relative}: passed G-ARCH requires an independent reviewer result, context disclosure, and author_overlap 'none'")
             if gate_id == "G-RELEASE":
                 change = record.get("change_control", {})
                 if not isinstance(change, dict):
