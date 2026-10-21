@@ -600,6 +600,29 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             output,
         )
 
+        superseded_root, _ = self._case(setup_pass)
+        intent_path = superseded_root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-INTENT-002.json"
+        intent = json.loads(intent_path.read_text(encoding="utf-8"))
+        blocked_intent = json.loads(json.dumps(intent))
+        blocked_intent.update({
+            "record_id": "FLAGLITE-GATE-RUN-INTENT-003",
+            "record_version": 3,
+            "supersedes_run_id": intent["record_id"],
+            "created_at": "2026-10-21T14:00:00Z",
+            "gate_result": "blocked",
+        })
+        for criterion in blocked_intent["criteria_results"]:
+            criterion.update({"outcome": "blocked", "rationale": "Synthetic upstream invalidation probe."})
+        blocked_path = intent_path.with_name("FLAGLITE-GATE-RUN-INTENT-003.json")
+        blocked_path.write_text(json.dumps(blocked_intent, indent=2) + "\n", encoding="utf-8")
+        invalidated = subprocess.run(
+            ["python3", "scripts/artifacts.py", "validate"], cwd=superseded_root,
+            text=True, capture_output=True,
+        )
+        output = invalidated.stdout + invalidated.stderr
+        self.assertNotEqual(invalidated.returncode, 0, output)
+        self.assertIn("cannot pass G-SETUP; latest G-INTENT result is blocked", output)
+
     def test_feasibility_supported_scope_reduced_blocked_conditional_and_owner_risk_routes(self) -> None:
         changes = {}
         def supported(d: dict[str, object]) -> None:
