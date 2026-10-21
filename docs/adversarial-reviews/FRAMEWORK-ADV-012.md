@@ -7,7 +7,7 @@ version: 1.0
 created: 2026-10-21
 updated: 2026-10-21
 reviewed-artifact: FW-TASK-019
-reviewed-version: implementation at 8bb496736acdbf69b95310f4a23b411e30b45fde
+reviewed-version: implementation and rehearsal regression cases at cef3672b2004817f17c1e907d6f65c12bf0a3eec
 related-artifacts: FRAMEWORK-ADV-011, FRAMEWORK-BACKLOG-001, FRAMEWORK-CI-RELEASE-POLICY-001, FRAMEWORK-GATE-CONTRACT-001
 ---
 
@@ -18,6 +18,7 @@ related-artifacts: FRAMEWORK-ADV-011, FRAMEWORK-BACKLOG-001, FRAMEWORK-CI-RELEAS
 - **Task/gates:** FW-TASK-019; G-IMPL CI and exact-source evidence, plus a bounded G-RELEASE control rehearsal. No application deployment, production release, or repository-setting mutation was authorized or performed.
 - **Reviewed implementation revision:** `8bb496736acdbf69b95310f4a23b411e30b45fde` on `codex/v2-backlog-roadmap`.
 - **Hosted positive run:** GitHub Actions push run [39533369435, attempt 1](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39533369435/attempts/1), against the exact revision above; completed successfully. `Initializer Regression Gate`, `TypeScript Static Code Analysis`, and `Metadata & Artifact Audit` all concluded `success`.
+- **Final hosted run for the reviewed test/evidence delta:** GitHub Actions push run [39533675105, attempt 1](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39533675105/attempts/1), event `push`, exact head `cef3672b2004817f17c1e907d6f65c12bf0a3eec`; completed successfully. All three checks (`Initializer Regression Gate`, `TypeScript Static Code Analysis`, `Metadata & Artifact Audit`) concluded `success`.
 - **Hosted negative observation:** The preceding push run [39533199767, attempt 1](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39533199767/attempts/1), against `15e00f0eec064fabc73aacd1c82d2ee254c10582`, failed the metadata job because a local-runner unit test assumed `runner_os == local` while executing on hosted Linux. The test now removes inherited provider/runner metadata when simulating a local run; the follow-up exact-commit hosted run passed. This was a test isolation defect, not a product check failure.
 - **Local evidence before the follow-up push:** `python3 -m unittest discover -s tests -q` — 59 passed; `python3 scripts/artifacts.py validate` — 45 artifacts validated; `git diff --check` — passed. The implementation checkpoint also recorded 30 TypeScript tests, configured 100% statement/branch/function/line coverage, typecheck, and production build passing. These local results are distinct from the hosted run.
 - **Review method:** A bounded read-only review of implementation, policy, fixtures, tests, backlog, and CI results. Reviewer did not edit files or execute checks. Reviewer separation is procedural and does not prove identity or independent organizational control.
@@ -49,4 +50,4 @@ The retained unit/fixture suite exercises the decision boundary for successful a
 
 ## Review disposition
 
-**Independent review disposition: PASS for the bounded FW-TASK-019 framework implementation and synthetic control rehearsal.** The local rehearsal demonstrates validator decisions and modeled responses; the rollback plan is textually present but not machine-parsed or actually executed. The hosted positive run cited above is for the earlier implementation commit; this final review-record/test delta still requires its own exact-commit hosted run before FW-TASK-019 can be closed. This record establishes neither production-release authorization nor production readiness. Branch protection remains explicitly unverified.
+**Independent review disposition: PASS for the bounded FW-TASK-019 framework implementation and synthetic control rehearsal.** The local rehearsal demonstrates validator decisions and modeled responses; the rollback plan is textually present but not machine-parsed or actually executed. The final review/test/evidence delta passed the hosted Verify Pipeline on exact commit `cef3672b2004817f17c1e907d6f65c12bf0a3eec`, run attempt 1, with all three required checks successful. This record establishes neither production-release authorization nor production readiness. Branch protection remains explicitly unverified.
