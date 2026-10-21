@@ -72,6 +72,9 @@ class RequiredCheckRunnerTests(unittest.TestCase):
     def _run(self, *, expected_sha: str | None = None, failure: bool = False) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
         evidence_dir = Path(self.evidence_temp.name)
         env = os.environ.copy()
+        for key in list(env):
+            if key.startswith(("GITHUB_", "RUNNER_")) or key in {"ImageOS", "ImageVersion"}:
+                env.pop(key, None)
         env["SDD_CI_EVIDENCE_DIR"] = str(evidence_dir)
         if expected_sha is not None:
             env["GITHUB_ACTIONS"] = "true"
