@@ -280,7 +280,12 @@ class GateContractFixtureTests(unittest.TestCase):
         record["gate_data"].update({"tested_commit_sha": commit, "artifact_sha256": digest,
             "environment": "production", "required_check_evidence_ids": ["EVIDENCE-CI-001"],
             "security_accessibility_platform_evidence_ids": ["EVIDENCE-CI-001"],
-            "owner_authorization_id": "FIXTURE-DECISION-001"})
+            "owner_authorization_id": "FIXTURE-DECISION-001",
+            "migration_backup_rollback_plan": (
+                "Operator fixture-owner: if exact-SHA checks, artifact digest, or authorization fail, do not activate the candidate; "
+                "retain the prior local artifact and state snapshot; restore the snapshot into an isolated temporary directory; "
+                "verify its recorded SHA-256 and tenant-scoped read result; record the outcome before retrying."
+            )})
         record["change_control"].update({
             "commit_sha": commit,
             "branch_ref": "refs/heads/release-candidate",
@@ -373,6 +378,17 @@ class GateContractFixtureTests(unittest.TestCase):
         case["change_control"]["ci_runs"][0]["status"] = "cancelled"
         errors = self._validate_in_isolated_app(case, schema)
         self.assertTrue(any("successful ci-run" in error for error in errors), errors)
+
+        case = json.loads(json.dumps(record))
+        case["evidence"][1]["details"]["conclusion"] = "cancelled"
+        case["change_control"]["ci_runs"][0]["status"] = "pending"
+        errors = self._validate_in_isolated_app(case, schema)
+        self.assertTrue(any("successful ci-run" in error for error in errors), errors)
+
+        case = json.loads(json.dumps(record))
+        case["evidence"] = [item for item in case["evidence"] if item["evidence_id"] != "EVIDENCE-ARTIFACT-001"]
+        errors = self._validate_in_isolated_app(case, schema)
+        self.assertTrue(any("artifact-reference evidence" in error for error in errors), errors)
 
         case = json.loads(json.dumps(record))
         case["gate_data"]["migration_backup_rollback_plan"] = ""
