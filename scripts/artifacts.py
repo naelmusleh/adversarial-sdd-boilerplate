@@ -1012,11 +1012,16 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                     problems.append(f"{relative}: command evidence '{eid}' detail scope does not match its scope_ref")
                 if not detail.get("stdout_ref") and not detail.get("stderr_ref"):
                     problems.append(f"{relative}: command evidence '{eid}' requires durable stdout_ref or stderr_ref evidence")
+                output_digests: set[str] = set()
                 for output_ref in (detail.get("stdout_ref"), detail.get("stderr_ref")):
                     if output_ref is not None:
                         output_path, output_error = safe_file(root, output_ref) if isinstance(output_ref, str) else (None, "path must be a string")
                         if output_error or output_path is None:
                             problems.append(f"{relative}: command evidence '{eid}' output reference is invalid: {output_error or 'file is missing'}")
+                        else:
+                            output_digests.add(file_sha256(output_path))
+                if output_digests and ev.get("record_sha256") not in output_digests:
+                    problems.append(f"{relative}: command evidence '{eid}' record_sha256 does not match its durable stdout/stderr output")
                 if detail.get("exit_code") != 0 and any(
                     isinstance(item, dict) and item.get("outcome") == "pass" and eid in item.get("evidence_ids", [])
                     for item in results
@@ -1033,6 +1038,20 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                     for item in results
                 ) and detail.get("conclusion") != "success":
                     problems.append(f"{relative}: CI evidence '{eid}' with a non-success conclusion cannot support a passing criterion")
+            if ev.get("type") == "interaction-capture":
+                capture_path, capture_error = safe_file(root, ev.get("locator")) if isinstance(ev.get("locator"), str) else (None, "locator must be a repository-relative file path")
+                if capture_error or capture_path is None:
+                    problems.append(f"{relative}: interaction capture evidence '{eid}' locator is invalid: {capture_error or 'file is missing'}")
+                else:
+                    capture_bytes = capture_path.read_bytes()
+                    is_png = capture_bytes.startswith(b"\x89PNG\r\n\x1a\n")
+                    is_jpeg = capture_bytes.startswith(b"\xff\xd8\xff")
+                    is_gif = capture_bytes.startswith((b"GIF87a", b"GIF89a"))
+                    is_webp = len(capture_bytes) >= 12 and capture_bytes[:4] == b"RIFF" and capture_bytes[8:12] == b"WEBP"
+                    if not (is_png or is_jpeg or is_gif or is_webp):
+                        problems.append(f"{relative}: interaction capture evidence '{eid}' must reference a PNG, JPEG, GIF, or WebP image")
+                    if ev.get("record_sha256") != file_sha256(capture_path):
+                        problems.append(f"{relative}: interaction capture evidence '{eid}' record_sha256 does not match the capture file")
 
         if record.get("gate_result") == "passed":
             open_blockers = [finding.get("finding_id") for finding in findings if isinstance(finding, dict) and finding.get("blocking") is True and finding.get("disposition") not in {"fixed", "not-applicable"}]

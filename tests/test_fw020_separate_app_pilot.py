@@ -573,12 +573,40 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             output,
         )
 
+        stale_upstream_root, _ = self._case(setup_pass)
+        upstream_path = stale_upstream_root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-INTENT-002.json"
+        upstream_path.write_text(upstream_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+        stale_upstream = subprocess.run(
+            ["python3", "scripts/artifacts.py", "validate"], cwd=stale_upstream_root,
+            text=True, capture_output=True,
+        )
+        output = stale_upstream.stdout + stale_upstream.stderr
+        self.assertNotEqual(stale_upstream.returncode, 0, output)
+        self.assertIn("artifact digest is stale", output)
+
+        altered_output_root, _ = self._case(setup_pass)
+        altered_setup_path = altered_output_root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-SETUP-002.json"
+        altered_setup = json.loads(altered_setup_path.read_text(encoding="utf-8"))
+        stdout_file = altered_output_root / altered_setup["evidence"][0]["details"]["stdout_ref"]
+        stdout_file.write_text("replaced output; the original command result is no longer reproducible\n", encoding="utf-8")
+        altered = subprocess.run(
+            ["python3", "scripts/artifacts.py", "validate"], cwd=altered_output_root,
+            text=True, capture_output=True,
+        )
+        output = altered.stdout + altered.stderr
+        self.assertNotEqual(altered.returncode, 0, output)
+        self.assertIn(
+            "command evidence 'FLAGLITE-SETUP-OBSERVED-VALIDATION' record_sha256 does not match its durable stdout/stderr output",
+            output,
+        )
+
     def test_feasibility_supported_scope_reduced_blocked_conditional_and_owner_risk_routes(self) -> None:
         changes = {}
         def supported(d: dict[str, object]) -> None:
             probe = d["gate_data"]["probes"][0]
             probe.update({"classification": "supported", "observed_at": "2026-10-21T12:00:00Z", "confidence": "medium",
-                          "status": "evidence-recorded", "limitations": ["synthetic route-shape only; no product evidence"]})
+                          "status": "evidence-recorded", "source_or_plan": "synthetic evidence fixture only",
+                          "limitations": ["synthetic route-shape only; no product feasibility claim"]})
             probe["task_dependencies"][0].update({"state": "unblocked", "condition": "", "safe_work_boundary": ""})
             d["dependency_effects"][0].update(probe["task_dependencies"][0])
         changes["supported route (synthetic only)"] = supported
@@ -607,12 +635,18 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             def mutate(root: Path, change=change) -> None:
                 path, record = self._record(root, "G-FEAS")
                 change(record["gate_data"].update({}) if False else record)
+                if name == "supported route (synthetic only)":
+                    self._attach_synthetic_observation(record, "FEAS-SYNTHETIC-SUPPORT-EVIDENCE")
                 self._save(path, record)
             with self.subTest(route=name):
                 root, result = self._case(mutate)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                _, record = self._record(root, "G-FEAS")
+                self.assertEqual(record["gate_result"], "in-progress")
+                if name == "supported route (synthetic only)":
+                    self.assertTrue(record["evidence"])
+                    self.assertTrue(all("FEAS-SYNTHETIC-SUPPORT-EVIDENCE" in item["evidence_ids"] for item in record["criteria_results"]))
                 if name == "owner risk leaves unknown blocked":
-                    _, record = self._record(root, "G-FEAS")
                     self.assertEqual(record["gate_data"]["probes"][0]["classification"], "unknown")
                     self.assertEqual(record["gate_data"]["probes"][0]["task_dependencies"][0]["state"], "blocked")
 
@@ -655,6 +689,50 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         self.assertNotEqual(claimed_pass.returncode, 0, output)
         self.assertIn(
             "passed G-CX cannot rely on explicitly unverified interaction evidence",
+            output,
+        )
+
+    def test_gcx_rejects_fabricated_non_image_capture_content(self) -> None:
+        def mutate(root: Path) -> None:
+            path, record = self._record(root, "G-CX")
+            capture_path = root / "docs/evidence/fw020/fabricated-capture.txt"
+            capture_path.parent.mkdir(parents=True, exist_ok=True)
+            capture_bytes = b"This is fabricated screenshot text, not an image."
+            capture_path.write_bytes(capture_bytes)
+            evidence_id = "FABRICATED-CAPTURE-001"
+            criteria = record["criteria_results"]
+            for item in criteria:
+                item.update({"outcome": "pass", "evidence_ids": [evidence_id]})
+            record["gate_result"] = "passed"
+            record["gate_data"]["interaction_evidence_ids"] = [evidence_id]
+            record["evidence"] = [{
+                "evidence_id": evidence_id,
+                "type": "interaction-capture",
+                "criterion_ids": [item["criterion_id"] for item in criteria],
+                "observed_at": "2026-10-21T15:00:00Z",
+                "observed_by": "synthetic fixture",
+                "source_revision": self.source_revision,
+                "scope_ref": "synthetic capture scope",
+                "locator": capture_path.relative_to(root).as_posix(),
+                "record_sha256": "sha256:" + hashlib.sha256(capture_bytes).hexdigest(),
+                "limitations": ["synthetic adversarial input; not a rendered product capture"],
+                "details": {
+                    "target_ref": "synthetic-only://unavailable-product-screen",
+                    "capture_method": "fabricated text file mislabeled as a screenshot",
+                    "tool_version": "synthetic fixture",
+                    "viewport_or_device": "synthetic fixture",
+                    "runtime": "unavailable",
+                    "captured_at": "2026-10-21T15:00:00Z",
+                    "limitations": ["fabricated non-image content"],
+                },
+            }]
+            self._save(path, record)
+
+        _, result = self._case(mutate)
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn(
+            "interaction capture evidence 'FABRICATED-CAPTURE-001' must reference a PNG, JPEG, GIF, or WebP image",
             output,
         )
 
