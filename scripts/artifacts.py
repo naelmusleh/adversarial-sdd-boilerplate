@@ -1159,6 +1159,22 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                 if not _id_occurs_in_paths(root, task_id, ("backlog.md",)):
                     problems.append(f"{relative}: gate_data backlog task ID '{task_id}' does not resolve in backlog.md")
             if gate_id == "G-COVERAGE":
+                scope_surfaces = set(scope.get("surfaces", [])) if isinstance(scope, dict) else set()
+                scope_platforms = set(scope.get("platforms", [])) if isinstance(scope, dict) else set()
+                applicability = gate_data.get("platform_applicability", [])
+                mapped_surfaces = {row.get("surface") for row in applicability if isinstance(row, dict)}
+                mapped_platforms = {row.get("platform") for row in applicability if isinstance(row, dict)}
+                for surface in sorted(scope_surfaces - mapped_surfaces):
+                    problems.append(f"{relative}: G-COVERAGE scope surface '{surface}' has no platform_applicability row")
+                for surface in sorted(mapped_surfaces - scope_surfaces):
+                    problems.append(f"{relative}: G-COVERAGE platform_applicability surface '{surface}' is outside scope.surfaces")
+                for platform in sorted(scope_platforms - mapped_platforms):
+                    problems.append(f"{relative}: G-COVERAGE scope platform '{platform}' has no platform_applicability row")
+                for platform in sorted(mapped_platforms - scope_platforms):
+                    problems.append(f"{relative}: G-COVERAGE platform_applicability platform '{platform}' is outside scope.platforms")
+                pairs = [(row.get("surface"), row.get("platform")) for row in applicability if isinstance(row, dict)]
+                if len(pairs) != len(set(pairs)):
+                    problems.append(f"{relative}: G-COVERAGE platform_applicability must not duplicate a surface/platform pair")
                 for journey in gate_data.get("journeys", []):
                     if not isinstance(journey, dict):
                         continue

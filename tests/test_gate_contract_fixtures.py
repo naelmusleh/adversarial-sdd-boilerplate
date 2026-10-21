@@ -170,6 +170,17 @@ class GateContractFixtureTests(unittest.TestCase):
         errors = self._validate_in_isolated_app(record, schema)
         self.assertTrue(any("does not match its probe" in error for error in errors), errors)
 
+    def test_coverage_platform_matrix_must_match_declared_scope(self) -> None:
+        schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+        record = json.loads((FIXTURES / "valid/G-COVERAGE.json").read_text(encoding="utf-8"))
+        record["application_id"] = "SYNTHETIC"
+        self.assertEqual(self._validate_in_isolated_app(record, schema), [])
+
+        record["gate_data"]["platform_applicability"][0]["platform"] = "android"
+        errors = self._validate_in_isolated_app(record, schema)
+        self.assertTrue(any("platform_applicability platform 'android' is outside scope.platforms" in error for error in errors), errors)
+        self.assertTrue(any("scope platform 'fixture' has no platform_applicability row" in error for error in errors), errors)
+
     def test_ci_evidence_is_checked_against_this_record_source_commit(self) -> None:
         schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
         record = json.loads((FIXTURES / "valid/G-INTENT.json").read_text(encoding="utf-8"))

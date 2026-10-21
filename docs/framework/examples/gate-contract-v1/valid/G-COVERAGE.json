@@ -79,8 +79,8 @@
     ],
     "platform_applicability": [
       {
-        "surface": "fixture",
-        "platform": "synthetic",
+        "surface": "synthetic",
+        "platform": "fixture",
         "applicable": false,
         "rationale": "fixture only; no product surface"
       }
