@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "evidence_boundary": "synthetic framework-process fixtures; not observed owner or model conversations",
+  "scenarios": [
+    {
+      "id": "minimal-intake",
+      "setup_questions": ["project_name", "artifact_prefix", "empty_target"],
+      "questions_not_needed_for_bootstrap": ["platform", "provider", "region", "budget", "license", "database"],
+      "unknowns": [
+        {
+          "topic": "reported interview evidence and success baseline",
+          "classification": "unknown-researchable",
+          "blocks": ["approved success target", "demand claim"],
+          "resolver": "owner supplies notes or authorizes later research",
+          "next_action": "draft intent with provisional outcome and measurement plan"
+        },
+        {
+          "topic": "platform",
+          "classification": "owner-decision",
+          "blocks": ["platform-specific promises"],
+          "resolver": "owner",
+          "next_action": "defer until platform-dependent requirements are considered"
+        },
+        {
+          "topic": "provider availability and pricing",
+          "classification": "researchable-unknown",
+          "blocks": ["provider and cost promises"],
+          "resolver": "dated research plus any required account access",
+          "next_action": "no external access during bootstrap; research only after a concrete dependency appears"
+        }
+      ],
+      "bootstrap_creates_remote_or_gate_pass": false
+    },
+    {
+      "id": "existing-repository",
+      "observed_facts": ["README.md", "AGENTS.md", "pyproject.toml", "src/inventory.py", "CI workflow", "branch main", "no remote", "no canonical SDD files"],
+      "owner_statements": [],
+      "researched_claims": [],
+      "inferences": ["Python project based on pyproject.toml"],
+      "unknowns": ["product intent", "intended user", "authorization to create a remote"],
+      "credentials_read": false,
+      "initializer_allowed": false,
+      "next_action": "ask intended outcome and whether owner wants a path-specific SDD migration"
+    },
+    {
+      "id": "repeat-changed-constraint",
+      "changed_owner_statement": "barcode scanning is needed on phones in the first release",
+      "preserve": ["repair-shop staff audience", "part-finding problem", "unknown provider", "unknown region", "unknown budget"],
+      "reopen": ["phone surfaces", "camera permission", "offline scanning", "supported devices"],
+      "do_not_silently_approve_requirement": true,
+      "block_only_dependent_promises": true
+    },
+    {
+      "id": "owner-review-boundary",
+      "handoff_fields": ["owner statements", "observed files", "researched claims", "inferences", "unknowns and impacts", "decisions requested", "generated paths", "gate state", "next permitted action"],
+      "outward_actions_before_owner_review": [],
+      "requires_owner_review_before": ["git init", "remote creation", "commit", "push", "publication"],
+      "technical_sandbox_claim": false,
+      "gate_pass_claim": false
+    }
+  ]
+}
