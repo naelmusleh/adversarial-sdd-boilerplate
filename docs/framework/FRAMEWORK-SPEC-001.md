@@ -3,9 +3,9 @@ id: FRAMEWORK-SPEC-001
 type: framework-specification
 title: Adversarial SDD Framework v1 scope and behavior
 status: draft
-version: 0.13
+version: 0.14
 created: 2026-10-07
-updated: 2026-10-20
+updated: 2026-10-21
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001
 ---
 
@@ -84,6 +84,7 @@ Requirement statements in the tables below use uppercase RFC 2119 keywords for m
 | FR-FW-013 | The framework MUST provide an approved template-only distribution that a new user can fork/clone or download as a source archive and use locally by following the README. The distribution MUST exclude all app-specific material and private owner information, including prior application history. | After the owner approves the package and license, a clean fork/clone and ZIP download both support the documented local validation and app-initialization path; the public repository has clean history and contains only approved reusable framework materials. |
 | FR-FW-014 | An initialized application MUST record the exact framework source revision and contract versions used to generate its local governance tools. The app's validator MUST check versioned G-REQ and G-ARCH handoff manifests against their frozen source artifacts and must reject a gate record claiming PASS when the required manifest is missing or invalid. | A generated app records a 40-character source commit, artifact/helper contract versions, and locked file digests; controlled valid and invalid handoff fixtures demonstrate that validation accepts matching frozen inputs and rejects drift, missing manifests, duplicate JSON keys, and unsupported contract versions. |
 | FR-FW-015 | The implementation workflow MUST preserve completed authorized changes in Git as scoped, reviewable commits and MUST push them to the authorized feature branch or remote when the owner has granted standing or task-specific push authorization. It MUST inspect the staged diff, exclude unrelated/user changes, preserve review controls, and report commit and push evidence; failed required checks or absent authorization MUST NOT be presented as a completed, merge-ready change. | A workflow tabletop covers a clean change, unrelated pre-existing edits, failing checks, missing remote/authorization, and successful feature-branch publication; every case preserves ownership boundaries and accurately records commit, push, and check status. |
+| FR-FW-016 | The framework MUST guide new and resumed application setup through a progressive, evidence-aware intake that inspects available repository state, distinguishes owner statements, observed facts, researched claims, inferences, and unknowns, asks only relevant unresolved questions, and creates a truthful next-action summary without fabricating decisions or gate outcomes. | Fresh-copy exercises cover minimal and partial input, unknown answers, an existing codebase, a repeat run after one context change, and an invalid target; outputs preserve source/provenance labels, avoid stale template state, validate successfully, and ask only for material owner decisions. |
 
 ### Non-functional requirements
 

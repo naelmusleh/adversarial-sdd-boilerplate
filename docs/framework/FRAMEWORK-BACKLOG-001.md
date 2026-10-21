@@ -6,7 +6,7 @@ status: draft
 version: 3.2
 created: 2026-10-07
 updated: 2026-10-21
-related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001
+related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001
 ---
 
 # FRAMEWORK-BACKLOG-001 — Remaining work to complete Adversarial SDD Framework v1
@@ -473,8 +473,8 @@ The following candidates incorporate the review of [Fadi88/one-man-startup](http
 
 - **Priority:** P1 — highest user-facing setup value; builds on the existing lean initializer.
 - **Goal:** Help an owner move from a product idea to a truthful, validated app-repository starting state with fewer unnecessary questions and no inherited template state.
-- **Requirements:** Assign v2 requirement IDs only after v2 scope is opened and approved.
-- **Dependencies:** CAP-004 and the app-project validator; owner-approved v2 scope. FW-TASK-020 completion is not a dependency for research or design, but its unresolved evidence limitations remain explicit.
+- **Requirements:** FR-FW-016 (progressive, evidence-aware app intake and safe bootstrap).
+- **Dependencies:** CAP-004 and the app-project validator; owner authorization to begin v2 implementation is recorded in the current task request. FW-TASK-020 completion is not a dependency for FW-TASK-021, but its unresolved evidence limitations remain explicit.
 - **Work:** Evolve `workflows/product-discovery.md`, the app setup instructions, and CAP-004 as needed. Begin with a bounded environment/repository inspection (target path and contents, repository identity and remotes when observable, current stack when source exists, and available local prerequisites). Run an adaptive intake for product intent, intended users and problem evidence, outcome, platforms and regions, data sensitivity, integrations/providers, operational and cost constraints, license, and repository visibility only where applicable. Look up facts that can be reliably verified; cite source and date. Ask the owner only for decisions or unavailable evidence. Group dependent questions, offer a reasoned recommendation where useful, and let the owner identify an item as unknown rather than forcing a guess. If intake runs again, revisit only changed or newly relevant branches. Select one canonical home for the durable setup summary; do not create a second task tracker or duplicate canonical decisions.
 - **Acceptance criteria:**
   1. A clean, empty target can be initialized from minimal owner input without inventing a user, provider, stack, budget, platform, region, decision, or gate outcome.
@@ -485,8 +485,8 @@ The following candidates incorporate the review of [Fadi88/one-man-startup](http
   6. The owner sees a concise review of captured intent, unresolved items, decisions requested, generated files, and the next permitted action before any initial commit, remote creation, push, publication, or other outward action.
   7. A fresh-copy regression exercise checks both generated content and removed template-only state; its rubric covers minimal input, partial/unknown input, an existing codebase, repeat setup after one context change, and invalid target safety.
   8. A recorded synthetic setup run is explicitly labeled as framework-workflow evidence and is not accepted as product/user evidence or as a G-INTENT/G-SETUP approval.
-- **Evidence:** Versioned intake contract and templates; clean-copy initialization record; generated repository listing and validator output; rubric and transcript/output inspection; independent review of question burden, state provenance, cleanup, and false gate-pass risks.
-- **State:** **TODO — proposed v2; owner-prioritized, not yet authorized as implementation scope.**
+- **Evidence:** FR-FW-016; updated progressive intake workflow and setup instructions; clean-copy initialization record; generated repository listing and validator output; [FRAMEWORK-EXERCISE-003](FRAMEWORK-EXERCISE-003-app-onboarding.md) rubric and transcript/output inspection; independent review of question burden, state provenance, cleanup, and false gate-pass risks.
+- **State:** **In progress — owner authorized implementation on 2026-10-21.** Active gate: G-IMPL for the workflow, app-start instructions, and any narrowly required initializer change. Approved scope: satisfy FR-FW-016 and this task's eight acceptance criteria; do not implement stack selection (FW-TASK-013), dependency feasibility (FW-TASK-022), or other backlog items in this checkpoint. Acceptance evidence: clean-copy initialization, minimal/unknown/existing/repeat/invalid-target scenarios, generated artifact validation, independent review, and exact local/hosted checks. Blockers: none identified for this bounded task; FW-TASK-020 remains blocked separately and is not waived.
 
 ### FW-TASK-022 — Surface system and service dependencies before specification lock
 

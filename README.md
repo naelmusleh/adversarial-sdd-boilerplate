@@ -157,11 +157,15 @@ The app's repository is its source of truth after setup. Later changes to this t
 
 In the new app repo:
 
-1. Give the agent the app idea, intended user, observed problem evidence, desired outcome, constraints, and any supplied source material. The agent drafts `mission.md`, labeling evidence, assumptions, non-goals, and unknowns.
-2. Have the agent lead product discovery and draft `constitution.md`, `specification.md`, and `backlog.md`, with linked decisions and testable acceptance outcomes.
+1. Start with the app idea and whatever is already known about the user, problem, desired outcome, constraints, and evidence. A short description is enough to begin; label missing details “unknown” rather than guessing or completing a fixed questionnaire. The agent inspects the app repository and relevant source material before asking follow-up questions.
+2. Have the agent draft `mission.md` and then lead product discovery for `constitution.md`, `specification.md`, and `backlog.md`, labeling owner statements, observed facts, researched claims, and agent inferences separately. Ask only material questions that affect scope or the next safe action; provider, platform, budget, legal, and operational choices may remain open until relevant.
 3. Review material scope and risk decisions returned by the agent; record owner decisions in the app repository.
 4. Have the agent define the full active journey set, platform behavior, design system, content, states, errors, accessibility, and prototype links in `design.md`.
 5. Run required adversarial and CX reviews. Keep findings in review artifacts separate from the documents being reviewed.
+
+When resuming setup, the agent re-reads current repository state and canonical SDD files, preserves unaffected accepted decisions, and revisits only questions affected by changed context or new evidence. The canonical mission, decision/specification records, backlog, and gate records remain the durable record; do not create a second onboarding tracker. Generated files and a passing structural validator do not imply owner approval or a passed gate.
+
+For an existing application repository, do not run the new-app initializer. Inspect its instructions, source layout, dependency manifests, Git state, and current SDD records first; propose only a reviewed, path-specific migration for missing framework assets.
 
 Do not start implementation of dependent features while a blocking requirement, feasibility, coverage, CX, or architecture gate is failed or blocked.
 
