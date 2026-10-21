@@ -3,7 +3,7 @@ id: FRAMEWORK-ADV-008
 type: adversarial-review
 title: Independent G-IMPL review of versioned app handoffs and commit-push controls
 status: revision-required
-version: 0.1
+version: 0.2
 created: 2026-10-20
 updated: 2026-10-20
 reviewed-artifact: FRAMEWORK-BACKLOG-001
@@ -78,6 +78,26 @@ related-artifacts: FRAMEWORK-SPEC-001, GATE-CATALOG-001, FRAMEWORK-BACKLOG-001, 
 - **Owner decision required:** No.
 - **Initial disposition:** unresolved.
 
+### FRAMEWORK-ADV-008/FINDING-005 — Explicit revision can mislabel Git checkout contents
+
+- **Severity:** Major; blocking for FW-TASK-015 criterion 1.
+- **Target location:** `scripts/init_app_project.py`, `discover_framework_revision`.
+- **Evidence:** When run from a clean Git checkout, the initializer validates a supplied `--framework-revision` only as a 40-character SHA and returns it without comparing it with `HEAD`. It can therefore copy current-checkout inputs while recording a different revision.
+- **Impact / failure mode:** The generated lock and README may claim provenance that does not identify the copied framework bytes.
+- **Recommendation:** In Git checkout mode require the explicit SHA to equal the resolved `HEAD`; retain explicit SHA input for archive mode, which has no Git metadata.
+- **Owner decision required:** No; provenance must be truthful.
+- **Initial disposition:** unresolved.
+
+### FRAMEWORK-ADV-008/FINDING-006 — Legacy PASS records may be forced into new handoff rules
+
+- **Severity:** Major; potential compatibility break for FW-TASK-015 criterion 5.
+- **Target location:** `scripts/artifacts.py`, `application_governance_problems`.
+- **Evidence:** Gate-record handoff checks run even when an app has no framework lock and no handoff manifest. A pre-existing G-REQ/G-ARCH PASS record without the newly introduced manifest can fail validation despite the stated legacy compatibility promise.
+- **Impact / failure mode:** Existing app repositories can become invalid merely by adopting an updated artifact helper, without having opted into the versioned lock/manifest contract.
+- **Recommendation:** Define the opt-in boundary and preserve no-lock/no-manifest legacy behavior; retain strict enforcement once a lock or manifest is present. Add a regression fixture containing a legacy PASS record.
+- **Owner decision required:** No, provided the existing legacy-compatibility acceptance criterion governs.
+- **Initial disposition:** unresolved.
+
 ## Disposition and revision
 
 | Finding | Disposition | Rationale / decision evidence | Change made or follow-up | Target revision/link | Owner and revisit trigger if deferred/risk |
@@ -86,15 +106,17 @@ related-artifacts: FRAMEWORK-SPEC-001, GATE-CATALOG-001, FRAMEWORK-BACKLOG-001, 
 | FRAMEWORK-ADV-008/FINDING-002 | resolved | Wrong-typed `review_inputs.purpose` now produces a controlled diagnostic before membership checks; negative fixture is present. | Implemented and exercised in local test suite at `8c47b52`. | `3119388` and local verification at `8c47b52` | N/A |
 | FRAMEWORK-ADV-008/FINDING-003 | resolved for covered paths | Dirty tracked or relevant untracked framework inputs are rejected; unrelated untracked files are permitted; archive initialization requires explicit revision. | Implemented and regression-tested in local test suite at `8c47b52`. Archive-source provenance remains bounded by the supplied explicit revision. | `3119388` and local verification at `8c47b52` | N/A |
 | FRAMEWORK-ADV-008/FINDING-004 | resolved as inspectable paper evidence | The seven-scenario commit/push tabletop is durable and explicitly does not claim live Git, remote, hosted CI, or branch-protection evidence. | Added `FRAMEWORK-EXERCISE-002` and linked it from FW-TASK-016. Independent reviewer confirmed the tabletop is inspectable and its limits are clear. | `8c47b52` | N/A |
+| FRAMEWORK-ADV-008/FINDING-005 | unresolved | Explicit revision must identify the exact files used in a Git-backed initialization. | Require a supplied revision to match checkout `HEAD`; add a mismatch regression fixture. | Pending | N/A |
+| FRAMEWORK-ADV-008/FINDING-006 | unresolved | No-lock apps must remain compatible with the legacy contract. | Scope strict gate handoff enforcement to versioned adoption and add a legacy PASS fixture. | Pending | N/A |
 
 No owner residual-risk approval used for this review.
 
 ## Rerun and verification
 
 - **Rerun date:** 2026-10-20.
-- **Verifier and reviewer mode:** `/root/sdd_governance`, independent read-only source review of the changed gate validation logic; no author overlap on the implementation. The reviewer did not execute tests or re-review the complete original task scope in this incremental rerun.
-- **Scope:** Focused re-review of FINDING-001, including missing/misspelled gate IDs, gate metadata on other artifact types, and G-REQ/G-ARCH handoff collection. The earlier rerun separately reviewed the other findings and recorded their resolution; local verification covers the combined code at `8c47b52`.
-- **Target revision:** Current proposed remediation changes after `8c47b52`; exact commit to be recorded after commit.
+- **Verifier and reviewer mode:** `/root/sdd_governance`, independent read-only full-scope review at frozen HEAD `44d7d922a82b298275a9dada1bc0eee356e683dc`; no author overlap on the reviewed implementation. The reviewer did not execute tests.
+- **Scope:** Full review of FW-TASK-015/016 acceptance criteria and earlier findings. The reviewer identified two additional gaps (FINDING-005/006), so the rerun failed. Local verification after remediation is reviser evidence and is not attributed to the reviewer.
+- **Target revision:** `44d7d922a82b298275a9dada1bc0eee356e683dc` (reviewed); remediation currently uncommitted.
 
 | Finding | Rerun state | Evidence confirming resolution or explaining remaining risk |
 | --- | --- | --- |
@@ -102,16 +124,18 @@ No owner residual-risk approval used for this review.
 | FRAMEWORK-ADV-008/FINDING-002 | resolved; reviser-executed | Wrong-typed-purpose fixture passes; full suite executed locally. |
 | FRAMEWORK-ADV-008/FINDING-003 | resolved for tested initializer modes; reviser-executed | Dirty relevant inputs reject, unrelated untracked files pass, and explicit-revision archive mode is covered; full suite executed locally. |
 | FRAMEWORK-ADV-008/FINDING-004 | resolved as paper tabletop | Independent reviewer confirmed artifact inspectability from prior rerun; scope does not include live publication/CI/settings. |
+| FRAMEWORK-ADV-008/FINDING-005 | not-resolved at reviewed revision | A Git checkout could accept an explicit revision different from HEAD and mislabel copied source. |
+| FRAMEWORK-ADV-008/FINDING-006 | not-resolved at reviewed revision | Legacy PASS records without a lock/manifest could be rejected by newly adopted validation. |
 
-- **New findings:** None in focused review of the changed gate validation paths.
-- **Verification limits:** Reviewer did not run tests or inspect hosted repository settings and did not rerun the full original scope. Local tests and artifact validation are reviser-executed evidence, not independent execution. Hosted CI and repository protection remain unverified.
+- **New findings:** FRAMEWORK-ADV-008/FINDING-005 (major provenance mismatch) and FINDING-006 (major legacy compatibility gap).
+- **Verification limits:** Reviewer did not run tests or inspect hosted repository settings. Local tests and artifact validation are reviser-executed evidence, not independent execution. Hosted CI and repository protection remain unverified.
 
 ## Final gate result
 
-- **Result:** **PENDING — full-scope rerun required.**
-- **Why this result follows the criteria:** The four recorded findings have remediation and bounded resolution evidence, including independent focused source review of the remaining validator bypass. The reviewer has not rerun the complete original FW-TASK-015/016 acceptance scope, so the G-IMPL gate and both backlog tasks remain open pending that review and owner disposition.
+- **Result:** **FAIL — revision required.**
+- **Why this result follows the criteria:** The rerun verified prior fixes but found an explicit-revision mismatch that breaks exact provenance and a potential no-lock legacy compatibility break. These block FW-TASK-015 acceptance; therefore the combined G-IMPL gate and both backlog tasks remain open pending remediation, local regression checks, and another full-scope independent rerun.
 - **Approval:** Not granted.
-- **Next action / owner:** Framework implementation agent commits and pushes the verified remediation, then requests a full-scope independent rerun. Framework owner reviews that evidence; neither FW-TASK-015 nor FW-TASK-016 is complete yet.
+- **Next action / owner:** Framework implementation agent finishes F005/F006 remediation, executes local checks, commits and pushes the change, then requests a full-scope independent rerun. Framework owner reviews the resulting evidence; neither FW-TASK-015 nor FW-TASK-016 is complete yet.
 
 ## References
 

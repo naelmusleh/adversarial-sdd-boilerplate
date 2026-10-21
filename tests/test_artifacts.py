@@ -376,6 +376,25 @@ class ArtifactValidationTests(unittest.TestCase):
             result = run_validation(root)
             self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_legacy_passed_gate_record_without_handoff_remains_compatible(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            write_app_fixture(
+                root,
+                functional_row="| FR-001 | The system MUST save the item. | A persisted item is visible after reload. |",
+                quality_row="| NFR-001 | The service MUST respond within one second. | A measured request completes within one second. |",
+            )
+            write_gate_record(root, "G-REQ", ".sdd/G-REQ-HANDOFF.json")
+            gate_path = root / "reviews/TEST-GATE-REQ-001.md"
+            gate_path.write_text(
+                gate_path.read_text(encoding="utf-8").replace(
+                    "handoff-manifest: .sdd/G-REQ-HANDOFF.json\n", ""
+                ),
+                encoding="utf-8",
+            )
+            result = run_validation(root)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_frozen_greq_handoff_and_gate_record_pass(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

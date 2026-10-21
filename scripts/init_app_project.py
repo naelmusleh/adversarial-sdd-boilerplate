@@ -161,6 +161,22 @@ def discover_framework_revision(explicit_revision: str | None = None) -> str:
         revision = explicit_revision.strip().lower()
         if not FRAMEWORK_REVISION_RE.fullmatch(revision):
             raise ValueError("Framework revision must be an exact 40-character lowercase commit SHA.")
+        if is_framework_checkout:
+            try:
+                head = subprocess.run(
+                    ["git", "rev-parse", "--verify", "HEAD^{commit}"],
+                    cwd=ROOT,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                ).stdout.strip().lower()
+            except (OSError, subprocess.CalledProcessError) as exc:
+                raise ValueError("Could not verify the explicit framework revision against the current checkout.") from exc
+            if revision != head:
+                raise ValueError(
+                    "The supplied framework revision does not match the current Git checkout. "
+                    "Use a clean checkout at that commit or provide the matching archive revision."
+                )
         return revision
     if not is_framework_checkout:
         raise ValueError(

@@ -158,6 +158,14 @@ class InitAppProjectTests(unittest.TestCase):
             self.assertIn("exact 40-character lowercase commit SHA", result.stderr)
             self.assertFalse(target.exists())
 
+    def test_explicit_revision_must_match_clean_git_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "app"
+            result = self.invoke(target, "--framework-revision", "0" * 40)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("does not match the current Git checkout", result.stderr)
+            self.assertFalse(target.exists())
+
     def test_nonempty_target_is_preserved(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             target = Path(temporary) / "app"

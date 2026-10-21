@@ -313,6 +313,10 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
     lock_path = root / APP_FRAMEWORK_LOCK
     has_manifest = any((root / path).exists() for path in APP_HANDOFFS.values())
     problems: list[str] = []
+    # Pre-lock app repositories retain legacy gate-record semantics. Once a
+    # lock or handoff manifest is present, enforce the versioned handoff rules.
+    if not lock_path.exists() and not has_manifest:
+        return problems
     revision = ""
     if lock_path.exists():
         safe_lock_path, lock_path_error = safe_file(root, APP_FRAMEWORK_LOCK.as_posix())
