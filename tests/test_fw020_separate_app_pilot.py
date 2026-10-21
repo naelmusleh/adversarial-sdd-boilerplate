@@ -670,6 +670,46 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0, output)
         self.assertIn("evidence must be command-execution or ci-run", output)
 
+    def test_structured_copied_terminal_output_is_not_authenticatable(self) -> None:
+        def copied_but_well_shaped_command_evidence(root: Path) -> None:
+            path, record = self._record(root, "G-IMPL")
+            output_path = root / "docs/evidence/fw020-gimpl/copied-terminal-output.txt"
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text("Copied terminal text: all checks passed.\n", encoding="utf-8")
+            output_ref = output_path.relative_to(root).as_posix()
+            evidence_id = "PILOT-FORGED-COMMAND-OUTPUT"
+            criterion_ids = [item["criterion_id"] for item in record["criteria_results"]]
+            for item in record["criteria_results"]:
+                item.update({"outcome": "pass", "evidence_ids": [evidence_id]})
+            record["gate_data"]["selected_task_id"] = "FIXTURE-TASK-001"
+            record["gate_data"]["criterion_check_mappings"] = [
+                {"criterion_id": criterion_id, "check_ids": ["PILOT-COPIED-OUTPUT"], "manual_method": None}
+                for criterion_id in criterion_ids
+            ]
+            record["gate_data"]["required_checks"] = [{
+                "check_id": "PILOT-COPIED-OUTPUT", "command_or_procedure": "python3 -m unittest",
+                "tool_runtime_version": "Python 3.13", "source_revision": self.source_revision,
+                "scope": "synthetic copied-output fixture", "pass_condition": "exit_code == 0",
+                "result": "passed", "evidence_id": evidence_id,
+            }]
+            record["evidence"] = [{
+                "evidence_id": evidence_id, "type": "command-execution", "criterion_ids": criterion_ids,
+                "observed_at": "2026-10-21T14:00:00Z", "observed_by": "synthetic fixture author",
+                "source_revision": self.source_revision, "scope_ref": "synthetic copied-output fixture",
+                "locator": output_ref,
+                "record_sha256": "sha256:" + hashlib.sha256(output_path.read_bytes()).hexdigest(),
+                "limitations": ["copied terminal text; no command was executed"],
+                "details": {"command": "python3 -m unittest", "exit_code": 0,
+                    "stdout_ref": output_ref, "stderr_ref": None, "runtime_versions": ["Python 3.13"],
+                    "started_at": "2026-10-21T13:59:00Z", "completed_at": "2026-10-21T14:00:00Z",
+                    "scope": "synthetic copied-output fixture"},
+            }]
+            self._save(path, record)
+
+        _, result = self._case(copied_but_well_shaped_command_evidence)
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 0, output)
+
 
 if __name__ == "__main__":
     unittest.main()
