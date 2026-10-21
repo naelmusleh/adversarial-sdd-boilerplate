@@ -28,12 +28,16 @@ APP_LOCKED_FILES = (
     ".github/workflows/sdd-contract-validation.yml",
     ".sdd/schemas/gate-run-v1.schema.json",
     ".sdd/gate-run-v1.json.template",
+    "scripts/ci_checks.py",
+    ".sdd/schemas/required-checks-v1.schema.json",
+    ".sdd/required-checks.json.template",
 )
 GATE_CONTRACT_ID = "FRAMEWORK-GATE-CONTRACT-001"
 GATE_CONTRACT_VERSION = "1.0"
 FRAMEWORK_SOURCE_PATHS = (
     "scripts/init_app_project.py",
     "scripts/artifacts.py",
+    "scripts/ci_checks.py",
     ".sdd",
     "docs/templates/app-project",
     "docs/framework/schemas",
@@ -258,7 +262,7 @@ This project uses the `{prefix}` prefix for stable artifact IDs. Do not reuse ID
 
 ## Framework checks
 
-The generated SDD Contract Validation workflow checks artifact metadata, framework snapshot integrity, and populated G-REQ/G-ARCH handoffs. It does not run application tests or prove semantic correctness. Add the app's required code checks from its verification plan to CI and require the relevant status checks in repository settings before treating them as merge or release controls. A workflow file by itself does not block merges.
+The generated SDD workflow validates artifact metadata, framework snapshot integrity, handoffs, and the app-owned `.sdd/required-checks.json` manifest. Configure that manifest from the approved verification plan before implementation: each check names its task and acceptance criteria, platform/path scope, exact command or manual procedure, pass condition, and evidence location. Required CI commands run on pushes and pull requests; each attempt records the tested SHA, provider run/attempt, event/ref, runtime probe, command exit, and output digests in an uploaded evidence artifact. The workflow has read-only repository permissions, injects no secrets, and does not deploy. Pull-request commands execute untrusted checkout code and must never depend on privileged credentials. CI evidence does not prove semantic correctness or branch protection; require the relevant status checks in repository settings before treating them as merge or release controls.
 
 ## Supporting records as needed
 
@@ -296,6 +300,8 @@ This is an application repository initialized from Adversarial SDD. Read this fi
 - Keep `design.md` canonical. Do not run Impeccable `document` at this repository root; use an isolated staging copy and store reviewed generated output in `.impeccable/generated/`.
 - Use `python3 scripts/artifacts.py list`, `validate`, and `new` for local artifact management. The helper is a snapshot of the framework tool; structural validation does not prove links, decisions, gate evidence, or app readiness.
 - The `.sdd/framework.lock.json` file pins the exact framework commit and digests of the copied validator, handoff checks, gate-run schema, and starter template. Update it only as part of a reviewed framework migration.
+- The app-owned `.sdd/required-checks.json` is not framework-locked: maintain its task/acceptance-criterion/platform mapping as product scope changes. The locked schema and `scripts/ci_checks.py` validate and execute required entries. Review command changes as code because pull-request workflows execute them without secrets and with read-only repository permissions.
+- Each CI attempt writes a provider/run-attempt/source-SHA/event/ref record and hashed stdout/stderr under an uploaded workflow artifact. Link that exact evidence to the task/gate record; a green status for another SHA, skipped check, local commit, or file-presence claim cannot satisfy G-IMPL/G-RELEASE.
 - A passed G-REQ or G-ARCH record requires its corresponding populated manifest under `.sdd/`; the validator checks frozen files and exact digests. A passing validator is not itself a gate pass.
 - New version-2 apps store immutable JSON gate-run records under `.sdd/gate-runs/<record_id>.json`. The generated G-INTENT record template starts at `not-ready`; it does not assert a gate result. The validator checks structure and repository-local relationships, not the truth or sufficiency of evidence.
 - Add SDD Contract Validation and app-specific required checks to branch protection before claiming they block merges. Do not treat this workflow alone as a release gate.
@@ -417,11 +423,18 @@ def main() -> int:
         (ROOT / ".sdd" / "gate-run-v1.json.template").read_text(encoding="utf-8")
         .replace("<APP>", prefix)
     )
+    outputs["scripts/ci_checks.py"] = (ROOT / "scripts" / "ci_checks.py").read_text(encoding="utf-8")
+    outputs[".sdd/schemas/required-checks-v1.schema.json"] = (
+        (ROOT / "docs" / "framework" / "schemas" / "required-checks-v1.schema.json").read_text(encoding="utf-8")
+    )
+    required_check_template = (TEMPLATES / "required-checks.json.template").read_text(encoding="utf-8")
+    outputs[".sdd/required-checks.json.template"] = required_check_template
+    outputs[".sdd/required-checks.json"] = required_check_template
     outputs[".github/workflows/sdd-contract-validation.yml"] = (
         (TEMPLATES / "sdd-contract-validation.yml.template").read_text(encoding="utf-8")
     )
     lock = {
-        "lock_version": 2,
+        "lock_version": 3,
         "framework_repository": framework_url,
         "framework_revision": framework_revision,
         "artifact_contract_id": "ARTIFACT-CONTRACT-001",

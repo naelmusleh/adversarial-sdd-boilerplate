@@ -37,11 +37,15 @@ BASE_FILES = {
     "AGENTS.md",
     ".gitignore",
     "scripts/artifacts.py",
+    "scripts/ci_checks.py",
     ".sdd/framework.lock.json",
     ".sdd/G-REQ-HANDOFF.json.template",
     ".sdd/G-ARCH-CONTRACT.json.template",
     ".sdd/gate-run-v1.json.template",
     ".sdd/schemas/gate-run-v1.schema.json",
+    ".sdd/schemas/required-checks-v1.schema.json",
+    ".sdd/required-checks.json.template",
+    ".sdd/required-checks.json",
     "docs/templates/app-project/gate-record.md.template",
     ".github/workflows/sdd-contract-validation.yml",
 }
@@ -54,6 +58,7 @@ class InitAppProjectTests(unittest.TestCase):
         (self.template_root / "scripts").mkdir(parents=True)
         shutil.copy2(INITIALIZER, self.template_root / "scripts" / INITIALIZER.name)
         shutil.copy2(ROOT / "scripts" / "artifacts.py", self.template_root / "scripts" / "artifacts.py")
+        shutil.copy2(ROOT / "scripts" / "ci_checks.py", self.template_root / "scripts" / "ci_checks.py")
         shutil.copytree(ROOT / ".sdd", self.template_root / ".sdd")
         (self.template_root / "docs" / "framework").mkdir(parents=True)
         shutil.copytree(ROOT / "docs" / "framework" / "schemas", self.template_root / "docs" / "framework" / "schemas")
@@ -100,21 +105,26 @@ class InitAppProjectTests(unittest.TestCase):
 
             files = {str(path.relative_to(target)) for path in target.rglob("*") if path.is_file()}
             self.assertEqual(files, CORE_ARTIFACTS | BASE_FILES)
-            self.assertEqual(len(files), 16)
+            self.assertEqual(len(files), 20)
             generated_readme = (target / "README.md").read_text(encoding="utf-8")
             self.assertIn("EXAMPLE-DECISION-001", generated_readme)
             self.assertIn("Give your AI agent the app idea", generated_readme)
             self.assertIn("The agent drafts [`mission.md`](mission.md)", generated_readme)
             lock = json.loads((target / ".sdd/framework.lock.json").read_text(encoding="utf-8"))
-            self.assertEqual(lock["lock_version"], 2)
+            self.assertEqual(lock["lock_version"], 3)
             self.assertEqual(lock["gate_contract_id"], "FRAMEWORK-GATE-CONTRACT-001")
             self.assertEqual(lock["gate_contract_version"], "1.0")
             self.assertIn(".sdd/schemas/gate-run-v1.schema.json", lock["locked_files"])
+            self.assertIn("scripts/ci_checks.py", lock["locked_files"])
+            self.assertIn(".sdd/schemas/required-checks-v1.schema.json", lock["locked_files"])
+            check_manifest = json.loads((target / ".sdd/required-checks.json").read_text(encoding="utf-8"))
+            check_schema = json.loads((target / ".sdd/schemas/required-checks-v1.schema.json").read_text(encoding="utf-8"))
+            from scripts.artifacts import validate_schema_value
+            self.assertEqual(validate_schema_value(check_manifest, check_schema, check_schema), [])
             self.assertRegex(lock["framework_revision"], r"^[a-f0-9]{40}$")
             self.assertIn(f"/blob/{lock['framework_revision']}/", generated_readme)
             gate_template = json.loads((target / ".sdd/gate-run-v1.json.template").read_text(encoding="utf-8"))
             schema = json.loads((target / ".sdd/schemas/gate-run-v1.schema.json").read_text(encoding="utf-8"))
-            from scripts.artifacts import validate_schema_value
             self.assertEqual(validate_schema_value(gate_template, schema, schema), [])
             req_template = json.loads((target / ".sdd/G-REQ-HANDOFF.json.template").read_text(encoding="utf-8"))
             self.assertEqual(req_template["framework_revision"], lock["framework_revision"])
@@ -127,6 +137,21 @@ class InitAppProjectTests(unittest.TestCase):
             )
             self.assertEqual(validation.returncode, 0, validation.stderr)
             self.assertIn("Validated 5 artifact(s).", validation.stdout)
+
+            required_manifest_path = target / ".sdd/required-checks.json"
+            required_manifest = json.loads(required_manifest_path.read_text(encoding="utf-8"))
+            required_manifest["status"] = "active"
+            required_manifest_path.write_text(json.dumps(required_manifest), encoding="utf-8")
+            invalid_manifest = subprocess.run(
+                [sys.executable, str(target / "scripts" / "artifacts.py"), "validate"],
+                cwd=target,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(invalid_manifest.returncode, 1)
+            self.assertIn("checks", invalid_manifest.stderr)
+            required_manifest_path.write_text(json.dumps({"manifest_version": 1, "status": "unconfigured", "checks": []}), encoding="utf-8")
 
             # The initialized app enforces its pinned v1 gate schema and relational rules.
             gate_template["record_id"] = "EXAMPLE-GATE-RUN-INTENT-001"
@@ -165,7 +190,7 @@ class InitAppProjectTests(unittest.TestCase):
 
             files = {str(path.relative_to(target)) for path in target.rglob("*") if path.is_file()}
             self.assertEqual(files, CORE_ARTIFACTS | SUPPORTING_ARTIFACTS | BASE_FILES)
-            self.assertEqual(len(files), 28)
+            self.assertEqual(len(files), 32)
             generated_readme = (target / "README.md").read_text(encoding="utf-8")
             self.assertIn("EXAMPLE-DECISION-002", generated_readme)
             validation = subprocess.run(
@@ -246,6 +271,7 @@ class InitAppProjectTests(unittest.TestCase):
             shutil.copytree(self.template_root / "docs" / "templates" / "app-project", templates)
             shutil.copy2(self.template_root / "scripts" / INITIALIZER.name, scripts / INITIALIZER.name)
             shutil.copy2(self.template_root / "scripts" / "artifacts.py", scripts / "artifacts.py")
+            shutil.copy2(self.template_root / "scripts" / "ci_checks.py", scripts / "ci_checks.py")
             shutil.copytree(self.template_root / ".sdd", source / ".sdd")
             (source / "docs" / "framework").mkdir(parents=True)
             shutil.copytree(

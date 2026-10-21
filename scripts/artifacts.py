@@ -41,7 +41,14 @@ APP_GATE_SCHEMA_V1_1 = Path(".sdd/schemas/gate-run-v1.1.schema.json")
 APP_GATE_TEMPLATE = Path(".sdd/gate-run-v1.json.template")
 APP_GATE_RUNS = Path(".sdd/gate-runs")
 APP_LOCKED_FILES_V2 = APP_LOCKED_FILES_V1 + (APP_GATE_SCHEMA.as_posix(), APP_GATE_TEMPLATE.as_posix())
-APP_LOCK_VERSIONS = {1, 2}
+APP_REQUIRED_CHECKS_SCHEMA = Path(".sdd/schemas/required-checks-v1.schema.json")
+APP_REQUIRED_CHECKS_TEMPLATE = Path(".sdd/required-checks.json.template")
+APP_REQUIRED_CHECKS = Path(".sdd/required-checks.json")
+APP_CI_CHECK_RUNNER = "scripts/ci_checks.py"
+APP_LOCKED_FILES_V3 = APP_LOCKED_FILES_V2 + (
+    APP_REQUIRED_CHECKS_SCHEMA.as_posix(), APP_REQUIRED_CHECKS_TEMPLATE.as_posix(), APP_CI_CHECK_RUNNER,
+)
+APP_LOCK_VERSIONS = {1, 2, 3}
 HANDOFF_CONTRACT_VERSION = 1
 MAX_JSON_BYTES = 1_048_576
 APP_REQUIREMENT_TABLES = (
@@ -754,6 +761,85 @@ def _latest_gate_runs(records: dict[str, tuple[Path, dict[str, object]]]) -> tup
     return latest, problems
 
 
+def _published_checkpoint_problems(
+    change_control: object,
+    source_commit: object,
+    authority: object,
+    required_task_ids: object,
+    label: str,
+) -> list[str]:
+    if not isinstance(change_control, dict):
+        return [f"{label}: a published change_control record is required"]
+    problems: list[str] = []
+    if not isinstance(source_commit, str) or not FRAMEWORK_REVISION_RE.fullmatch(source_commit):
+        problems.append(f"{label}: a passing implementation/release requires an exact source commit SHA")
+    if change_control.get("commit_sha") != source_commit:
+        problems.append(f"{label}: change_control.commit_sha must match the exact source snapshot")
+    if change_control.get("push_result") != "pushed":
+        problems.append(f"{label}: push_result must be 'pushed'; a missing or unavailable remote is a blocker")
+    for field in ("branch_ref", "remote", "authorization_ref"):
+        value = change_control.get(field)
+        if not isinstance(value, str) or not value.strip():
+            problems.append(f"{label}: published checkpoint requires non-empty change_control.{field}")
+    authorization_ref = change_control.get("authorization_ref")
+    authority_obj = authority if isinstance(authority, dict) else {}
+    owner = authority_obj.get("accountable_owner", {})
+    owner_identity = owner.get("identity") if isinstance(owner, dict) else None
+    decisions = authority_obj.get("owner_decisions", [])
+    decision = next((item for item in decisions if isinstance(item, dict) and item.get("decision_id") == authorization_ref), None) if isinstance(decisions, list) else None
+    if decision is None:
+        problems.append(f"{label}: change_control.authorization_ref must resolve to an owner decision in this gate record")
+    else:
+        choice = str(decision.get("choice", "")).lower()
+        if decision.get("decision_maker") != owner_identity:
+            problems.append(f"{label}: publication authorization must be made by the accountable owner")
+        if "authoriz" not in choice or not any(action in choice for action in ("publish", "push", "commit", "release")):
+            problems.append(f"{label}: owner decision must explicitly authorize commit, push, publication, or release")
+        if "G-IMPL" in label:
+            parts = [part.strip() for part in choice.split(";")]
+            fields = {}
+            for part in parts[1:]:
+                key, separator, value = part.partition("=")
+                if separator:
+                    fields[key.strip()] = value.strip()
+            if parts[0] not in {"authorize-commit", "authorize-push", "authorize-publish"} or any(
+                fields.get(key) != str(value).lower()
+                for key, value in (("commit_sha", source_commit), ("branch_ref", change_control.get("branch_ref")), ("remote", change_control.get("remote")))
+            ):
+                problems.append(f"{label}: owner authorization must use authorize-commit/push/publish with exact commit_sha, branch_ref, and remote fields")
+        affected = decision.get("affected_ids", [])
+        tasks = required_task_ids if isinstance(required_task_ids, list) else []
+        if not isinstance(affected, list) or not tasks or not set(tasks).intersection(affected):
+            problems.append(f"{label}: publication authorization must identify at least one in-scope task")
+    return problems
+
+
+def _ci_change_control_reference_problems(change_control: object, evidence: object, label: str) -> list[str]:
+    if not isinstance(change_control, dict) or not isinstance(evidence, dict):
+        return [f"{label}: CI evidence and change_control record are required"]
+    details = evidence.get("details")
+    if not isinstance(details, dict):
+        return [f"{label}: CI evidence details are required"]
+    if details.get("provider") == "github-actions":
+        run_ref = details.get("run_id_or_url")
+        if not isinstance(run_ref, str) or not re.search(r"/actions/runs/\d+/attempts/\d+(?:[/?#].*)?$", run_ref):
+            return [f"{label}: GitHub Actions evidence must link the exact run attempt URL, including /attempts/<attempt>"]
+    expected_check = details.get("check_name") or details.get("workflow_job")
+    for item in change_control.get("ci_runs", []) if isinstance(change_control.get("ci_runs"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        if (
+            item.get("provider") == details.get("provider")
+            and item.get("run_id_or_url") == details.get("run_id_or_url")
+            and item.get("commit_sha") == details.get("commit_sha")
+            and item.get("status") == "passed"
+            and item.get("scope") == details.get("scope")
+            and (expected_check is None or item.get("check") == expected_check)
+        ):
+            return []
+    return [f"{label}: successful CI evidence must match a change_control.ci_runs entry by provider, run attempt, SHA, check, status, and scope"]
+
+
 def validate_gate_run_records(root: Path, schema: dict[str, object], application_id: str) -> list[str]:
     """Validate app-local v1 gate-run JSON and cross-record invariants, without mutation."""
     root = root.resolve()
@@ -1131,6 +1217,9 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                 if isinstance(scope, dict) and selected_task not in scope.get("task_ids", []):
                     problems.append(f"{relative}: G-IMPL selected_task_id must be present in scope.task_ids")
                 if record.get("gate_result") in {"passed", "passed-with-accepted-risk"}:
+                    change_control = record.get("change_control", {})
+                    authority = record.get("authority", {})
+                    problems.extend(_published_checkpoint_problems(change_control, source_commit, authority, [selected_task], f"{relative} G-IMPL"))
                     mappings = gate_data.get("criterion_check_mappings", [])
                     mapping_ids = [item.get("criterion_id") for item in mappings if isinstance(item, dict)]
                     if len(mapping_ids) != len(set(mapping_ids)) or set(mapping_ids) != set(GATE_CRITERIA[gate_id]):
@@ -1139,6 +1228,36 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                     checks_by_id = {item.get("check_id"): item for item in checks if isinstance(item, dict)}
                     if len(checks_by_id) != len(checks):
                         problems.append(f"{relative}: passing G-IMPL must use unique required check IDs")
+                    app_lock, _ = load_json_object(root / APP_FRAMEWORK_LOCK)
+                    if app_lock and app_lock.get("lock_version") == 3:
+                        manifest, manifest_problems = required_check_manifest(root)
+                        problems.extend(manifest_problems)
+                        if manifest is not None:
+                            applicable = [
+                                item for item in manifest.get("checks", [])
+                                if isinstance(item, dict) and item.get("required") is True
+                                and selected_task in item.get("task_ids", [])
+                            ]
+                            if manifest.get("status") != "active" or not applicable:
+                                problems.append(f"{relative}: passing G-IMPL requires an active required-check manifest with checks for selected task '{selected_task}'")
+                            for declared in applicable:
+                                check_id = declared.get("check_id")
+                                if declared.get("execution") == "ci":
+                                    observed = checks_by_id.get(check_id)
+                                    if observed is None:
+                                        problems.append(f"{relative}: passing G-IMPL omits manifest-required check '{check_id}'")
+                                    elif observed.get("command_or_procedure") != declared.get("command_or_procedure"):
+                                        problems.append(f"{relative}: G-IMPL check '{check_id}' command differs from the required-check manifest")
+                                    elif observed.get("pass_condition") != declared.get("pass_condition"):
+                                        problems.append(f"{relative}: G-IMPL check '{check_id}' pass condition differs from the required-check manifest")
+                                    elif observed.get("scope") != ", ".join(sorted(declared.get("scope_paths", []))):
+                                        problems.append(f"{relative}: G-IMPL check '{check_id}' scope must match the manifest scope_paths joined in sorted order")
+                                elif declared.get("execution") == "manual" and not any(
+                                    isinstance(mapping, dict) and isinstance(mapping.get("manual_method"), str)
+                                    and check_id in mapping["manual_method"]
+                                    for mapping in mappings
+                                ):
+                                    problems.append(f"{relative}: G-IMPL criterion mappings must identify required manual check '{check_id}' in manual_method")
                     for mapping in mappings:
                         if not isinstance(mapping, dict):
                             continue
@@ -1161,6 +1280,10 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                             problems.append(f"{relative}: required check '{check_id}' evidence must be command-execution or ci-run")
                         elif ev.get("type") == "ci-run" and isinstance(ev.get("details"), dict) and ev["details"].get("commit_sha") != source_commit:
                             problems.append(f"{relative}: required CI check '{check_id}' commit does not match the gate-run snapshot")
+                        elif ev.get("type") == "ci-run" and isinstance(ev.get("details"), dict) and ev["details"].get("conclusion") != "success":
+                            problems.append(f"{relative}: required CI check '{check_id}' evidence conclusion must be success")
+                        elif ev is not None and ev.get("type") == "ci-run":
+                            problems.extend(_ci_change_control_reference_problems(change_control, ev, f"{relative} required CI check '{check_id}'"))
                         elif ev.get("type") == "command-execution" and isinstance(ev.get("details"), dict) and ev["details"].get("exit_code") != 0:
                             problems.append(f"{relative}: required command check '{check_id}' did not exit successfully")
                         if ev is not None and isinstance(ev.get("details"), dict):
@@ -1203,6 +1326,10 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                 if not isinstance(change, dict):
                     change = {}
                 if record.get("gate_result") in {"passed", "passed-with-accepted-risk"}:
+                    authority = record.get("authority", {})
+                    problems.extend(_published_checkpoint_problems(change, source_commit, authority, scope.get("task_ids", []) if isinstance(scope, dict) else [], f"{relative} G-RELEASE"))
+                    if change.get("authorization_ref") != gate_data.get("owner_authorization_id"):
+                        problems.append(f"{relative}: G-RELEASE publication authorization_ref must match gate_data.owner_authorization_id")
                     if gate_data.get("tested_commit_sha") != change.get("commit_sha"):
                         problems.append(f"{relative}: G-RELEASE tested_commit_sha must match change_control.commit_sha")
                     if gate_data.get("tested_commit_sha") != source_commit:
@@ -1251,6 +1378,8 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                     item = evidence_by_id.get(evidence_id)
                     if item is None or item.get("type") != "ci-run" or not isinstance(item.get("details"), dict) or item["details"].get("conclusion") != "success" or item["details"].get("commit_sha") != source_commit:
                         problems.append(f"{relative}: required release check evidence '{evidence_id}' must be a successful ci-run for the exact gate-run commit")
+                    elif isinstance(item.get("details"), dict):
+                        problems.extend(_ci_change_control_reference_problems(change, item, f"{relative} required release check evidence '{evidence_id}'"))
 
     latest, transition_problems = _latest_gate_runs(records)
     problems.extend(transition_problems)
@@ -1278,6 +1407,50 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
     return diagnostics
 
 
+def required_check_manifest(root: Path) -> tuple[dict[str, object] | None, list[str]]:
+    manifest_path, path_error = safe_file(root, APP_REQUIRED_CHECKS.as_posix())
+    if path_error or manifest_path is None:
+        return None, [f"{APP_REQUIRED_CHECKS.as_posix()}: {path_error or 'could not resolve manifest'}"]
+    manifest, parse_error = load_json_object(manifest_path)
+    if parse_error or manifest is None:
+        return None, [f"{APP_REQUIRED_CHECKS.as_posix()}: invalid JSON manifest: {parse_error or 'invalid object'}"]
+    schema_path, schema_error = safe_file(root, APP_REQUIRED_CHECKS_SCHEMA.as_posix())
+    if schema_error or schema_path is None:
+        return None, [f"{APP_REQUIRED_CHECKS_SCHEMA.as_posix()}: {schema_error or 'required schema is missing'}"]
+    schema, schema_parse_error = load_json_object(schema_path)
+    if schema_parse_error or schema is None:
+        return None, [f"{APP_REQUIRED_CHECKS_SCHEMA.as_posix()}: invalid JSON Schema: {schema_parse_error or 'invalid object'}"]
+    schema_errors = schema_definition_problems(schema)
+    if schema_errors:
+        return None, [f"{APP_REQUIRED_CHECKS_SCHEMA.as_posix()}: {problem}" for problem in schema_errors]
+    problems = [f"{APP_REQUIRED_CHECKS.as_posix()}: {problem}" for problem in validate_schema_value(manifest, schema, schema)]
+    seen: set[str] = set()
+    checks = manifest.get("checks", [])
+    if isinstance(checks, list):
+        for index, check in enumerate(checks):
+            if not isinstance(check, dict):
+                continue
+            check_id = check.get("check_id")
+            label = f"{APP_REQUIRED_CHECKS.as_posix()} checks[{index}]"
+            if isinstance(check_id, str):
+                if check_id in seen:
+                    problems.append(f"{label}: duplicate check_id '{check_id}'")
+                seen.add(check_id)
+            if check.get("execution") == "ci" and check.get("required") is True:
+                command = check.get("command_or_procedure")
+                if isinstance(command, str) and len(command) > 4096:
+                    problems.append(f"{label}: required command exceeds the 4096-character execution limit")
+            for field in ("scope_paths", "evidence_location"):
+                candidates = check.get(field, []) if field == "scope_paths" else [check.get(field)]
+                for value in candidates if isinstance(candidates, list) else []:
+                    if not isinstance(value, str):
+                        continue
+                    path = Path(value)
+                    if path.is_absolute() or ".." in path.parts:
+                        problems.append(f"{label}: {field} path '{value}' must be repository-relative and must not contain '..'")
+    return manifest, problems
+
+
 def application_governance_problems(root: Path, gate_records: list[tuple[Path, dict[str, str]]]) -> list[str]:
     """Check a versioned app framework lock and gate handoff manifests when adopted."""
     lock_path = root / APP_FRAMEWORK_LOCK
@@ -1301,13 +1474,13 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
         lock_version = lock.get("lock_version")
         expected_fields_v1 = {"lock_version", "framework_repository", "framework_revision", "artifact_contract_id", "artifact_contract_version", "locked_files"}
         expected_fields_v2 = expected_fields_v1 | {"gate_contract_id", "gate_contract_version"}
-        expected_fields = expected_fields_v1 if lock_version == 1 else expected_fields_v2 if lock_version == 2 else expected_fields_v2
+        expected_fields = expected_fields_v1 if lock_version == 1 else expected_fields_v2
         if set(lock) != expected_fields:
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: fields must be exactly {', '.join(sorted(expected_fields))}")
         revision_value = lock.get("framework_revision")
         if lock_version not in APP_LOCK_VERSIONS or lock.get("artifact_contract_id") != "ARTIFACT-CONTRACT-001" or lock.get("artifact_contract_version") != 1:
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: unsupported framework or artifact contract version")
-        if lock_version == 2 and (lock.get("gate_contract_id") != "FRAMEWORK-GATE-CONTRACT-001" or lock.get("gate_contract_version") != "1.0"):
+        if lock_version in {2, 3} and (lock.get("gate_contract_id") != "FRAMEWORK-GATE-CONTRACT-001" or lock.get("gate_contract_version") != "1.0"):
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: unsupported gate contract identity or version")
         if not isinstance(revision_value, str) or not FRAMEWORK_REVISION_RE.fullmatch(revision_value):
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: framework_revision must be a 40-character lowercase commit SHA")
@@ -1317,7 +1490,7 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
         if not isinstance(repository, str) or not repository.startswith("https://github.com/"):
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: framework_repository must be an HTTPS GitHub repository URL")
         locked_files = lock.get("locked_files")
-        expected_locked_files = APP_LOCKED_FILES_V1 if lock_version == 1 else APP_LOCKED_FILES_V2
+        expected_locked_files = APP_LOCKED_FILES_V1 if lock_version == 1 else APP_LOCKED_FILES_V2 if lock_version == 2 else APP_LOCKED_FILES_V3
         if not isinstance(locked_files, dict) or set(locked_files) != set(expected_locked_files):
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: locked_files must cover exactly the files for framework lock version {lock_version}")
         else:
@@ -1330,6 +1503,9 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
                     problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()} ({relative}): locked digest is malformed")
                 elif file_sha256(path) != expected_digest:
                     problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()} ({relative}): file digest differs from the initialized framework snapshot")
+        if lock_version == 3:
+            _, manifest_problems = required_check_manifest(root)
+            problems.extend(manifest_problems)
 
     for gate_id, manifest_path in APP_HANDOFFS.items():
         if (root / manifest_path).exists():
@@ -1360,8 +1536,8 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
         problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: required because a handoff manifest is present")
     if has_gate_runs and lock_path.exists():
         lock, _ = load_json_object(lock_path)
-        if not lock or lock.get("lock_version") != 2:
-            problems.append(f"{APP_GATE_RUNS.as_posix()}: version-2 framework lock and explicit gate-contract migration are required")
+        if not lock or lock.get("lock_version") not in {2, 3}:
+            problems.append(f"{APP_GATE_RUNS.as_posix()}: version-2 or version-3 framework lock and explicit gate-contract migration are required")
         else:
             lock, _ = load_json_object(lock_path)
             contract_version = str(lock.get("gate_contract_version")) if lock else ""
@@ -1376,10 +1552,10 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
                 else:
                     problems.extend(validate_gate_run_records(root, schema, application_id))
     elif has_gate_runs:
-        problems.append(f"{APP_GATE_RUNS.as_posix()}: version-2 framework lock and explicit gate-contract migration are required")
+        problems.append(f"{APP_GATE_RUNS.as_posix()}: version-2 or version-3 framework lock and explicit gate-contract migration are required")
     elif lock_path.exists():
         lock, _ = load_json_object(lock_path)
-        if lock and lock.get("lock_version") == 2:
+        if lock and lock.get("lock_version") in {2, 3}:
             contract_version = str(lock.get("gate_contract_version"))
             schema, schema_problems = _gate_schema_for_app(root, contract_version)
             problems.extend(schema_problems)

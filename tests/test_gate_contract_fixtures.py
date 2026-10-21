@@ -7,7 +7,7 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
-from scripts.artifacts import _latest_gate_runs, file_sha256, json_sha256, schema_definition_problems, validate_gate_run_records, validate_schema_value
+from scripts.artifacts import _latest_gate_runs, _published_checkpoint_problems, file_sha256, json_sha256, schema_definition_problems, validate_gate_run_records, validate_schema_value
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -93,6 +93,9 @@ class GateContractFixtureTests(unittest.TestCase):
             shutil.copy2(FIXTURES / "inputs/FIXTURE-INPUT-001.md", input_path)
             gate_runs = root / ".sdd/gate-runs"
             gate_runs.mkdir(parents=True)
+            baseline = record.get("_baseline_record")
+            if isinstance(baseline, dict):
+                (gate_runs / f"{baseline['record_id']}.json").write_text(json.dumps(baseline, indent=2) + "\n", encoding="utf-8")
             record_path = gate_runs / f"{record['record_id']}.json"
             record_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
             return validate_gate_run_records(root, schema, "SYNTHETIC")
@@ -187,6 +190,54 @@ class GateContractFixtureTests(unittest.TestCase):
         record["evidence"][0]["details"]["commit_sha"] = "b" * 40
         self.assertTrue(any("commit_sha does not match" in error for error in self._validate_in_isolated_app(record, schema)))
 
+    def test_g_impl_rejects_required_ci_evidence_with_failed_conclusion(self) -> None:
+        schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+        record = json.loads((FIXTURES / "valid/G-IMPL.json").read_text(encoding="utf-8"))
+        record["application_id"] = "SYNTHETIC"
+        commit = record["source_snapshot"]["commit_sha"]
+        check_id = "CI-CHECK-001"
+        evidence_id = "CI-EVIDENCE-001"
+        record["gate_data"]["required_checks"] = [{
+            "check_id": check_id, "command_or_procedure": "python -m unittest", "tool_runtime_version": "Python 3.13",
+            "source_revision": commit, "scope": "tests", "pass_condition": "exit code 0",
+            "result": "passed", "evidence_id": evidence_id,
+        }]
+        record["gate_data"]["criterion_check_mappings"] = [{
+            "criterion_id": row["criterion_id"], "check_ids": [check_id], "manual_method": None,
+        } for row in record["criteria_results"]]
+        record["criteria_results"] = [{**row, "outcome": "pass", "evidence_ids": [evidence_id]} for row in record["criteria_results"]]
+        record["evidence"] = [{
+            "evidence_id": evidence_id, "type": "ci-run", "criterion_ids": [row["criterion_id"] for row in record["criteria_results"]],
+            "observed_at": "2026-10-20T12:00:00Z", "observed_by": "synthetic CI", "source_revision": commit,
+            "scope_ref": "tests", "locator": "fixture-run", "record_sha256": "sha256:" + "1" * 64,
+            "limitations": ["synthetic"], "details": {"provider": "fixture", "run_id_or_url": "fixture-run",
+                "commit_sha": commit, "workflow_job": check_id, "conclusion": "failure", "scope": "tests"},
+        }]
+        record["change_control"].update({"commit_sha": commit, "branch_ref": "refs/heads/candidate",
+            "remote": "fixture", "push_result": "pushed", "authorization_ref": "OWNER-DECISION-001",
+            "ci_runs": [{"provider": "fixture", "run_id_or_url": "fixture-run", "commit_sha": commit,
+                "check": check_id, "status": "passed", "scope": "tests"}]})
+        record["authority"]["owner_decisions"] = [{"decision_id": "OWNER-DECISION-001", "decision_maker": "fixture-owner",
+            "role": "synthetic owner", "decided_at": "2026-10-20T12:00:00Z",
+            "choice": f"authorize-publish; commit_sha={commit}; branch_ref=refs/heads/candidate; remote=fixture",
+            "affected_ids": ["FIXTURE-TASK-001"], "rationale": "synthetic", "revisit_condition": "synthetic"}]
+        errors = self._validate_in_isolated_app(record, schema)
+        self.assertTrue(any("CI evidence 'CI-EVIDENCE-001' with a non-success conclusion" in error for error in errors), errors)
+
+    def test_published_checkpoint_requires_exact_owner_authorization_scope(self) -> None:
+        commit = "a" * 40
+        change = {"commit_sha": commit, "branch_ref": "refs/heads/candidate", "remote": "fixture",
+                  "push_result": "pushed", "authorization_ref": "OWNER-DECISION-001"}
+        authority = {"accountable_owner": {"identity": "fixture-owner"}, "owner_decisions": [{
+            "decision_id": "OWNER-DECISION-001", "decision_maker": "fixture-owner",
+            "choice": f"authorize-publish; commit_sha={commit}; branch_ref=refs/heads/candidate; remote=fixture",
+            "affected_ids": ["TASK-001"],
+        }]}
+        self.assertEqual(_published_checkpoint_problems(change, commit, authority, ["TASK-001"], "G-IMPL"), [])
+        authority["owner_decisions"][0]["choice"] = "authorize-publish"
+        problems = _published_checkpoint_problems(change, commit, authority, ["TASK-001"], "G-IMPL")
+        self.assertTrue(any("exact commit_sha, branch_ref, and remote fields" in problem for problem in problems), problems)
+
     def test_release_pass_requires_actual_artifact_reference_owner_and_successful_current_ci(self) -> None:
         schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
         record = json.loads((FIXTURES / "valid/G-RELEASE.json").read_text(encoding="utf-8"))
@@ -194,11 +245,52 @@ class GateContractFixtureTests(unittest.TestCase):
         commit = record["source_snapshot"]["commit_sha"]
         digest = file_sha256(FIXTURES / "inputs/FIXTURE-INPUT-001.md")
         record["gate_result"] = "passed"
+        record["record_version"] = 2
+        record["supersedes_run_id"] = "FIXTURE-RELEASE-VALID-001-BASE"
+        baseline = json.loads(json.dumps(record))
+        baseline.update({"record_id": "FIXTURE-RELEASE-VALID-001-BASE", "record_version": 1,
+                         "gate_result": "in-progress", "supersedes_run_id": None,
+                         "created_at": "2026-10-20T11:00:00Z"})
+        isolated_validator = self._validate_in_isolated_app
+        def validate_with_baseline(value: dict[str, object], schema_value: dict[str, object]) -> list[str]:
+            original = value.pop("_baseline_record", None)
+            try:
+                result = isolated_validator(value, schema_value)
+                if isinstance(original, dict):
+                    with tempfile.TemporaryDirectory() as temporary:
+                        root = Path(temporary)
+                        (root / "specification.md").write_text("Synthetic requirement: FIXTURE-REQ-001\n", encoding="utf-8")
+                        (root / "backlog.md").write_text("Synthetic task: FIXTURE-TASK-001\n", encoding="utf-8")
+                        (root / "decisions").mkdir()
+                        (root / "decisions/DECISION-LOG.md").write_text("Synthetic decision: FIXTURE-DECISION-001\n", encoding="utf-8")
+                        input_path = root / "docs/framework/examples/gate-contract-v1/inputs/FIXTURE-INPUT-001.md"
+                        input_path.parent.mkdir(parents=True)
+                        shutil.copy2(FIXTURES / "inputs/FIXTURE-INPUT-001.md", input_path)
+                        gate_runs = root / ".sdd/gate-runs"
+                        gate_runs.mkdir(parents=True)
+                        (gate_runs / f"{original['record_id']}.json").write_text(json.dumps(original, indent=2) + "\n", encoding="utf-8")
+                        (gate_runs / f"{value['record_id']}.json").write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
+                        result = validate_gate_run_records(root, schema_value, "SYNTHETIC")
+                return result
+            finally:
+                if isinstance(original, dict):
+                    value["_baseline_record"] = original
+        self._validate_in_isolated_app = validate_with_baseline
+        record["_baseline_record"] = baseline
         record["gate_data"].update({"tested_commit_sha": commit, "artifact_sha256": digest,
             "environment": "production", "required_check_evidence_ids": ["EVIDENCE-CI-001"],
             "security_accessibility_platform_evidence_ids": ["EVIDENCE-CI-001"],
             "owner_authorization_id": "FIXTURE-DECISION-001"})
-        record["change_control"]["release_artifact_sha256"] = digest
+        record["change_control"].update({
+            "commit_sha": commit,
+            "branch_ref": "refs/heads/release-candidate",
+            "remote": "https://github.com/example/app",
+            "push_result": "pushed",
+            "authorization_ref": "FIXTURE-DECISION-001",
+            "release_artifact_sha256": digest,
+            "ci_runs": [{"provider": "fixture", "run_id_or_url": "fixture-run", "commit_sha": commit,
+                         "check": "release-check", "status": "passed", "scope": "fixture"}],
+        })
         for item in record["criteria_results"]:
             item["outcome"] = "pass"
         record["criteria_results"][0]["evidence_ids"] = ["EVIDENCE-ARTIFACT-001"]
@@ -224,8 +316,69 @@ class GateContractFixtureTests(unittest.TestCase):
         self.assertTrue(any("successful ci-run" in error for error in errors), errors)
         record["authority"]["owner_decisions"][0].update({"decision_maker": "fixture-owner",
             "choice": f"authorize-release: {digest}; environment: production", "revisit_condition": "release-window: 2026-10-20T11:00:00Z/2026-10-20T13:00:00Z"})
+        record["evidence"][1]["details"]["conclusion"] = "success"
         errors = self._validate_in_isolated_app(record, schema)
         self.assertFalse(any("release-window" in error or "fall within the owner-authorized" in error for error in errors), errors)
+        release_errors = [error for error in errors if "[G-RELEASE]:" in error and "required upstream gate" not in error]
+        self.assertEqual(release_errors, [], release_errors)
+
+        case = json.loads(json.dumps(record))
+        attempt_details = case["evidence"][1]["details"]
+        attempt_details.update({"provider": "github-actions", "run_id_or_url": "https://github.com/example/actions/runs/123"})
+        case["change_control"]["ci_runs"][0].update({"provider": "github-actions", "run_id_or_url": attempt_details["run_id_or_url"]})
+        errors = self._validate_in_isolated_app(case, schema)
+        self.assertTrue(any("exact run attempt URL" in error for error in errors), errors)
+        attempt_details["run_id_or_url"] += "/attempts/2"
+        case["change_control"]["ci_runs"][0]["run_id_or_url"] = attempt_details["run_id_or_url"]
+        errors = self._validate_in_isolated_app(case, schema)
+        self.assertFalse(any("exact run attempt URL" in error for error in errors), errors)
+
+        case = json.loads(json.dumps(record))
+        case["change_control"]["authorization_ref"] = "MISSING-PUBLISH-AUTH-001"
+        errors = self._validate_in_isolated_app(case, schema)
+        self.assertTrue(any("authorization_ref must resolve to an owner decision" in error for error in errors), errors)
+        case = json.loads(json.dumps(record))
+        case["authority"]["owner_decisions"][0]["affected_ids"] = ["OTHER-TASK-001"]
+        errors = self._validate_in_isolated_app(case, schema)
+        self.assertTrue(any("publication authorization must identify at least one in-scope task" in error for error in errors), errors)
+
+        case = json.loads(json.dumps(record))
+        case["gate_data"]["artifact_sha256"] = "sha256:" + "0" * 64
+        case["change_control"]["release_artifact_sha256"] = case["gate_data"]["artifact_sha256"]
+        errors = self._validate_in_isolated_app(case, schema)
+        self.assertTrue(any("artifact digest" in error or "artifact-reference evidence" in error for error in errors), errors)
+
+        case = json.loads(json.dumps(record))
+        case["gate_data"]["owner_authorization_id"] = "MISSING-OWNER-AUTH-001"
+        errors = self._validate_in_isolated_app(case, schema)
+        self.assertTrue(any("owner_authorization_id does not resolve" in error for error in errors), errors)
+
+        case = json.loads(json.dumps(record))
+        case["change_control"]["authorization_ref"] = "OTHER-OWNER-DECISION-001"
+        errors = self._validate_in_isolated_app(case, schema)
+        self.assertTrue(any("authorization_ref must match gate_data.owner_authorization_id" in error for error in errors), errors)
+
+        case = json.loads(json.dumps(record))
+        case["change_control"].update({"push_result": "failed", "remote": None, "branch_ref": None})
+        errors = self._validate_in_isolated_app(case, schema)
+        self.assertTrue(any("push_result must be 'pushed'" in error for error in errors), errors)
+
+        case = json.loads(json.dumps(record))
+        case["evidence"][1]["details"]["commit_sha"] = "b" * 40
+        errors = self._validate_in_isolated_app(case, schema)
+        self.assertTrue(any("commit_sha does not match" in error or "exact gate-run commit" in error for error in errors), errors)
+
+        case = json.loads(json.dumps(record))
+        case["evidence"][1]["details"]["conclusion"] = "cancelled"
+        case["change_control"]["ci_runs"][0]["status"] = "cancelled"
+        errors = self._validate_in_isolated_app(case, schema)
+        self.assertTrue(any("successful ci-run" in error for error in errors), errors)
+
+        case = json.loads(json.dumps(record))
+        case["gate_data"]["migration_backup_rollback_plan"] = ""
+        errors = self._validate_in_isolated_app(case, schema)
+        self.assertTrue(any("migration_backup_rollback_plan" in error for error in errors), errors)
+
         record["authority"]["owner_decisions"][0]["decided_at"] = "2026-10-20T12:30:00Z"
         errors = self._validate_in_isolated_app(record, schema)
         self.assertTrue(any("must be recorded no later" in error for error in errors), errors)

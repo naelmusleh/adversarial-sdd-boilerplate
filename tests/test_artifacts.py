@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from scripts.artifacts import required_check_manifest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -610,6 +611,29 @@ class ArtifactValidationTests(unittest.TestCase):
             result = run_validation(root)
             self.assertEqual(result.returncode, 1)
             self.assertIn("unsupported gate contract identity or version", result.stderr)
+
+    def test_required_check_manifest_rejects_duplicate_ids_and_path_escape(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            schema_path = root / ".sdd/schemas/required-checks-v1.schema.json"
+            schema_path.parent.mkdir(parents=True)
+            shutil.copy2(ROOT / "docs/framework/schemas/required-checks-v1.schema.json", schema_path)
+            check = {
+                "check_id": "PYTEST-01", "execution": "ci", "required": True,
+                "task_ids": ["TASK-001"], "acceptance_criteria": ["AC-001"], "platforms": ["linux"],
+                "command_or_procedure": "python3 -m unittest", "runtime_probe": "python3 --version",
+                "scope_paths": ["tests"], "pass_condition": "exit_code == 0", "evidence_location": ".sdd/ci-evidence/"
+            }
+            manifest_path = root / ".sdd/required-checks.json"
+            manifest_path.write_text(json.dumps({"manifest_version": 1, "status": "active", "checks": [check, check]}), encoding="utf-8")
+            _, errors = required_check_manifest(root)
+            self.assertTrue(any("duplicate check_id" in error for error in errors), errors)
+
+            check["check_id"] = "PYTEST-02"
+            check["scope_paths"] = ["../outside"]
+            manifest_path.write_text(json.dumps({"manifest_version": 1, "status": "active", "checks": [check]}), encoding="utf-8")
+            _, errors = required_check_manifest(root)
+            self.assertTrue(any("must not contain '..'" in error for error in errors), errors)
 
     def test_handoff_rejects_unsupported_version_and_path_traversal(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
