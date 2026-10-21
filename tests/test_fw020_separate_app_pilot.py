@@ -274,7 +274,7 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         _, result = self._case(empty_waiver)
         output = result.stdout + result.stderr
         self.assertNotEqual(result.returncode, 0, output)
-        self.assertIn("passed-with-accepted-risk requires accepted_risk details", output)
+        self.assertIn("$.accepted_risk: expected JSON type object", output)
 
         def unsupported_not_applicable(root: Path) -> None:
             path, record = self._record(root, "G-CX")
