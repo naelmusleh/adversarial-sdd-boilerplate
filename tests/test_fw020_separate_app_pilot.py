@@ -559,7 +559,8 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         )
 
         missing_file_root, _ = self._case(setup_pass)
-        evidence = self._record(missing_file_root, "G-SETUP")[1]["evidence"][0]
+        setup_pass_path = missing_file_root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-SETUP-002.json"
+        evidence = json.loads(setup_pass_path.read_text(encoding="utf-8"))["evidence"][0]
         (missing_file_root / evidence["details"]["stdout_ref"]).unlink()
         missing_file = subprocess.run(
             ["python3", "scripts/artifacts.py", "validate"], cwd=missing_file_root,
@@ -750,7 +751,7 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             ("G-OPERATE", lambda d: d["gate_data"].update({"degradation_limits": [
                 {"condition": "state growth", "threshold": "", "response": "stop"}
             ]}),
-             "$.gate_data.degradation_limits[0].threshold: string is shorter than minimum length 1"),
+             "$.gate_data.degradation_limits[0].threshold: string is shorter than 1 characters"),
         )
         for gate_id, change, expected in cases:
             def mutate(root: Path, gate_id=gate_id, change=change) -> None:
