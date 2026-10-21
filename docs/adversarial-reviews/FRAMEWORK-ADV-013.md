@@ -3,7 +3,7 @@ id: FRAMEWORK-ADV-013
 type: adversarial-review
 title: FW-TASK-020 separate-app ten-gate adversarial pilot
 status: in-review
-version: 2.3
+version: 2.4
 created: 2026-10-21
 updated: 2026-10-21
 reviewed-artifact: FW-TASK-020
@@ -16,9 +16,9 @@ related-artifacts: FRAMEWORK-ADV-011, FRAMEWORK-ADV-012, FRAMEWORK-GATE-CONTRACT
 ## Active FW-TASK-020 execution record
 
 - **Active gate:** G-IMPL for the harness and pilot evidence; G-RELEASE is limited to its non-production hosted-check/attestation rehearsal.
-- **Selected task and scope:** FW-TASK-020 only. Extend the separate-app tests for durable G-SETUP output, blocking G-REQ findings for untestable acceptance, explicitly unverified G-CX evidence, and G-ARCH narrative-only security/data verification. Keep the app synthetic, preserve all ten gate records as `in-progress`, and avoid product code or production claims.
-- **Acceptance evidence:** Focused pilot suite, complete Python suite, artifact validation, diff checks, exact-commit hosted Verify Pipeline result, and an independent review of the frozen added cases and limitations.
-- **Known blockers:** Earlier reviewer findings identify incomplete per-gate bypass/valid-path coverage. This checkpoint is not accepted until the cases produce targeted diagnostics, exact-commit CI passes, and an independent reviewer assesses the complete updated scope.
+- **Selected task and scope:** FW-TASK-020 only. Reconcile the pilot's gate-by-gate PASS applicability, stale summary text, and latest independent BLOCK findings against the current harness and hosted attestation. Keep the app synthetic, preserve all ten product gate records as `in-progress`, and avoid product code or production claims.
+- **Acceptance evidence:** Gate-by-gate applicability disposition, focused pilot suite, complete Python suite, artifact validation, diff checks, exact-commit hosted Verify Pipeline result, and an independent review of the frozen updated matrix and limitations.
+- **Known blockers:** Named negative attacks remain incompletely isolated; product-facing PASS fixtures are intentionally absent where genuine product evidence is required. Completion depends on targeted coverage and independent acceptance of the fixture applicability interpretation.
 
 ## Scope and method
 
@@ -27,7 +27,24 @@ related-artifacts: FRAMEWORK-ADV-011, FRAMEWORK-ADV-012, FRAMEWORK-GATE-CONTRACT
 - **Disposable app:** `/private/tmp/flaglite-fw020-pilot-v3`; initialized by `scripts/init_app_project.py`, local Git repository, no remote, and no `src/`, `services/`, or `apps/` product source directories. Synthetic fixture source baseline: `2c2efcdfc44d0cfc78fffec41b88c6b754450957`; ten in-progress gate-run records were committed at app revision `6278b103f8ef6f05245a97b019dbeda1f40dadff`.
 - **Baseline result:** The pinned app-local validator accepted the 10 explicitly in-progress gate records and reported `Validated 18 artifact(s).` This is not a gate pass.
 - **Earlier retained pilot:** `/private/tmp/flaglite-fw020-pilot-v3` pinned framework revision `927fbdeee820d72ce5c008d2f81f88c02346239f`; its baseline source and gate-record commits are preserved as historical evidence. It exposed the G-INTENT forged-evidence gap subsequently fixed in that framework revision.
-- **Current harness:** `tests/test_fw020_separate_app_pilot.py` creates a temporary app pinned to the exact framework revision under test, commits synthetic source/records, and evaluates mutated copies with its app-local validator. It has 19 tests, including observed G-SETUP PASS after synthetic G-INTENT PASS, targeted negative cases, a positive probe showing fabricated terminal text can be mislabeled as structured `command-execution` evidence, and a focused G-REQ blocking-finding case. No product gate other than synthetic G-INTENT/G-SETUP is promoted. For framework revision `692dbc1b01ef2bfd05d522eadb08db53b65a7564`, pilot metadata: app source revision `6c2daafbd4845d5744ef8688529efa4026cbb984`; gate-record revision `18277d172b67566fdc3259d6df9da1015acd4803`; ten records all `in-progress`; no remote; no product source; synthetic only. The app is deleted at teardown; its Git object database is not retained.
+- **Current harness:** `tests/test_fw020_separate_app_pilot.py` creates a temporary app pinned to the exact framework revision under test, commits synthetic source/records, and evaluates mutated copies with its app-local validator. The current 19-test suite exercises synthetic G-INTENT/G-SETUP PASS paths, gate-specific negative cases, and the structured copied-terminal-output provenance gap. G-REQ, G-FEAS, G-COVERAGE, G-CX, G-ARCH, G-IMPL, G-RELEASE, and G-OPERATE remain product-gate `in-progress`; route/schema acceptance is not promoted to product PASS. The latest recorded pilot metadata is revision-dependent and must be regenerated when the harness changes. Temporary apps are deleted at teardown.
+
+### Gate-by-gate PASS fixture applicability
+
+| Gate | Synthetic PASS fixture in this pilot | Disposition and boundary |
+|---|---|---|
+| G-INTENT | Yes | Validator-bound synthetic mission, explicit exclusions, and fixture owner approval. Exercises reference/digest relationships only; identity and product intent are not authenticated. |
+| G-SETUP | Yes | Actual local validator command after synthetic G-INTENT PASS, with durable output. Exercises only the disposable app setup; does not establish product environment readiness or completeness of setup commands. |
+| G-REQ | No | A PASS requires testable product requirements and an independent review of those requirements. The only requirement is a synthetic fixture identifier, so a PASS would fabricate substantive evidence. The harness tests rejection of an open blocking finding. |
+| G-FEAS | No | Supported, reduced-scope, blocked, conditional, and owner-risk route shapes are exercised, but no product dependency research or owner scope decision exists. These are routing fixtures, not PASS evidence. |
+| G-COVERAGE | No | Platform and journey mismatch attacks are tested. No real product journeys, failure modes, or surface inventory exists to support PASS. |
+| G-CX | No | Contract criterion 6 requires a real rendered artifact or product-appropriate interaction evidence for a valid fixture. This validator-only synthetic pilot has neither; no fabricated critique is labeled valid. It remains unverifiable/in-progress, not exempt for real applications. |
+| G-ARCH | No | Narrative-only security/data assertions are rejected. No product data model, threat boundary, or executed tenant-isolation contract exists; a synthetic PASS would overclaim. |
+| G-IMPL | No | Product implementation is out of scope. Hosted trusted-runner attestation demonstrates provenance for the synthetic app validation only; it does not pass this pilot's product G-IMPL gate or prove test quality. |
+| G-RELEASE | No | Hosted check and signed report attestation are a non-production provenance rehearsal, not a product artifact, release authorization, or deployment. |
+| G-OPERATE | No | No released product, telemetry stream, operator, or duration exists. Structural telemetry/degradation omissions are negative probes only; no operational PASS is claimed. |
+
+This resolves the fixture interpretation for the product-free pilot: “where permitted” allows structural positive probes for G-INTENT/G-SETUP and route/schema probes elsewhere, while prohibiting fabricated product PASS evidence. It does not waive acceptance criteria for a product-bearing app.
 - **Framework verification:** Exact revision `692dbc1b01ef2bfd05d522eadb08db53b65a7564` passed the focused 16-test pilot, the full Python suite (78 tests), `python3 scripts/artifacts.py validate` (`Validated 47 artifact(s).`), and `git diff --check`. Verify Pipeline run `39536952364`, attempt 1, completed successfully on that SHA: `Initializer Regression Gate`, `Metadata & Artifact Audit`, and `TypeScript Static Code Analysis` all concluded `success`.
 
 ## Adversarial cases and observed outcomes
@@ -73,6 +90,9 @@ related-artifacts: FRAMEWORK-ADV-011, FRAMEWORK-ADV-012, FRAMEWORK-GATE-CONTRACT
 
 
 ## Latest FW-TASK-020 rerun and independent review
+
+- **Latest independent matrix review (2026-10-21, framework HEAD `aa0e31f`): BLOCK / NOT COMPLETE.** Reviewer `/root/fw020_review` found the 19 focused tests and 87 Python tests pass, 48 artifacts validate, and no vacuity in the recent G-SETUP/G-REQ/G-CX assertions. Remaining gaps: valid PASS coverage is limited to G-INTENT/G-SETUP and needs explicit gate-by-gate applicability; named attacks still lack isolated probes for missing/non-reproducible setup, upstream invalidation, remote/credential absence, interrupted CI, and operations telemetry/state-growth failures; the G-CX product PASS criterion needs an explicit applicability disposition; and an independent review of the now-frozen full matrix is still required. The reviewer also identified stale report/backlog summaries; those are reconciled by the current gate applicability table and this checkpoint. Earlier statements that protected-ref attestation was absent are superseded by the public hosted attestation checkpoint later in this section. Standalone attestation verification remains unverified due to network DNS failure.
+- **Current FW-TASK-020 disposition (2026-10-21):** The gate applicability table above treats only G-INTENT/G-SETUP as eligible synthetic PASS probes in a product-free pilot. Other gate routes are structural probes only; where acceptance criteria require product evidence (especially G-CX), the pilot explicitly remains in-progress. This interpretation has not yet been independently accepted. Named attack coverage remains incomplete, and FW-TASK-020 remains in progress.
 
 - **Current resumption audit (2026-10-21):** Focused `python3 -m unittest tests.test_fw020_separate_app_pilot -v` passed all 17 tests; the complete Python suite passed all 85 tests; artifact validation reported `Validated 48 artifact(s).`; and `git diff --check` passed. These local checks ran against framework checkout HEAD `484c4cc` with documentation-only working-tree changes; they do not create a new committed or hosted app revision. An independent reviewer inspected the current harness and acceptance matrix and returned **BLOCK / NOT COMPLETE**. Remaining gaps: targeted diagnostics are missing for several named attacks and cross-gate cases (including non-reproducible setup, untestable requirements, fabricated critique, and security-contract adequacy); some negative cases can still pass due to unrelated validation failures; valid PASS paths exist only for G-INTENT/G-SETUP, while G-FEAS has dependency-route shapes but no feasibility PASS evidence; and the required exact app-hosted attestation and final review of a frozen complete matrix are absent. This reviewer assessment is not a final acceptance review and does not authorize weakening the task criteria.
 - **Hosted-evidence access check (2026-10-21):** The local GitHub CLI reports its configured account token is invalid. The disposable pilot still has no remote, so it cannot produce an app-hosted attestation. No credential was printed or changed. Framework-hosted Verify Pipeline runs remain distinct from the required app-hosted run.
