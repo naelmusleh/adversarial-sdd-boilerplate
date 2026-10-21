@@ -279,12 +279,32 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         def unsupported_not_applicable(root: Path) -> None:
             path, record = self._record(root, "G-CX")
             record["gate_result"] = "not-applicable"
+            record["scope"]["exclusions"] = [{
+                "item": "synthetic unavailable CX surface",
+                "reason": "fixture only",
+                "authority": "synthetic owner",
+                "downstream_effect": "no product readiness claim",
+            }]
+            decision_id = "PILOT-UNAUTHORIZED-NA"
+            record["authority"]["owner_decisions"] = [{
+                "decision_id": decision_id,
+                "decision_maker": "not-the-accountable-owner",
+                "role": "synthetic fixture actor",
+                "decided_at": "2026-10-21T12:00:00Z",
+                "choice": "mark CX not applicable",
+                "affected_ids": ["FLAGLITE-GATE-RUN-CX-001"],
+                "rationale": "negative test",
+                "revisit_condition": "fixture only",
+            }]
+            for criterion in record["criteria_results"]:
+                criterion["outcome"] = "not-applicable"
+                criterion["owner_decision_ids"] = [decision_id]
             self._save(path, record)
 
         _, result = self._case(unsupported_not_applicable)
         output = result.stdout + result.stderr
         self.assertNotEqual(result.returncode, 0, output)
-        self.assertIn("not-applicable gate requires every criterion to be not-applicable", output)
+        self.assertIn("not-applicable decision 'PILOT-UNAUTHORIZED-NA' was not made by the accountable owner", output)
 
     def test_unknown_feasibility_cannot_unblock_and_coverage_cannot_substitute_platform(self) -> None:
         def unblocked(root: Path) -> None:
