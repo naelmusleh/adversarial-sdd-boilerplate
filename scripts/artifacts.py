@@ -1042,6 +1042,8 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                 capture_path, capture_error = safe_file(root, ev.get("locator")) if isinstance(ev.get("locator"), str) else (None, "locator must be a repository-relative file path")
                 if capture_error or capture_path is None:
                     problems.append(f"{relative}: interaction capture evidence '{eid}' locator is invalid: {capture_error or 'file is missing'}")
+                elif capture_path.stat().st_size > 25 * 1024 * 1024:
+                    problems.append(f"{relative}: interaction capture evidence '{eid}' exceeds the 25 MiB validation limit")
                 else:
                     capture_bytes = capture_path.read_bytes()
                     is_png = capture_bytes.startswith(b"\x89PNG\r\n\x1a\n")
