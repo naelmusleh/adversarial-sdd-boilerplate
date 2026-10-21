@@ -8,13 +8,20 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.artifacts import _trusted_gimpl_attestation_problems
+from scripts.artifacts import _lock_v4_gimpl_evidence_type_problem, _trusted_gimpl_attestation_problems
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class TrustedCiAttestationTests(unittest.TestCase):
+    def test_local_and_typed_command_evidence_cannot_support_lock_v4_pass(self) -> None:
+        for evidence_type in ("command-execution", "manual-observation"):
+            with self.subTest(evidence_type=evidence_type):
+                problem = _lock_v4_gimpl_evidence_type_problem({"type": evidence_type}, "fixture")
+                self.assertIn("provider-attested ci-run is required", problem or "")
+        self.assertIsNone(_lock_v4_gimpl_evidence_type_problem({"type": "ci-run"}, "fixture"))
+
     def test_valid_signed_report_is_bound_to_framework_signer_source_and_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -10,6 +10,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from scripts.artifacts import json_sha256
+
 
 ROOT = Path(__file__).resolve().parents[1]
 GATE_FIXTURES = ROOT / "docs/framework/examples/gate-contract-v1"
@@ -71,6 +73,7 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         for source in sorted((GATE_FIXTURES / "valid").glob("G-*.json")):
             record = json.loads(source.read_text(encoding="utf-8"))
             gate_id = record["gate_id"]
+            record["contract_version"] = "1.2"
             record["record_id"] = f"FLAGLITE-GATE-RUN-{gate_id[2:]}-001"
             record["application_id"] = "FLAGLITE"
             record["repository"]["url_or_path"] = str(cls.app)
@@ -81,6 +84,8 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
                 ref["source_revision"] = cls.source_revision
             if gate_id == "G-REQ":
                 record["gate_data"]["decision_ids"] = ["FLAGLITE-DECISION-001"]
+            if gate_id == "G-RELEASE":
+                record["gate_data"]["release_window"] = "synthetic-window"
             (runs / f"{record['record_id']}.json").write_text(
                 json.dumps(record, indent=2) + "\n", encoding="utf-8"
             )
@@ -134,6 +139,13 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
 
     @staticmethod
     def _save(path: Path, record: dict[str, object]) -> None:
+        scope_ref = json_sha256(record.get("scope"))
+        for evidence in record.get("evidence", []):
+            if isinstance(evidence, dict):
+                evidence["scope_ref"] = scope_ref
+                details = evidence.get("details")
+                if evidence.get("type") == "command-execution" and isinstance(details, dict):
+                    details["scope"] = scope_ref
         path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
 
     def _attach_synthetic_observation(self, record: dict[str, object], evidence_id: str = "PILOT-OBSERVATION") -> None:
@@ -302,7 +314,7 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
     def test_intent_synthetic_positive_pass_and_forged_manual_evidence_boundary(self) -> None:
         def positive(root: Path) -> None:
             record, _ = self._synthetic_intent_pass(root)
-            (root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-INTENT-002.json").write_text(json.dumps(record, indent=2) + "\n")
+            self._save(root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-INTENT-002.json", record)
         _, result = self._case(positive)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
@@ -425,7 +437,8 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             probe = d["gate_data"]["probes"][0]
             probe["classification"] = "constrained"
             dependency = {"task_id": "FIXTURE-TASK-001", "state": "conditional",
-                          "condition": "owner accepts documented limit", "safe_work_boundary": "no provider integration or rollout"}
+                          "condition": "owner accepts documented limit", "safe_work_boundary": "no provider integration or rollout",
+                          "state_change_trigger": "new provider evidence is recorded"}
             probe["task_dependencies"] = [dependency]
             d["dependency_effects"] = [dict(dependency)]
         changes["conditional safe work"] = conditional
@@ -650,6 +663,7 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             self._attach_synthetic_observation(record)
             record["gate_result"] = "passed"
             record["gate_data"]["selected_task_id"] = "FIXTURE-TASK-001"
+            record["gate_data"]["review_evidence_ids"] = ["PILOT-OBSERVATION"]
             record["gate_data"]["criterion_check_mappings"] = [
                 {"criterion_id": item["criterion_id"], "check_ids": ["PILOT-CHECK"], "manual_method": None}
                 for item in record["criteria_results"]
@@ -670,7 +684,7 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0, output)
         self.assertIn("evidence must be command-execution or ci-run", output)
 
-    def test_structured_copied_terminal_output_is_not_authenticatable(self) -> None:
+    def test_structured_copied_terminal_output_cannot_support_lock_v4_gimpl_pass(self) -> None:
         def copied_but_well_shaped_command_evidence(root: Path) -> None:
             path, record = self._record(root, "G-IMPL")
             output_path = root / "docs/evidence/fw020-gimpl/copied-terminal-output.txt"
@@ -681,7 +695,9 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             criterion_ids = [item["criterion_id"] for item in record["criteria_results"]]
             for item in record["criteria_results"]:
                 item.update({"outcome": "pass", "evidence_ids": [evidence_id]})
+            record["gate_result"] = "passed"
             record["gate_data"]["selected_task_id"] = "FIXTURE-TASK-001"
+            record["gate_data"]["review_evidence_ids"] = [evidence_id]
             record["gate_data"]["criterion_check_mappings"] = [
                 {"criterion_id": criterion_id, "check_ids": ["PILOT-COPIED-OUTPUT"], "manual_method": None}
                 for criterion_id in criterion_ids
@@ -708,7 +724,8 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
 
         _, result = self._case(copied_but_well_shaped_command_evidence)
         output = result.stdout + result.stderr
-        self.assertEqual(result.returncode, 0, output)
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn("lock-v4 G-IMPL PASS requires an active trusted CI policy", output)
 
 
 if __name__ == "__main__":

@@ -1366,8 +1366,11 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                                             linked_evidence = evidence_by_id.get(evidence_id)
                                             if linked_evidence is None:
                                                 continue
-                                            if linked_evidence.get("type") != "ci-run":
-                                                problems.append(f"{relative}: lock-v4 G-IMPL PASS cannot use local/manual command evidence; a provider-attested ci-run is required")
+                                            evidence_type_problem = _lock_v4_gimpl_evidence_type_problem(
+                                                linked_evidence, f"{relative} evidence '{evidence_id}'",
+                                            )
+                                            if evidence_type_problem:
+                                                problems.append(evidence_type_problem)
                                                 continue
                                             problems.extend(_trusted_gimpl_attestation_problems(
                                                 root, record, linked_evidence, source_commit, trusted_policy,
@@ -1639,6 +1642,12 @@ def _git_blob(root: Path, revision: str, relative: str) -> tuple[bytes | None, s
     if result.returncode != 0:
         return None, f"source commit does not contain {relative}"
     return result.stdout, None
+
+
+def _lock_v4_gimpl_evidence_type_problem(evidence: dict[str, object], label: str) -> str | None:
+    if evidence.get("type") != "ci-run":
+        return f"{label}: lock-v4 G-IMPL PASS cannot use local/manual command evidence; a provider-attested ci-run is required"
+    return None
 
 
 def _trusted_gimpl_attestation_problems(
