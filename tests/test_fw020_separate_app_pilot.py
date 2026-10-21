@@ -243,7 +243,10 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
                 fixture = json.loads(source.read_text(encoding="utf-8"))
                 gate_id = fixture["gate_id"]
                 self.assertIn(f"[{gate_id}]", output)
-                self.assertIn(f"$.gate_data.{INVALID_REQUIRED_GATE_DATA[gate_id]}", output)
+                self.assertIn(
+                    f"missing required property '{INVALID_REQUIRED_GATE_DATA[gate_id]}'",
+                    output,
+                )
 
     def test_stale_digest_revision_identity_waiver_and_cross_app_substitution_fail(self) -> None:
         cases = (
