@@ -46,11 +46,32 @@ BASE_FILES = {
 
 
 class InitAppProjectTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.source_temp = tempfile.TemporaryDirectory()
+        self.template_root = Path(self.source_temp.name) / "template"
+        (self.template_root / "scripts").mkdir(parents=True)
+        shutil.copy2(INITIALIZER, self.template_root / "scripts" / INITIALIZER.name)
+        shutil.copy2(ROOT / "scripts" / "artifacts.py", self.template_root / "scripts" / "artifacts.py")
+        shutil.copytree(ROOT / ".sdd", self.template_root / ".sdd")
+        (self.template_root / "docs" / "templates").mkdir(parents=True)
+        shutil.copytree(
+            ROOT / "docs" / "templates" / "app-project",
+            self.template_root / "docs" / "templates" / "app-project",
+        )
+        subprocess.run(["git", "init", "-q"], cwd=self.template_root, check=True)
+        subprocess.run(["git", "config", "user.name", "Fixture Author"], cwd=self.template_root, check=True)
+        subprocess.run(["git", "config", "user.email", "fixture@example.com"], cwd=self.template_root, check=True)
+        subprocess.run(["git", "add", "scripts", ".sdd", "docs/templates/app-project"], cwd=self.template_root, check=True)
+        subprocess.run(["git", "commit", "-qm", "fixture baseline"], cwd=self.template_root, check=True)
+
+    def tearDown(self) -> None:
+        self.source_temp.cleanup()
+
     def invoke(self, target: Path, *extra: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
                 sys.executable,
-                str(INITIALIZER),
+                str(self.template_root / "scripts" / INITIALIZER.name),
                 "--name",
                 "Example App",
                 "--prefix",
@@ -61,7 +82,7 @@ class InitAppProjectTests(unittest.TestCase):
                 "https://github.com/example/adversarial-sdd",
                 *extra,
             ],
-            cwd=ROOT,
+            cwd=self.template_root,
             capture_output=True,
             text=True,
             check=False,
@@ -148,6 +169,23 @@ class InitAppProjectTests(unittest.TestCase):
             self.assertEqual(sentinel.read_text(encoding="utf-8"), "preserve")
             self.assertEqual(list(target.iterdir()), [sentinel])
 
+    def test_dirty_framework_input_is_rejected_before_creating_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "app"
+            input_file = self.template_root / ".sdd/G-REQ-HANDOFF.json.template"
+            input_file.write_text(input_file.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+            result = self.invoke(target)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("Framework source inputs have uncommitted changes", result.stderr)
+            self.assertFalse(target.exists())
+
+    def test_unrelated_untracked_file_does_not_block_framework_initialization(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "app"
+            (self.template_root / "scratch.txt").write_text("unrelated", encoding="utf-8")
+            result = self.invoke(target)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_downloaded_source_without_git_metadata_initializes_app(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             temporary_root = Path(temporary)
@@ -156,12 +194,12 @@ class InitAppProjectTests(unittest.TestCase):
             scripts = source / "scripts"
             templates.parent.mkdir(parents=True)
             scripts.mkdir(parents=True)
-            shutil.copytree(ROOT / "docs" / "templates" / "app-project", templates)
-            shutil.copy2(INITIALIZER, scripts / INITIALIZER.name)
-            shutil.copy2(ROOT / "scripts" / "artifacts.py", scripts / "artifacts.py")
-            shutil.copytree(ROOT / ".sdd", source / ".sdd")
+            shutil.copytree(self.template_root / "docs" / "templates" / "app-project", templates)
+            shutil.copy2(self.template_root / "scripts" / INITIALIZER.name, scripts / INITIALIZER.name)
+            shutil.copy2(self.template_root / "scripts" / "artifacts.py", scripts / "artifacts.py")
+            shutil.copytree(self.template_root / ".sdd", source / ".sdd")
             revision = subprocess.run(
-                ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True
+                ["git", "rev-parse", "HEAD"], cwd=self.template_root, capture_output=True, text=True, check=True
             ).stdout.strip()
             target = temporary_root / "example-app"
 

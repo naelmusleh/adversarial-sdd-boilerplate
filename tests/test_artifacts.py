@@ -156,10 +156,17 @@ def write_review(root: Path, gate_id: str) -> dict[str, str]:
     }
 
 
-def write_gate_record(root: Path, gate_id: str, manifest_path: str, *, result: str | None = "passed") -> None:
+def write_gate_record(
+    root: Path,
+    gate_id: str,
+    manifest_path: str,
+    *,
+    result: str | None = "passed",
+    artifact_type: str = "lifecycle-gate-record",
+) -> None:
     gate_slug = gate_id.removeprefix("G-")
     gate_id_artifact = f"TEST-GATE-{gate_slug}-001"
-    content = artifact_text(gate_id_artifact, "lifecycle-gate-record")
+    content = artifact_text(gate_id_artifact, artifact_type)
     metadata = f"updated: 2026-10-13\ngate-id: {gate_id}\n"
     if result is not None:
         metadata += f"gate-result: {result}\n"
@@ -396,6 +403,26 @@ class ArtifactValidationTests(unittest.TestCase):
             self.assertEqual(result.returncode, 1)
             self.assertIn("passed G-REQ record has no populated .sdd/G-REQ-HANDOFF.json", result.stderr)
 
+    def test_passed_greq_cannot_evade_handoff_validation_by_retyping_record(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            write_app_fixture(
+                root,
+                functional_row="| FR-001 | The system MUST save the item. | A persisted item is visible after reload. |",
+                quality_row="| NFR-001 | The service MUST respond within one second. | A measured request completes within one second. |",
+            )
+            install_governance_bundle(root)
+            write_gate_record(
+                root,
+                "G-REQ",
+                ".sdd/G-REQ-HANDOFF.json",
+                artifact_type="decision-record",
+            )
+            result = run_validation(root)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("G-REQ gate metadata requires type", result.stderr)
+            self.assertIn("passed G-REQ record has no populated .sdd/G-REQ-HANDOFF.json", result.stderr)
+
     def test_greq_gate_record_without_result_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -422,6 +449,31 @@ class ArtifactValidationTests(unittest.TestCase):
             write_arch_manifest(root, revision)
             result = run_validation(root)
             self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_review_input_purpose_wrong_type_fails_with_actionable_error(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            write_app_fixture(
+                root,
+                functional_row="| FR-001 | The system MUST save the item. | A persisted item is visible after reload. |",
+                quality_row="| NFR-001 | The service MUST respond within one second. | A measured request completes within one second. |",
+            )
+            revision = install_governance_bundle(root)
+            write_arch_manifest(root, revision)
+            manifest_path = root / ".sdd/G-ARCH-CONTRACT.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["review_inputs"] = [{
+                "purpose": ["security-review"],
+                "path": "specification.md",
+                "id": "TEST-SPEC-001",
+                "version": "0.1",
+                "sha256": sha256(root / "specification.md"),
+            }]
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            result = run_validation(root)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("purpose must be a non-empty string", result.stderr)
+            self.assertNotIn("Traceback", result.stderr)
 
     def test_frozen_greq_detects_source_drift_and_duplicate_json_keys(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

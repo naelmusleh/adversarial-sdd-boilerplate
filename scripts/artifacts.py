@@ -284,6 +284,9 @@ def validate_handoff_manifest(root: Path, gate_id: str, revision: str) -> list[s
                     problems.append(f"{label}: each review input must define exactly purpose, path, id, version, and sha256")
                     continue
                 purpose = review_input.get("purpose")
+                if not isinstance(purpose, str) or not purpose.strip():
+                    problems.append(f"{label}: purpose must be a non-empty string")
+                    continue
                 if purpose not in {"historical-rule-index", "domain-contract", "security-review", "other"}:
                     problems.append(f"{label}: unsupported review input purpose '{purpose}'")
                 problems.extend(
@@ -627,7 +630,14 @@ def command_validate(_: argparse.Namespace) -> int:
                 f"{rel}: invalid artifact status '{status}'; expected one of "
                 f"{', '.join(sorted(ALLOWED_STATUSES))}"
             )
-        if data.get("type") in {"gate-record", "lifecycle-gate-record"}:
+        gate_id = data.get("gate-id", "")
+        declares_handoff_gate = gate_id in APP_HANDOFFS
+        gate_record_type = data.get("type") in {"gate-record", "lifecycle-gate-record"}
+        if declares_handoff_gate and not gate_record_type:
+            problems.append(
+                f"{rel}: {gate_id} gate metadata requires type 'gate-record' or 'lifecycle-gate-record'"
+            )
+        if gate_record_type or declares_handoff_gate:
             gate_records.append((path, data))
         artifact_id = data.get("id", "")
         if artifact_id:

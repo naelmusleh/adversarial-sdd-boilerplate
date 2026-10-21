@@ -27,6 +27,12 @@ APP_LOCKED_FILES = (
     "docs/templates/app-project/gate-record.md.template",
     ".github/workflows/sdd-contract-validation.yml",
 )
+FRAMEWORK_SOURCE_PATHS = (
+    "scripts/init_app_project.py",
+    "scripts/artifacts.py",
+    ".sdd",
+    "docs/templates/app-project",
+)
 
 # The default is the smallest complete app starter: the five canonical SDD files.
 # Supporting records are created when their lifecycle triggers are reached.
@@ -121,12 +127,46 @@ def discover_framework_url() -> str:
 
 
 def discover_framework_revision(explicit_revision: str | None = None) -> str:
-    """Return an immutable source commit, requiring one for archive-based use."""
+    """Return an immutable source commit and reject dirty Git-backed inputs."""
+    try:
+        top_level = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        is_framework_checkout = Path(top_level).resolve() == ROOT.resolve()
+    except (OSError, subprocess.CalledProcessError):
+        is_framework_checkout = False
+
+    if is_framework_checkout:
+        try:
+            status = subprocess.run(
+                ["git", "status", "--porcelain", "--untracked-files=all", "--", *FRAMEWORK_SOURCE_PATHS],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise ValueError("Could not verify that framework source inputs match a clean commit.") from exc
+        if status.stdout.strip():
+            raise ValueError(
+                "Framework source inputs have uncommitted changes. Commit them before initializing an app "
+                "so the recorded framework revision identifies the copied source."
+            )
+
     if explicit_revision is not None:
         revision = explicit_revision.strip().lower()
         if not FRAMEWORK_REVISION_RE.fullmatch(revision):
             raise ValueError("Framework revision must be an exact 40-character lowercase commit SHA.")
         return revision
+    if not is_framework_checkout:
+        raise ValueError(
+            "Could not identify an exact framework commit. When using a source archive, pass "
+            "--framework-revision with the 40-character commit SHA for that archive."
+        )
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--verify", "HEAD^{commit}"],
