@@ -942,6 +942,21 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         _, record = self._record(root, "G-IMPL")
         self.assertEqual(record["change_control"]["push_result"], "failed")
         self.assertEqual(record["gate_result"], "in-progress")
+        self.assertIsNone(record["change_control"]["remote"])
+        self.assertIsNone(record["change_control"]["authorization_ref"])
+
+        def missing_remote_claimed_pass(root: Path) -> None:
+            path, record = self._record(root, "G-IMPL")
+            record["gate_result"] = "passed"
+            record["change_control"].update({"push_result": "not-applicable", "remote": None,
+                                             "branch_ref": None, "authorization_ref": None})
+            self._save(path, record)
+
+        _, missing_remote = self._case(missing_remote_claimed_pass)
+        output = missing_remote.stdout + missing_remote.stderr
+        self.assertNotEqual(missing_remote.returncode, 0, output)
+        self.assertIn("push_result must be 'pushed'; a missing or unavailable remote is a blocker", output)
+        self.assertIn("published checkpoint requires non-empty change_control.remote", output)
 
     def test_skipped_unavailable_or_failed_required_check_cannot_support_impl_pass(self) -> None:
         for check_result in ("not-run", "skipped", "unavailable", "failed", "interrupted"):
