@@ -1014,6 +1014,7 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         self.assertNotEqual(missing_remote.returncode, 0, output)
         self.assertIn("push_result must be 'pushed'; a missing or unavailable remote is a blocker", output)
         self.assertIn("published checkpoint requires non-empty change_control.remote", output)
+        self.assertIn("published checkpoint requires non-empty change_control.authorization_ref", output)
 
     def test_skipped_unavailable_or_failed_required_check_cannot_support_impl_pass(self) -> None:
         for check_result in ("not-run", "skipped", "unavailable", "failed", "interrupted"):
