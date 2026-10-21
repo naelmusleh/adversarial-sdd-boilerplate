@@ -525,6 +525,22 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("Validated", result.stdout)
 
+        failed_root, _ = self._case(setup_pass)
+        setup_path = failed_root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-SETUP-002.json"
+        setup = json.loads(setup_path.read_text(encoding="utf-8"))
+        setup["evidence"][0]["details"]["exit_code"] = 1
+        self._save(setup_path, setup)
+        failed = subprocess.run(
+            ["python3", "scripts/artifacts.py", "validate"], cwd=failed_root,
+            text=True, capture_output=True,
+        )
+        output = failed.stdout + failed.stderr
+        self.assertNotEqual(failed.returncode, 0, output)
+        self.assertIn(
+            "non-zero command evidence 'FLAGLITE-SETUP-OBSERVED-VALIDATION' cannot support a passing criterion",
+            output,
+        )
+
     def test_feasibility_supported_scope_reduced_blocked_conditional_and_owner_risk_routes(self) -> None:
         changes = {}
         def supported(d: dict[str, object]) -> None:
