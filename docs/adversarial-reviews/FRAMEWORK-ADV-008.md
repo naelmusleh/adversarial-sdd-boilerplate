@@ -2,7 +2,7 @@
 id: FRAMEWORK-ADV-008
 type: adversarial-review
 title: Independent G-IMPL review of versioned app handoffs and commit-push controls
-status: revision-required
+status: approved
 version: 0.3
 created: 2026-10-20
 updated: 2026-10-20
@@ -116,42 +116,44 @@ related-artifacts: FRAMEWORK-SPEC-001, GATE-CATALOG-001, FRAMEWORK-BACKLOG-001, 
 | FRAMEWORK-ADV-008/FINDING-002 | resolved | Wrong-typed `review_inputs.purpose` now produces a controlled diagnostic before membership checks; negative fixture is present. | Implemented and exercised in local test suite at `8c47b52`. | `3119388` and local verification at `8c47b52` | N/A |
 | FRAMEWORK-ADV-008/FINDING-003 | resolved for covered paths | Dirty tracked or relevant untracked framework inputs are rejected; unrelated untracked files are permitted; archive initialization requires explicit revision. | Implemented and regression-tested in local test suite at `8c47b52`. Archive-source provenance remains bounded by the supplied explicit revision. | `3119388` and local verification at `8c47b52` | N/A |
 | FRAMEWORK-ADV-008/FINDING-004 | resolved as inspectable paper evidence | The seven-scenario commit/push tabletop is durable and explicitly does not claim live Git, remote, hosted CI, or branch-protection evidence. | Added `FRAMEWORK-EXERCISE-002` and linked it from FW-TASK-016. Independent reviewer confirmed the tabletop is inspectable and its limits are clear. | `8c47b52` | N/A |
-| FRAMEWORK-ADV-008/FINDING-005 | unresolved | Explicit revision must identify the exact files used in a Git-backed initialization. | Require a supplied revision to match checkout `HEAD`; add a mismatch regression fixture. | Pending | N/A |
-| FRAMEWORK-ADV-008/FINDING-006 | unresolved | No-lock apps must remain compatible with the legacy contract. | Scope strict gate handoff enforcement to versioned adoption and add a legacy PASS fixture. | Pending | N/A |
-| FRAMEWORK-ADV-008/FINDING-007 | unresolved | An explicit versioned handoff claim cannot be accepted without its lock and populated manifest. | Make a declared handoff link opt into strict validation; add pointer-only negative fixture. | Pending | N/A |
+| FRAMEWORK-ADV-008/FINDING-005 | resolved | Explicit revision identifies the exact checked-out source; archive mode still requires an explicit revision. | Require checkout SHA to equal `HEAD`; retain archive SHA input and test both modes. | `3e7d880`, independently re-reviewed at `a831f84` | N/A |
+| FRAMEWORK-ADV-008/FINDING-006 | resolved | Unlinked legacy PASS records remain compatible when no lock/manifest opts the app into versioned handoffs. | Scope strict checks to lock/manifest adoption; add legacy PASS regression fixture. | `3e7d880`, independently re-reviewed at `a831f84` | N/A |
+| FRAMEWORK-ADV-008/FINDING-007 | resolved | An explicit versioned handoff claim cannot be accepted without its lock and populated manifest. | A declared handoff link opts into strict validation; add pointer-only negative fixture. | `a831f84` | N/A |
 
 No owner residual-risk approval used for this review.
 
 ## Rerun and verification
 
-- **Rerun date:** 2026-10-20.
-- **Verifier and reviewer mode:** `/root/sdd_governance`, independent read-only full-scope review at frozen HEAD `44d7d922a82b298275a9dada1bc0eee356e683dc`; no author overlap on the reviewed implementation. The reviewer did not execute tests.
-- **Scope:** Full review of FW-TASK-015/016 acceptance criteria and earlier findings. The reviewer identified two additional gaps (FINDING-005/006), so the rerun failed. Local verification after remediation is reviser evidence and is not attributed to the reviewer.
-- **Target revision:** `3e7d8805d83167e55b382ab02c422fe9d765792d` (reviewed); the reviewer identified ADV-008/FINDING-007. Its remediation is currently uncommitted.
+- **Final rerun date:** 2026-10-20.
+- **Final verifier and mode:** `/root/sdd_governance`, independent read-only full-scope source review at `a831f84037de3d04cb122ef45ad140c81d203070`; no author overlap on implementation. The reviewer did not execute tests.
+- **Final rerun scope:** All seven findings and FW-TASK-015/016 acceptance criteria, including checkout/archive provenance, legacy opt-in, handoff strictness, generated workflow/instructions, and tabletop.
 
-| Finding | Rerun state | Evidence confirming resolution or explaining remaining risk |
+| Finding | Final rerun state | Evidence confirming resolution or explaining remaining risk |
 | --- | --- | --- |
-| FRAMEWORK-ADV-008/FINDING-001 | resolved in focused source review; execution verified by reviser | Independent review confirms missing/misspelled IDs and retyped gate metadata fail closed. New missing-ID fixture plus the retyping fixture pass in the full 29-test local suite. Broader test execution was performed by the reviser, not the reviewer. |
-| FRAMEWORK-ADV-008/FINDING-002 | resolved; reviser-executed | Wrong-typed-purpose fixture passes; full suite executed locally. |
-| FRAMEWORK-ADV-008/FINDING-003 | resolved for tested initializer modes; reviser-executed | Dirty relevant inputs reject, unrelated untracked files pass, and explicit-revision archive mode is covered; full suite executed locally. |
-| FRAMEWORK-ADV-008/FINDING-004 | resolved as paper tabletop | Independent reviewer confirmed artifact inspectability from prior rerun; scope does not include live publication/CI/settings. |
-| FRAMEWORK-ADV-008/FINDING-005 | not-resolved at reviewed revision | A Git checkout could accept an explicit revision different from HEAD and mislabel copied source. |
-| FRAMEWORK-ADV-008/FINDING-006 | not-resolved at reviewed revision | Legacy PASS records without a lock/manifest could be rejected by newly adopted validation. |
-| FRAMEWORK-ADV-008/FINDING-007 | not-resolved at reviewed revision | A PASS record with an explicit but missing handoff link bypasses strict checks through the legacy early return. |
+| FRAMEWORK-ADV-008/FINDING-001 | resolved | Missing/misspelled IDs and type reclassification fail closed; source reviewed at `a831f84`. |
+| FRAMEWORK-ADV-008/FINDING-002 | resolved | Wrong-typed review purpose is controlled; source reviewed at `a831f84`. |
+| FRAMEWORK-ADV-008/FINDING-003 | resolved for covered source paths | Dirty relevant inputs reject while unrelated untracked inputs remain allowed; source reviewed at `a831f84`. |
+| FRAMEWORK-ADV-008/FINDING-004 | resolved as bounded paper evidence | Seven scenarios are inspectable; no live Git, remote, hosted CI, or branch-protection claim. |
+| FRAMEWORK-ADV-008/FINDING-005 | resolved | Checkout explicit SHA must equal `HEAD`; archive mode requires supplied SHA. |
+| FRAMEWORK-ADV-008/FINDING-006 | resolved | Unlinked legacy PASS with no lock/manifest remains compatible. |
+| FRAMEWORK-ADV-008/FINDING-007 | resolved | A declared handoff link opts into strict validation and fails without the required lock/populated manifest. |
 
-- **New findings:** FRAMEWORK-ADV-008/FINDING-007 (major declared-handoff bypass). The rerun also resolved FINDING-005 and FINDING-006 within their reviewed scope.
-- **Verification limits:** Reviewer did not run tests or inspect hosted repository settings. Local tests and artifact validation are reviser-executed evidence, not independent execution. Hosted CI and repository protection remain unverified.
+- **Review history:** Initial review at `30d76cd` failed with four findings; incremental reruns at `8c47b52` and `44d7d92` found additional gaps; the full-scope rerun at `3e7d880` found FINDING-007. Each blocker was recorded and corrected before the final rerun. The latest full-scope review at `a831f84` passed.
+- **Local execution evidence at reviewed source:** Reviser ran `python3 -m unittest discover -s tests -v` (32 tests passed), `python3 scripts/artifacts.py validate` (`Validated 36 artifact(s).`), and `git diff --check` successfully for the code present at `a831f84`. The reviewer did not execute these commands.
+
+- **New findings:** None in the final rerun. The prior round's FINDING-007 is resolved.
+- **Verification limits:** Reviewer did not run tests or inspect hosted repository settings. Local tests and artifact validation are reviser-executed evidence, not independent execution. Hosted CI, live remote behavior, repository protection, and release readiness remain unverified.
 
 ## Final gate result
 
-- **Result:** **FAIL — revision required.**
-- **Why this result follows the criteria:** The rerun resolved the revision-mismatch and legacy-compatibility findings, but found that a record explicitly claiming a missing handoff manifest bypasses strict validation. This blocks FW-TASK-015 acceptance; therefore the combined G-IMPL gate and both backlog tasks remain open pending remediation, local regression checks, and another full-scope independent rerun.
-- **Approval:** Not granted.
-- **Next action / owner:** Framework implementation agent finishes F007 remediation, executes local checks, commits and pushes the change, then requests a full-scope independent rerun. Framework owner reviews the resulting evidence; neither FW-TASK-015 nor FW-TASK-016 is complete yet.
+- **Result:** **PASS — bounded G-IMPL scope.**
+- **Why this result follows the criteria:** The independent full-scope source rerun found all seven findings resolved and no new blocking issue across the FW-TASK-015/016 implementation and acceptance criteria. Local execution evidence is recorded separately by the reviser. This PASS does not establish hosted CI, branch-protection settings, live remote behavior, G-RELEASE, or production readiness.
+- **Approval:** Independent G-IMPL review passed for the bounded scope; no residual risk waiver was used.
+- **Next action / owner:** Continue to FW-TASK-017, which depends on the reviewed app-local handoff and commit/push controls. Hosted enforcement and release authorization remain separate evidence.
 
 ## References
 
-- `FRAMEWORK-BACKLOG-001` v2.1, FW-TASK-015 and FW-TASK-016.
+- `FRAMEWORK-BACKLOG-001` v2.8, FW-TASK-015 and FW-TASK-016.
 - `FRAMEWORK-SPEC-001` FR-FW-014/015 and NFR-FW-003.
 - `GATE-CATALOG-001` G-IMPL and universal evidence requirements.
 - `workflows/ai-engineering-execution.md` commit/push and review procedure.
