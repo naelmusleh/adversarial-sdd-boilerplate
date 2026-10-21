@@ -96,6 +96,8 @@ The corresponding machine-readable expectations live in [`tests/fixtures/fw021_d
 
 **Framework checks — 2026-10-21:** `python3 -m unittest discover -s tests -v` passed all 85 tests; `python3 scripts/artifacts.py validate` reported 48 artifacts; `git diff --check` passed. These checks ran after the no-clobber correction and exercise record were committed at `e0a5c25034c32d1787276138fc0d7773c5aaa586` (the final exercise/checkpoint edits themselves are a follow-up evidence change).
 
+**FW-TASK-021 scripted-fixture checkpoint — 2026-10-21:** The follow-up passed 94 Python tests, `Validated 48 artifact(s).`, `npm run typecheck`, 30 Vitest tests, configured coverage at 100% for statements/branches/functions/lines, `npm run build`, and `git diff --check`. Commit `d2e520f28373502de634d98312cc88c980fd3418` was pushed to `codex/v2-backlog-roadmap`; [Verify Pipeline run 39668502464](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39668502464) completed successfully for that commit. Independent review passes criteria 1–5, 7, and 8 within synthetic bounds; criterion 6 remains partial because no actual owner-facing handoff was observed. FW-TASK-021 remains in progress.
+
 **Earlier failed attempts:** Ordinary recursive template copying overwrote the generated locked gate template and was rejected by app validation. macOS `cp -Rn` then returned non-zero on the expected no-clobber collision. The documented Python-standard-library copier fixed both issues; the passing run above is after that correction.
 
 ## Limitations
