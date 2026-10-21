@@ -541,6 +541,23 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             output,
         )
 
+        missing_output_root, _ = self._case(setup_pass)
+        output_path = missing_output_root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-SETUP-002.json"
+        setup = json.loads(output_path.read_text(encoding="utf-8"))
+        setup["evidence"][0]["details"]["stdout_ref"] = None
+        setup["evidence"][0]["details"]["stderr_ref"] = None
+        self._save(output_path, setup)
+        missing_output = subprocess.run(
+            ["python3", "scripts/artifacts.py", "validate"], cwd=missing_output_root,
+            text=True, capture_output=True,
+        )
+        output = missing_output.stdout + missing_output.stderr
+        self.assertNotEqual(missing_output.returncode, 0, output)
+        self.assertIn(
+            "command evidence 'FLAGLITE-SETUP-OBSERVED-VALIDATION' requires durable stdout_ref or stderr_ref evidence",
+            output,
+        )
+
     def test_feasibility_supported_scope_reduced_blocked_conditional_and_owner_risk_routes(self) -> None:
         changes = {}
         def supported(d: dict[str, object]) -> None:
@@ -609,6 +626,82 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         _, record = self._record(root, "G-CX")
         self.assertEqual(record["gate_result"], "in-progress")
         self.assertTrue(any("no rendered" in item.lower() for item in record["gate_data"]["limitations"]))
+
+        def fabricate_passing_critique(root: Path) -> None:
+            path, record = self._record(root, "G-CX")
+            record["gate_result"] = "passed"
+            for criterion in record["criteria_results"]:
+                criterion["outcome"] = "pass"
+            self._save(path, record)
+
+        _, claimed_pass = self._case(fabricate_passing_critique)
+        output = claimed_pass.stdout + claimed_pass.stderr
+        self.assertNotEqual(claimed_pass.returncode, 0, output)
+        self.assertIn(
+            "passed G-CX cannot rely on explicitly unverified interaction evidence",
+            output,
+        )
+
+    def test_untestable_requirement_finding_blocks_greq_pass(self) -> None:
+        def mutate(root: Path) -> None:
+            path, record = self._record(root, "G-REQ")
+            record["gate_result"] = "passed"
+            finding_id = "GREQ-UNTESTABLE-001"
+            evidence_id = "GREQ-REVIEW-UNTESTABLE"
+            criteria = record["criteria_results"]
+            for criterion in criteria:
+                criterion.update({"outcome": "pass", "evidence_ids": [evidence_id]})
+            record["gate_data"]["review_evidence_ids"] = [evidence_id]
+            record["authority"]["reviewers"] = [{
+                "identity": "synthetic-independent-reviewer",
+                "role": "fixture reviewer",
+                "mode": "independent",
+                "result": "pass",
+                "author_overlap": "none",
+                "context_disclosure": "reviewed the frozen synthetic specification and backlog fixture",
+                "limitations": ["synthetic reviewer identity; no product review claim"],
+            }]
+            record["evidence"] = [{
+                "evidence_id": evidence_id,
+                "type": "review-finding",
+                "criterion_ids": [item["criterion_id"] for item in criteria],
+                "observed_at": "2026-10-21T14:00:00Z",
+                "observed_by": "synthetic-independent-reviewer",
+                "source_revision": self.source_revision,
+                "scope_ref": "synthetic requirement review",
+                "locator": "synthetic-only://greq-untestable-review",
+                "record_sha256": "sha256:" + "e" * 64,
+                "limitations": ["fixture only; does not authenticate reviewer identity"],
+                "details": {
+                    "reviewer": "synthetic-independent-reviewer",
+                    "mode": "independent",
+                    "author_overlap": "none",
+                    "context_disclosure": "reviewed the frozen synthetic specification and backlog fixture",
+                    "finding_id": finding_id,
+                    "severity": "major",
+                    "location": "specification.md: FIXTURE-REQ-001",
+                    "disposition": "open",
+                },
+            }]
+            record["findings"] = [{
+                "finding_id": finding_id,
+                "severity": "major",
+                "blocking": True,
+                "location": "specification.md: FIXTURE-REQ-001",
+                "impact": "The requirement has no observable acceptance outcome and cannot be verified.",
+                "disposition": "open",
+                "owner_decision_required": False,
+                "evidence_ids": [evidence_id],
+            }]
+            self._save(path, record)
+
+        _, result = self._case(mutate)
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn(
+            "passed gate retains unresolved blocking finding(s): GREQ-UNTESTABLE-001",
+            output,
+        )
 
     def test_gate_specific_evidence_bypasses_are_rejected(self) -> None:
         cases = (

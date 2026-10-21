@@ -3,7 +3,7 @@ id: FRAMEWORK-ADV-013
 type: adversarial-review
 title: FW-TASK-020 separate-app ten-gate adversarial pilot
 status: in-review
-version: 2.1
+version: 2.2
 created: 2026-10-21
 updated: 2026-10-21
 reviewed-artifact: FW-TASK-020
@@ -12,6 +12,13 @@ related-artifacts: FRAMEWORK-ADV-011, FRAMEWORK-ADV-012, FRAMEWORK-GATE-CONTRACT
 ---
 
 # FRAMEWORK-ADV-013 — FW-TASK-020 separate-app adversarial pilot
+
+## Active FW-TASK-020 execution record
+
+- **Active gate:** G-IMPL for the harness and pilot evidence; G-RELEASE is limited to its non-production hosted-check/attestation rehearsal.
+- **Selected task and scope:** FW-TASK-020 only. Extend the separate-app tests for reproducible G-SETUP evidence, blocking G-REQ findings for untestable acceptance, fabricated/unverified G-CX critique evidence, and G-ARCH narrative-only security/data verification. Keep the app synthetic, preserve all ten gate records as `in-progress`, and avoid product code or production claims.
+- **Acceptance evidence:** Focused pilot suite, complete Python suite, artifact validation, diff checks, exact-commit hosted Verify Pipeline result, and an independent review of the frozen added cases and limitations.
+- **Known blockers:** Earlier reviewer findings identify incomplete per-gate bypass/valid-path coverage. This checkpoint is not accepted until the cases produce targeted diagnostics, exact-commit CI passes, and an independent reviewer assesses the complete updated scope.
 
 ## Scope and method
 

@@ -1302,6 +1302,12 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
                 for field in required_evidence_fields:
                     if not gate_data.get(field):
                         problems.append(f"{relative}: {gate_id} PASS requires non-empty gate_data.{field}")
+                if gate_id == "G-CX":
+                    for evidence_id in gate_data.get("interaction_evidence_ids", []):
+                        interaction = evidence_by_id.get(evidence_id)
+                        details = interaction.get("details", {}) if isinstance(interaction, dict) else {}
+                        if isinstance(details, dict) and details.get("result") in {"unverified", "not-run", "failed"}:
+                            problems.append(f"{relative}: passed G-CX cannot rely on explicitly unverified interaction evidence '{evidence_id}'")
             if gate_id == "G-IMPL":
                 selected_task = gate_data.get("selected_task_id")
                 if isinstance(scope, dict) and selected_task not in scope.get("task_ids", []):
