@@ -502,6 +502,8 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
              "passed G-ARCH requires at least one verified contract with linked evidence"),
             ("G-OPERATE", lambda d: d["gate_data"].update({"telemetry_gaps": [], "runbook_evidence_ids": ["PILOT-OBSERVATION"]}),
              "passed G-OPERATE requires an explicit telemetry_gaps declaration"),
+            ("G-OPERATE", lambda d: d["gate_data"].update({"degradation_limits": []}),
+             "$.gate_data.degradation_limits: array has fewer than 1 items"),
         )
         for gate_id, change, expected in cases:
             def mutate(root: Path, gate_id=gate_id, change=change) -> None:
