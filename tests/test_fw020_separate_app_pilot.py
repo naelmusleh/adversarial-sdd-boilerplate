@@ -313,7 +313,9 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             record["dependency_effects"][0]["state"] = "unblocked"
             self._save(path, record)
         _, result = self._case(unblocked)
-        self.assertIn("cannot leave task", result.stdout + result.stderr)
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn("unknown feasibility probe 'FIXTURE-PROBE-001' cannot leave task 'FIXTURE-TASK-001' unconditionally unblocked", output)
 
         def substituted(root: Path) -> None:
             path, record = self._record(root, "G-COVERAGE")
@@ -329,6 +331,30 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
             self._save(path, record)
         _, result = self._case(out_of_scope_journey)
         self.assertIn("out-of-scope requirement", result.stdout + result.stderr)
+
+    def test_feasibility_dependency_conflicts_and_out_of_scope_tasks_fail_with_targeted_diagnostics(self) -> None:
+        def conflicting_effect(root: Path) -> None:
+            path, record = self._record(root, "G-FEAS")
+            record["dependency_effects"][0]["state"] = "conditional"
+            record["dependency_effects"][0]["condition"] = "owner approval"
+            record["dependency_effects"][0]["safe_work_boundary"] = "no product work"
+            record["dependency_effects"][0]["state_change_trigger"] = "new evidence"
+            self._save(path, record)
+
+        _, result = self._case(conflicting_effect)
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn("feasibility task 'FIXTURE-TASK-001' dependency_effect state does not match its probe", output)
+
+        def out_of_scope_task(root: Path) -> None:
+            path, record = self._record(root, "G-FEAS")
+            record["gate_data"]["probes"][0]["task_dependencies"][0]["task_id"] = "OTHER-TASK-999"
+            self._save(path, record)
+
+        _, result = self._case(out_of_scope_task)
+        output = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0, output)
+        self.assertIn("feasibility dependency task 'OTHER-TASK-999' is not declared in scope.task_ids", output)
 
     def _synthetic_intent_pass(self, root: Path) -> tuple[dict[str, object], dict[str, object]]:
         base_path, base = self._record(root, "G-INTENT")
@@ -730,7 +756,11 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
                 output = result.stdout + result.stderr
                 self.assertNotEqual(result.returncode, 0, output)
                 self.assertIn("[G-IMPL]", output)
-                self.assertIn("$.gate_data.required_checks[0].result", output)
+                if check_result in {"skipped", "unavailable"}:
+                    expected = "$.gate_data.required_checks[0].result: value is not one of the allowed values"
+                else:
+                    expected = "$.gate_data.required_checks[0].result: value does not equal required constant 'passed'"
+                self.assertIn(expected, output)
 
         def copied_terminal_output(root: Path) -> None:
             path, record = self._record(root, "G-IMPL")
