@@ -40,6 +40,8 @@ BASE_FILES = {
     ".sdd/framework.lock.json",
     ".sdd/G-REQ-HANDOFF.json.template",
     ".sdd/G-ARCH-CONTRACT.json.template",
+    ".sdd/gate-run-v1.json.template",
+    ".sdd/schemas/gate-run-v1.schema.json",
     "docs/templates/app-project/gate-record.md.template",
     ".github/workflows/sdd-contract-validation.yml",
 }
@@ -53,6 +55,8 @@ class InitAppProjectTests(unittest.TestCase):
         shutil.copy2(INITIALIZER, self.template_root / "scripts" / INITIALIZER.name)
         shutil.copy2(ROOT / "scripts" / "artifacts.py", self.template_root / "scripts" / "artifacts.py")
         shutil.copytree(ROOT / ".sdd", self.template_root / ".sdd")
+        (self.template_root / "docs" / "framework").mkdir(parents=True)
+        shutil.copytree(ROOT / "docs" / "framework" / "schemas", self.template_root / "docs" / "framework" / "schemas")
         (self.template_root / "docs" / "templates").mkdir(parents=True)
         shutil.copytree(
             ROOT / "docs" / "templates" / "app-project",
@@ -61,7 +65,7 @@ class InitAppProjectTests(unittest.TestCase):
         subprocess.run(["git", "init", "-q"], cwd=self.template_root, check=True)
         subprocess.run(["git", "config", "user.name", "Fixture Author"], cwd=self.template_root, check=True)
         subprocess.run(["git", "config", "user.email", "fixture@example.com"], cwd=self.template_root, check=True)
-        subprocess.run(["git", "add", "scripts", ".sdd", "docs/templates/app-project"], cwd=self.template_root, check=True)
+        subprocess.run(["git", "add", "scripts", ".sdd", "docs/templates/app-project", "docs/framework/schemas"], cwd=self.template_root, check=True)
         subprocess.run(["git", "commit", "-qm", "fixture baseline"], cwd=self.template_root, check=True)
 
     def tearDown(self) -> None:
@@ -96,14 +100,22 @@ class InitAppProjectTests(unittest.TestCase):
 
             files = {str(path.relative_to(target)) for path in target.rglob("*") if path.is_file()}
             self.assertEqual(files, CORE_ARTIFACTS | BASE_FILES)
-            self.assertEqual(len(files), 14)
+            self.assertEqual(len(files), 16)
             generated_readme = (target / "README.md").read_text(encoding="utf-8")
             self.assertIn("EXAMPLE-DECISION-001", generated_readme)
             self.assertIn("Give your AI agent the app idea", generated_readme)
             self.assertIn("The agent drafts [`mission.md`](mission.md)", generated_readme)
             lock = json.loads((target / ".sdd/framework.lock.json").read_text(encoding="utf-8"))
+            self.assertEqual(lock["lock_version"], 2)
+            self.assertEqual(lock["gate_contract_id"], "FRAMEWORK-GATE-CONTRACT-001")
+            self.assertEqual(lock["gate_contract_version"], "1.0")
+            self.assertIn(".sdd/schemas/gate-run-v1.schema.json", lock["locked_files"])
             self.assertRegex(lock["framework_revision"], r"^[a-f0-9]{40}$")
             self.assertIn(f"/blob/{lock['framework_revision']}/", generated_readme)
+            gate_template = json.loads((target / ".sdd/gate-run-v1.json.template").read_text(encoding="utf-8"))
+            schema = json.loads((target / ".sdd/schemas/gate-run-v1.schema.json").read_text(encoding="utf-8"))
+            from scripts.artifacts import validate_schema_value
+            self.assertEqual(validate_schema_value(gate_template, schema, schema), [])
             req_template = json.loads((target / ".sdd/G-REQ-HANDOFF.json.template").read_text(encoding="utf-8"))
             self.assertEqual(req_template["framework_revision"], lock["framework_revision"])
             validation = subprocess.run(
@@ -116,6 +128,35 @@ class InitAppProjectTests(unittest.TestCase):
             self.assertEqual(validation.returncode, 0, validation.stderr)
             self.assertIn("Validated 5 artifact(s).", validation.stdout)
 
+            # The initialized app enforces its pinned v1 gate schema and relational rules.
+            gate_template["record_id"] = "EXAMPLE-GATE-RUN-INTENT-001"
+            (target / ".sdd/gate-runs").mkdir()
+            record_path = target / ".sdd/gate-runs/EXAMPLE-GATE-RUN-INTENT-001.json"
+            record_path.write_text(json.dumps(gate_template, indent=2) + "\n", encoding="utf-8")
+            valid_run = subprocess.run(
+                [sys.executable, str(target / "scripts" / "artifacts.py"), "validate"],
+                cwd=target,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(valid_run.returncode, 0, valid_run.stderr)
+
+            gate_template["gate_result"] = "passed"
+            for criterion in gate_template["criteria_results"]:
+                criterion["outcome"] = "pass"
+            record_path.write_text(json.dumps(gate_template, indent=2) + "\n", encoding="utf-8")
+            false_pass = subprocess.run(
+                [sys.executable, str(target / "scripts" / "artifacts.py"), "validate"],
+                cwd=target,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(false_pass.returncode, 0)
+            self.assertIn("criteria_results[0].evidence_ids", false_pass.stderr)
+            self.assertIn("[G-INTENT]", false_pass.stderr)
+
     def test_optional_lifecycle_profile_generates_complete_scaffold(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             target = Path(temporary) / "app"
@@ -124,7 +165,7 @@ class InitAppProjectTests(unittest.TestCase):
 
             files = {str(path.relative_to(target)) for path in target.rglob("*") if path.is_file()}
             self.assertEqual(files, CORE_ARTIFACTS | SUPPORTING_ARTIFACTS | BASE_FILES)
-            self.assertEqual(len(files), 26)
+            self.assertEqual(len(files), 28)
             generated_readme = (target / "README.md").read_text(encoding="utf-8")
             self.assertIn("EXAMPLE-DECISION-002", generated_readme)
             validation = subprocess.run(
@@ -206,6 +247,11 @@ class InitAppProjectTests(unittest.TestCase):
             shutil.copy2(self.template_root / "scripts" / INITIALIZER.name, scripts / INITIALIZER.name)
             shutil.copy2(self.template_root / "scripts" / "artifacts.py", scripts / "artifacts.py")
             shutil.copytree(self.template_root / ".sdd", source / ".sdd")
+            (source / "docs" / "framework").mkdir(parents=True)
+            shutil.copytree(
+                self.template_root / "docs" / "framework" / "schemas",
+                source / "docs" / "framework" / "schemas",
+            )
             revision = subprocess.run(
                 ["git", "rev-parse", "HEAD"], cwd=self.template_root, capture_output=True, text=True, check=True
             ).stdout.strip()

@@ -121,7 +121,14 @@
     "reviewers": [],
     "owner_decisions": []
   },
-  "dependency_effects": [],
+  "dependency_effects": [
+    {
+      "task_id": "FIXTURE-TASK-001",
+      "state": "blocked",
+      "condition": "synthetic unresolved input",
+      "safe_work_boundary": "no product work"
+    }
+  ],
   "gate_result": "in-progress",
   "result_rationale": "Schema-conforming fixture only; not application evidence or gate approval.",
   "accepted_risk": null,

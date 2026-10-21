@@ -566,6 +566,51 @@ class ArtifactValidationTests(unittest.TestCase):
             self.assertEqual(result.returncode, 1)
             self.assertIn("file digest differs from the initialized framework snapshot", result.stderr)
 
+    def test_v11_framework_lock_requires_digests_for_its_schema_and_template(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            write_app_fixture(
+                root,
+                functional_row="| FR-001 | The system MUST save the item. | A persisted item is visible after reload. |",
+                quality_row="| NFR-001 | The service MUST respond within one second. | A measured request completes within one second. |",
+            )
+            install_governance_bundle(root)
+            lock_path = root / ".sdd/framework.lock.json"
+            lock = json.loads(lock_path.read_text(encoding="utf-8"))
+            lock["lock_version"] = 2
+            lock["gate_contract_id"] = "FRAMEWORK-GATE-CONTRACT-001"
+            lock["gate_contract_version"] = "1.1"
+            schema = root / ".sdd/schemas/gate-run-v1.schema.json"
+            template = root / ".sdd/gate-run-v1.json.template"
+            (root / ".sdd/schemas").mkdir(parents=True)
+            shutil.copy2(ROOT / "docs/framework/schemas/gate-run-v1.schema.json", schema)
+            shutil.copy2(ROOT / ".sdd/gate-run-v1.json.template", template)
+            lock["locked_files"] = {
+                relative: lock["locked_files"].get(relative, sha256(root / relative))
+                for relative in (
+                    "scripts/artifacts.py",
+                    ".sdd/G-REQ-HANDOFF.json.template",
+                    ".sdd/G-ARCH-CONTRACT.json.template",
+                    "docs/templates/app-project/gate-record.md.template",
+                    ".github/workflows/sdd-contract-validation.yml",
+                    ".sdd/schemas/gate-run-v1.schema.json",
+                    ".sdd/gate-run-v1.json.template",
+                )
+            }
+            lock_path.write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+            result = run_validation(root)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("unsupported gate contract identity or version", result.stderr)
+
+            # Even a digest-complete draft lock cannot make v1.1 adoptable.
+            lock["locked_files"][".sdd/schemas/gate-run-v1.1.schema.json"] = sha256(ROOT / "docs/framework/schemas/gate-run-v1.1.schema.json")
+            lock["locked_files"][".sdd/gate-run-v1.1.json.template"] = sha256(ROOT / ".sdd/gate-run-v1.1.json.template")
+            lock_path.write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            result = run_validation(root)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("unsupported gate contract identity or version", result.stderr)
+
     def test_handoff_rejects_unsupported_version_and_path_traversal(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

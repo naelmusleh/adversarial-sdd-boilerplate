@@ -26,12 +26,17 @@ APP_LOCKED_FILES = (
     ".sdd/G-ARCH-CONTRACT.json.template",
     "docs/templates/app-project/gate-record.md.template",
     ".github/workflows/sdd-contract-validation.yml",
+    ".sdd/schemas/gate-run-v1.schema.json",
+    ".sdd/gate-run-v1.json.template",
 )
+GATE_CONTRACT_ID = "FRAMEWORK-GATE-CONTRACT-001"
+GATE_CONTRACT_VERSION = "1.0"
 FRAMEWORK_SOURCE_PATHS = (
     "scripts/init_app_project.py",
     "scripts/artifacts.py",
     ".sdd",
     "docs/templates/app-project",
+    "docs/framework/schemas",
 )
 
 # The default is the smallest complete app starter: the five canonical SDD files.
@@ -290,8 +295,9 @@ This is an application repository initialized from Adversarial SDD. Read this fi
 - Do not claim checks, approvals, deployments, or production readiness without observed evidence.
 - Keep `design.md` canonical. Do not run Impeccable `document` at this repository root; use an isolated staging copy and store reviewed generated output in `.impeccable/generated/`.
 - Use `python3 scripts/artifacts.py list`, `validate`, and `new` for local artifact management. The helper is a snapshot of the framework tool; structural validation does not prove links, decisions, gate evidence, or app readiness.
-- The `.sdd/framework.lock.json` file pins the exact framework commit and digests of the copied validator and handoff checks. Update it only as part of a reviewed framework migration.
+- The `.sdd/framework.lock.json` file pins the exact framework commit and digests of the copied validator, handoff checks, gate-run schema, and starter template. Update it only as part of a reviewed framework migration.
 - A passed G-REQ or G-ARCH record requires its corresponding populated manifest under `.sdd/`; the validator checks frozen files and exact digests. A passing validator is not itself a gate pass.
+- New version-2 apps store immutable JSON gate-run records under `.sdd/gate-runs/<record_id>.json`. The generated G-INTENT record template starts at `not-ready`; it does not assert a gate result. The validator checks structure and repository-local relationships, not the truth or sufficiency of evidence.
 - Add SDD Contract Validation and app-specific required checks to branch protection before claiming they block merges. Do not treat this workflow alone as a release gate.
 - Record each change's commit SHA, branch/ref, push outcome, required-check results, and review status in its task milestone.
 
@@ -404,15 +410,24 @@ def main() -> int:
         .replace("<APP>", prefix)
         .replace("<40-character framework commit SHA>", framework_revision)
     )
+    outputs[".sdd/schemas/gate-run-v1.schema.json"] = (
+        (ROOT / "docs" / "framework" / "schemas" / "gate-run-v1.schema.json").read_text(encoding="utf-8")
+    )
+    outputs[".sdd/gate-run-v1.json.template"] = (
+        (ROOT / ".sdd" / "gate-run-v1.json.template").read_text(encoding="utf-8")
+        .replace("<APP>", prefix)
+    )
     outputs[".github/workflows/sdd-contract-validation.yml"] = (
         (TEMPLATES / "sdd-contract-validation.yml.template").read_text(encoding="utf-8")
     )
     lock = {
-        "lock_version": 1,
+        "lock_version": 2,
         "framework_repository": framework_url,
         "framework_revision": framework_revision,
         "artifact_contract_id": "ARTIFACT-CONTRACT-001",
         "artifact_contract_version": 1,
+        "gate_contract_id": GATE_CONTRACT_ID,
+        "gate_contract_version": GATE_CONTRACT_VERSION,
         "locked_files": {
             relative: sha256_text(outputs[relative])
             for relative in APP_LOCKED_FILES

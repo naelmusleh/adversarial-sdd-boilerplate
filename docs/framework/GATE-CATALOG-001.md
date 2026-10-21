@@ -13,7 +13,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-001, FRA
 
 ## Purpose
 
-Provide the human-readable lifecycle overview and stage summaries. **FRAMEWORK-GATE-CONTRACT-001 v1.0 is the normative source for gate-run fields, criterion IDs, evidence provenance, results, transitions, authority, and migration.** This catalog summarizes those rules; stage-specific workflows explain how to prepare evidence and act on a result. If this catalog or a workflow conflicts with the versioned contract, the conflict blocks adoption and must be resolved in a reviewed contract update; a summary cannot silently redefine normative semantics.
+Provide the human-readable lifecycle overview and stage summaries. **FRAMEWORK-GATE-CONTRACT-001 v1.0 is approved and normative; v1.1 is an unapproved additive amendment under FW-TASK-018 review.** The approved contract is normative for gate-run fields, criterion IDs, evidence provenance, results, transitions, authority, and migration. This catalog summarizes those rules; stage-specific workflows explain how to prepare evidence and act on a result. If this catalog or a workflow conflicts with the versioned contract, the conflict blocks adoption and must be resolved in a reviewed contract update; a summary cannot silently redefine normative semantics.
 
 ## Gate outcome vocabulary
 
@@ -66,7 +66,7 @@ For projects using Impeccable, preserve its critique report and rerun evidence a
 
 ## Universal gate record
 
-For contract v1.0, use the universal record and JSON Schema in [FRAMEWORK-GATE-CONTRACT-001](FRAMEWORK-GATE-CONTRACT-001.md) and `schemas/gate-run-v1.schema.json`. The Markdown template below remains a legacy human-readable scaffold until the explicit app initializer/validator migration in FW-TASK-018; it does not by itself conform to or enforce the v1.0 machine schema.
+For approved contract v1.0, use the universal record and `.sdd/schemas/gate-run-v1.schema.json`. If amendment v1.1 is approved, new initialized apps will use `.sdd/schemas/gate-run-v1.1.schema.json`; v1.0 apps retain their pinned schema until an explicit migration. Gate-run JSON records live at `.sdd/gate-runs/<record_id>.json` when the corresponding app-local validator is adopted. The Markdown template below remains a legacy human-readable scaffold and does not conform to or enforce either machine schema.
 
 Every gate record includes:
 

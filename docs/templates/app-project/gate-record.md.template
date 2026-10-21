@@ -14,7 +14,7 @@ handoff-manifest:
 
 # <APP>-GATE-<GATE-ID>-001 — <Gate name> result
 
-> **Contract migration note:** This Markdown scaffold preserves the legacy app record format. It is not a machine-conforming v1.0 gate-run record. When an app explicitly pins `FRAMEWORK-GATE-CONTRACT-001` v1.0, use the pinned JSON Schema and generated record procedure; migration must create linked records and must not rewrite or promote this historical artifact.
+> **Contract migration note:** This Markdown scaffold preserves the legacy app record format. It is not a machine-conforming JSON gate-run record. New apps currently pin the approved `FRAMEWORK-GATE-CONTRACT-001` v1.0 and use its pinned JSON Schema and generated record procedure. Draft v1.1 is not adoptable until its amendment review passes and the initializer/validator explicitly enables it. Migration must create linked records and must not rewrite or promote this historical artifact.
 
 ## Gate identity and scope
 
