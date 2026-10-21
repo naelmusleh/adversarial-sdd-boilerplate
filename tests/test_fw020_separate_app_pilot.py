@@ -305,6 +305,61 @@ class SeparateAppAdversarialPilotTests(unittest.TestCase):
         self.assertIn("requires artifact-reference evidence for the current mission.md", output)
         self.assertIn("requires accountable-owner approval bound to mission ID and exact mission digest", output)
 
+    def test_setup_pass_uses_observed_local_validation_and_latest_intent_pass(self) -> None:
+        def setup_pass(root: Path) -> None:
+            intent, _ = self._synthetic_intent_pass(root)
+            intent_path = root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-INTENT-002.json"
+            self._save(intent_path, intent)
+
+            output_dir = root / "docs/evidence/fw020-setup"
+            output_dir.mkdir(parents=True)
+            execution = subprocess.run(
+                ["python3", "scripts/artifacts.py", "validate"], cwd=root,
+                text=True, capture_output=True,
+            )
+            stdout_path = output_dir / "stdout.txt"
+            stderr_path = output_dir / "stderr.txt"
+            stdout_path.write_text(execution.stdout, encoding="utf-8")
+            stderr_path.write_text(execution.stderr, encoding="utf-8")
+            self.assertEqual(execution.returncode, 0, execution.stdout + execution.stderr)
+
+            setup_path, setup = self._record(root, "G-SETUP")
+            setup.update({"record_id": "FLAGLITE-GATE-RUN-SETUP-002", "record_version": 2,
+                          "supersedes_run_id": setup["record_id"], "created_at": "2026-10-21T13:30:00Z",
+                          "gate_result": "passed"})
+            intent_bytes = intent_path.read_bytes()
+            setup["scope"]["artifact_refs"].append({
+                "artifact_id": intent["record_id"], "version": "2",
+                "path": intent_path.relative_to(root).as_posix(),
+                "sha256": "sha256:" + hashlib.sha256(intent_bytes).hexdigest(),
+                "source_revision": self.source_revision,
+            })
+            evidence_id = "FLAGLITE-SETUP-OBSERVED-VALIDATION"
+            criterion_ids = [item["criterion_id"] for item in setup["criteria_results"]]
+            for criterion in setup["criteria_results"]:
+                criterion.update({"outcome": "pass", "evidence_ids": [evidence_id],
+                                  "rationale": "Synthetic pilot: observed app-local validator execution."})
+            setup["gate_data"]["cold_start_evidence_ids"] = [evidence_id]
+            setup["evidence"] = [{
+                "evidence_id": evidence_id, "type": "command-execution", "criterion_ids": criterion_ids,
+                "observed_at": "2026-10-21T13:20:00Z", "observed_by": "synthetic pilot runner",
+                "source_revision": self.source_revision, "scope_ref": "initialized synthetic app baseline",
+                "locator": stdout_path.relative_to(root).as_posix(),
+                "record_sha256": "sha256:" + hashlib.sha256(stdout_path.read_bytes()).hexdigest(),
+                "limitations": ["synthetic app setup only; no product readiness claim"],
+                "details": {"command": "python3 scripts/artifacts.py validate", "exit_code": 0,
+                            "stdout_ref": stdout_path.relative_to(root).as_posix(),
+                            "stderr_ref": stderr_path.relative_to(root).as_posix(),
+                            "runtime_versions": ["Python 3.13"],
+                            "started_at": "2026-10-21T13:19:00Z", "completed_at": "2026-10-21T13:20:00Z",
+                            "scope": "initialized synthetic app baseline"},
+            }]
+            self._save(root / ".sdd/gate-runs/FLAGLITE-GATE-RUN-SETUP-002.json", setup)
+
+        _, result = self._case(setup_pass)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Validated", result.stdout)
+
     def test_feasibility_supported_scope_reduced_blocked_conditional_and_owner_risk_routes(self) -> None:
         changes = {}
         def supported(d: dict[str, object]) -> None:
