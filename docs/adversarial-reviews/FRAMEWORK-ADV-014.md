@@ -2,12 +2,12 @@
 id: FRAMEWORK-ADV-014
 type: adversarial-review
 title: FW-TASK-026 transactional gate runner review
-status: in-review
-version: 0.1
+status: approved
+version: 0.2
 created: 2026-10-22
 updated: 2026-10-22
 reviewed-artifact: FW-TASK-026
-reviewed-version: a6e90a65057e87f27b1a7a61b963b09893c3495c
+reviewed-version: f2ca403e4b0af68d439b58857c359615f69e810c
 related-artifacts: GATE-RUNNER-001, FRAMEWORK-SPEC-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-BACKLOG-001, DECISION-LOG-001
 ---
 
@@ -45,7 +45,7 @@ The runner currently consumes only gate-contract v1.0, an explicitly approved co
 
 - **Reviewer:** `/root/fw021_review`, read-only follow-up against the exact revision above.
 - **ADV-014-01 — CLOSED for runner-plumbing route coverage.** `tests/test_gate_runner.py::test_all_ten_gate_routes_accept_isolated_synthetic_not_applicable_records` builds and validates an accepted chain through all ten gates, pins exact upstream run IDs/versions/digests, and verifies that each downstream candidate is rejected while its immediate prerequisite is `in-progress`. Each fixture is explicitly synthetic `not-applicable` with a fixture-owner decision. This demonstrates positive/negative runner plumbing only; it does not establish application applicability, application evidence, or a PASS route.
-- **ADV-014-02 — OPEN pending final review.** At the time of this route-coverage review, hosted branch rules and the invalid-transition merge-blocking rehearsal remained unverified. The follow-up evidence below addresses that gap; a final independent disposition is pending.
+- **ADV-014-02 — CLOSED.** The paired hosted rehearsal evidence below demonstrates that the actual prerequisite-guard regression fails the required check and that failure of that same check blocks a ready, otherwise-mergeable PR under the observed active ruleset.
 - **Follow-up disposition:** The reviewer accepts this route-coverage evidence for the narrow original finding. FW-TASK-026 remains in progress until hosted policy rehearsal and other required acceptance evidence are complete.
 
 ## Hosted policy observation and rehearsal — 2026-10-21
@@ -54,8 +54,6 @@ The runner currently consumes only gate-contract v1.0, an explicitly approved co
 - **Regression check:** Disposable rehearsal PR [#13](https://github.com/naelmusleh/adversarial-sdd-boilerplate/pull/13), head `9363c3416195bd40bdfa119f3a66a8a8d6294f67`, deliberately disabled the gate runner's prerequisite-completion guard. Local execution of the ten-gate route regression failed as intended. Hosted Verify Pipeline run [39712514713](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39712514713) completed with `Metadata & Artifact Audit` **failure** and the other two required checks **success**.
 - **Required-check enforcement rehearsal:** Clean-based PR [#14](https://github.com/naelmusleh/adversarial-sdd-boilerplate/pull/14), head `a6b127810e9aec9d176c832758469b883193546b`, changed only one test to create an explicit, test-only failure sentinel. It was ready for review, based on `main` at `582f01a0f4fd3c126475a5e17c555f05fb718372`, and GitHub reported `mergeable: true` with no conflicts. Verify Pipeline run [39715440984](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39715440984) failed only the required `Metadata & Artifact Audit` context; `Initializer Regression Gate` and `TypeScript Static Code Analysis` passed. After the check completed, GitHub reported `mergeable_state: blocked` while the PR remained ready and mergeable. This isolates the active required-check rule as the merge blocker.
 - **Rehearsal conclusion:** The actual prerequisite-guard regression on PR #13 caused the same required `Metadata & Artifact Audit` context to fail. PR #14 then demonstrated that failure of that exact required context blocks an otherwise mergeable, ready PR under the observed active ruleset. Together these runs satisfy the hosted invalid-transition merge-block rehearsal. Neither PR was merged; both were closed unmerged and both temporary remote/local branches were removed. The PR #14 sentinel was test-only and is not part of the implementation branch.
-- **Disposition pending final review:** Evidence for ADV-014-02 is complete; a fresh independent review against the final documentation revision will determine closure. FW-TASK-026 remains **IN PROGRESS** until that review is recorded.
+- **Final independent disposition (2026-10-22): APPROVED — no remaining technical blockers.** Reviewer `/root/fw021_review` reviewed exact implementation/evidence revision `f2ca403e4b0af68d439b58857c359615f69e810c` and accepted criterion 5: PR #13 tied the actual prerequisite-guard regression to the failing required `Metadata & Artifact Audit` check; clean, ready, otherwise mergeable PR #14 showed failure of that same required context produced `mergeable_state: blocked`. Both temporary PRs were closed unmerged. The reviewer also confirmed the exact-SHA run `39710983844` subsequently completed with all three jobs successful. The paired rehearsal and active ruleset satisfy the hosted policy acceptance criterion. Synthetic all-gates `not-applicable` records remain runner-plumbing evidence only and do not establish application PASS.
 
-## Required follow-up
-
-1. Obtain a fresh independent review against the exact final revision and update this report and the FW-TASK-026 milestone. If the reviewer accepts the paired-run evidence and finds no new blocking issues, close ADV-014 and complete FW-TASK-026.
+- **Closure:** ADV-014 is approved and closed for FW-TASK-026. The implementation and hosted enforcement evidence are limited to the stated contract version and observed `main` ruleset; no merge or deployment is claimed.
