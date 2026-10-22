@@ -270,6 +270,27 @@ def test_cleanup_recovers_quarantined_projection(tmp_path: Path) -> None:
     assert not quarantine.exists()
 
 
+def test_concurrent_cleanup_of_one_projection_is_bounded(tmp_path: Path) -> None:
+    root = make_repo(tmp_path)
+    policy = write_policy(tmp_path / "policy.json")
+    output = tmp_path / "projections"
+    manifest = create_projection(root, policy, "G-IMPL", ROLES[0], output)
+    projection = Path(manifest["projection_path"])
+
+    def cleanup_once() -> str:
+        try:
+            cleanup_projection(projection)
+            return "removed"
+        except (ProjectionError, OSError):
+            return "already-removed-or-in-progress"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: cleanup_once(), range(2)))
+    assert "removed" in results
+    assert not projection.exists()
+    assert not list(output.iterdir())
+
+
 def test_source_change_during_projection_discards_staged_view(tmp_path: Path) -> None:
     root = make_repo(tmp_path)
     policy = write_policy(tmp_path / "policy.json")
@@ -321,6 +342,20 @@ def test_projection_cannot_be_created_inside_source_repository(tmp_path: Path) -
     assert not (root / ".projection-output").exists()
 
 
+def test_projection_refuses_shared_writable_output_parent(tmp_path: Path) -> None:
+    root = make_repo(tmp_path)
+    policy = write_policy(tmp_path / "policy.json")
+    output = tmp_path / "shared-output"
+    output.mkdir(mode=0o700)
+    output.chmod(0o777)
+    try:
+        with assert_raises(ProjectionError, match="must not be group- or world-writable"):
+            create_projection(root, policy, "G-IMPL", ROLES[0], output)
+        assert list(output.iterdir()) == []
+    finally:
+        output.chmod(0o700)
+
+
 class ContextProjectionTests(unittest.TestCase):
     def _run_scenario(self, scenario) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -350,6 +385,9 @@ class ContextProjectionTests(unittest.TestCase):
     def test_cleanup_recovers_quarantined_projection(self) -> None:
         self._run_scenario(test_cleanup_recovers_quarantined_projection)
 
+    def test_concurrent_cleanup_of_one_projection_is_bounded(self) -> None:
+        self._run_scenario(test_concurrent_cleanup_of_one_projection_is_bounded)
+
     def test_source_change_during_projection_discards_staged_view(self) -> None:
         self._run_scenario(test_source_change_during_projection_discards_staged_view)
 
@@ -358,3 +396,6 @@ class ContextProjectionTests(unittest.TestCase):
 
     def test_projection_cannot_be_created_inside_source_repository(self) -> None:
         self._run_scenario(test_projection_cannot_be_created_inside_source_repository)
+
+    def test_projection_refuses_shared_writable_output_parent(self) -> None:
+        self._run_scenario(test_projection_refuses_shared_writable_output_parent)

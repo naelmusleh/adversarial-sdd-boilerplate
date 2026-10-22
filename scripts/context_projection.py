@@ -360,6 +360,12 @@ def create_projection(
     output_parent.mkdir(parents=True, exist_ok=True)
     if output_parent.is_symlink() or not output_parent.is_dir():
         raise ProjectionError("projection output parent must be a non-symlink directory")
+    parent_stat = output_parent.stat()
+    effective_uid = getattr(os, "geteuid", None)
+    if effective_uid is not None and parent_stat.st_uid != effective_uid():
+        raise ProjectionError("projection output parent must be owned by the current user")
+    if stat.S_IMODE(parent_stat.st_mode) & 0o022:
+        raise ProjectionError("projection output parent must not be group- or world-writable")
     projection_id = str(uuid.uuid4())
     stage = output_parent / f".context-projection-staging-{projection_id}"
     destination = output_parent / f"context-projection-{projection_id}"
