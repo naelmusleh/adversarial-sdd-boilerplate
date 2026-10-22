@@ -13,7 +13,7 @@ related-artifacts: FRAMEWORK-BACKLOG-001, FRAMEWORK-SPEC-001, DECISION-LOG-001, 
 
 ## Boundary
 
-This is a deterministic synthetic fixture exercise, not a measurement of model tokens, task success, production workload, or security isolation. It does not establish that a human or agent reviewer finds no missed contract. No sandbox is configured or tested; generated directories are context-minimization copies only.
+This is a deterministic synthetic fixture exercise, not a measurement of model tokens, task success, production workload, or security isolation. It does not establish that a human or agent reviewer finds no missed contract. No sandbox is configured or tested; generated directories are context-minimization copies only. Cleanup is designed for owned projections and concurrent framework invocations, not as a defense against a hostile same-user process that can replace directory entries in a writable parent during deletion.
 
 ## Fixture and observations
 

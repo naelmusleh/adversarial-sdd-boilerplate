@@ -258,6 +258,18 @@ def test_cleanup_rejects_symlinked_ancestor(tmp_path: Path) -> None:
     cleanup_projection(projection)
 
 
+def test_cleanup_recovers_quarantined_projection(tmp_path: Path) -> None:
+    root = make_repo(tmp_path)
+    policy = write_policy(tmp_path / "policy.json")
+    output = tmp_path / "projections"
+    manifest = create_projection(root, policy, "G-IMPL", ROLES[0], output)
+    projection = Path(manifest["projection_path"])
+    quarantine = projection.parent / f".context-projection-cleanup-{manifest['projection_id']}"
+    projection.rename(quarantine)
+    cleanup_projection(projection)
+    assert not quarantine.exists()
+
+
 def test_source_change_during_projection_discards_staged_view(tmp_path: Path) -> None:
     root = make_repo(tmp_path)
     policy = write_policy(tmp_path / "policy.json")
@@ -334,6 +346,9 @@ class ContextProjectionTests(unittest.TestCase):
 
     def test_cleanup_rejects_symlinked_ancestor(self) -> None:
         self._run_scenario(test_cleanup_rejects_symlinked_ancestor)
+
+    def test_cleanup_recovers_quarantined_projection(self) -> None:
+        self._run_scenario(test_cleanup_recovers_quarantined_projection)
 
     def test_source_change_during_projection_discards_staged_view(self) -> None:
         self._run_scenario(test_source_change_during_projection_discards_staged_view)

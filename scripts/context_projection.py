@@ -461,6 +461,19 @@ def create_projection(
 
 def cleanup_projection(projection_path: Path) -> None:
     target = projection_path.expanduser().absolute()
+    recovery_quarantine = False
+    if not target.exists() and not target.is_symlink():
+        prefix = ".context-projection-staging-" if target.name.startswith(".context-projection-staging-") else "context-projection-"
+        supplied_id = target.name.removeprefix(prefix)
+        try:
+            projection_uuid = str(uuid.UUID(supplied_id))
+        except (ValueError, AttributeError):
+            projection_uuid = ""
+        if projection_uuid:
+            quarantine_candidate = target.parent / f".context-projection-cleanup-{projection_uuid}"
+            if quarantine_candidate.exists() and not quarantine_candidate.is_symlink():
+                target = quarantine_candidate
+                recovery_quarantine = True
     current = Path(target.anchor)
     for component in target.parts[1:]:
         current = current / component
@@ -474,27 +487,7 @@ def cleanup_projection(projection_path: Path) -> None:
         raise ProjectionError(f"cleanup target cannot be resolved safely: {exc}") from exc
     if resolved != target:
         raise ProjectionError("cleanup target path does not match its canonical path")
-    owner_path = target / OWNER_NAME
-    manifest_path = target / MANIFEST_NAME
-    if not owner_path.exists():
-        raise ProjectionError("cleanup target is not a projection owned by this tool")
-    if owner_path.is_symlink() or (manifest_path.exists() and manifest_path.is_symlink()):
-        raise ProjectionError("projection ownership files must not be symlinks")
-    owner = _load_json(owner_path)
     staging = target.name.startswith(".context-projection-staging-")
-    if owner.get("tool") != TOOL_ID or not owner.get("projection_id"):
-        raise ProjectionError("cleanup target is not a projection owned by this tool")
-    try:
-        projection_uuid = str(uuid.UUID(owner["projection_id"]))
-    except (ValueError, TypeError, AttributeError) as exc:
-        raise ProjectionError("projection ownership ID is invalid") from exc
-    expected_name = f".context-projection-staging-{projection_uuid}" if staging else f"context-projection-{projection_uuid}"
-    if target.name != expected_name:
-        raise ProjectionError("cleanup target name does not match its projection ownership ID")
-    if not staging:
-        manifest = _load_json(manifest_path)
-        if owner.get("projection_id") != manifest.get("projection_id"):
-            raise ProjectionError("projection ownership does not match its manifest")
     # Walk from the filesystem root with O_NOFOLLOW at every component. A plain
     # open(parent_path, O_NOFOLLOW) protects only the last component.
     directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
@@ -510,17 +503,70 @@ def cleanup_projection(projection_path: Path) -> None:
             named_stat = os.stat(target.name, dir_fd=parent_fd, follow_symlinks=False)
             if (opened_stat.st_dev, opened_stat.st_ino) != (named_stat.st_dev, named_stat.st_ino):
                 raise ProjectionError("cleanup target changed during ownership verification")
-            named_owner = os.stat(OWNER_NAME, dir_fd=target_fd, follow_symlinks=False)
-            if not stat.S_ISREG(named_owner.st_mode):
-                raise ProjectionError("projection ownership record is not a regular file")
+            owner = _read_json_at(target_fd, OWNER_NAME)
+            if owner.get("tool") != TOOL_ID or not owner.get("projection_id"):
+                raise ProjectionError("cleanup target is not a projection owned by this tool")
+            try:
+                projection_uuid = str(uuid.UUID(owner["projection_id"]))
+            except (ValueError, TypeError, AttributeError) as exc:
+                raise ProjectionError("projection ownership ID is invalid") from exc
+            expected_names = {f".context-projection-staging-{projection_uuid}"} if staging else {
+                f"context-projection-{projection_uuid}", f".context-projection-cleanup-{projection_uuid}"
+            }
+            if target.name not in expected_names:
+                raise ProjectionError("cleanup target name does not match its projection ownership ID")
+            if not staging:
+                manifest = _read_json_at(target_fd, MANIFEST_NAME)
+                if owner.get("projection_id") != manifest.get("projection_id"):
+                    raise ProjectionError("projection ownership does not match its manifest")
             current_stat = os.stat(target.name, dir_fd=parent_fd, follow_symlinks=False)
             if (opened_stat.st_dev, opened_stat.st_ino) != (current_stat.st_dev, current_stat.st_ino):
                 raise ProjectionError("cleanup target changed before removal")
+            # Atomically move the name to a fresh quarantine, then prove the moved
+            # object is the directory whose ownership was checked before deleting it.
+            quarantine = target.name if recovery_quarantine else f".context-projection-cleanup-{projection_uuid}"
+            if not recovery_quarantine:
+                if os.path.lexists(target.parent / quarantine):
+                    raise ProjectionError("a recoverable cleanup directory already exists")
+                os.rename(target.name, quarantine, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+            moved_fd = os.open(quarantine, directory_flags, dir_fd=parent_fd)
+            try:
+                moved_stat = os.fstat(moved_fd)
+                if (opened_stat.st_dev, opened_stat.st_ino) != (moved_stat.st_dev, moved_stat.st_ino):
+                    try:
+                        os.rename(quarantine, target.name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+                    except OSError:
+                        pass
+                    raise ProjectionError("cleanup target was replaced; refusing to remove the replacement")
+            finally:
+                os.close(moved_fd)
+            shutil.rmtree(quarantine, dir_fd=parent_fd)
         finally:
             os.close(target_fd)
-        shutil.rmtree(target.name, dir_fd=parent_fd)
     finally:
         os.close(parent_fd)
+
+
+def _read_json_at(directory_fd: int, name: str) -> dict[str, Any]:
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        fd = os.open(name, flags, dir_fd=directory_fd)
+    except OSError as exc:
+        if name == OWNER_NAME:
+            raise ProjectionError("cleanup target is not a projection owned by this tool") from exc
+        raise ProjectionError(f"projection ownership file is unavailable: {name}") from exc
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise ProjectionError(f"projection ownership file is not regular: {name}")
+        chunks: list[bytes] = []
+        while True:
+            chunk = os.read(fd, 65536)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        return _parse_json(b"".join(chunks), f"projection/{name}")
+    finally:
+        os.close(fd)
 
 
 def main(argv: list[str] | None = None) -> int:
