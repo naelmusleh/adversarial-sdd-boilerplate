@@ -3,7 +3,7 @@ id: WORKFLOW-AI-ENGINEERING-001
 type: workflow
 title: Execute one approved application backlog item
 status: draft
-version: 0.2
+version: 0.3
 created: 2026-10-07
 updated: 2026-10-20
 related-artifacts: CAP-003, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001
@@ -52,6 +52,7 @@ If any required input is absent, do not infer it from a similarly named task or 
 3. Determine whether the repository expects an isolated branch or another review mechanism. Follow its instructions; do not invent a branch naming rule or create a remote branch unless the task and available authorization support it.
 4. Confirm whether standing or task-specific authorization covers pushing to the configured remote. Do not ask again when a valid standing authorization already covers this repository and branch; do not push when authorization is absent.
 5. List the selected task's acceptance criteria and their source links. For each, identify the intended code/configuration/documentation change and the check or observation that can demonstrate it.
+6. If the repository has an approved context-projection policy for the active gate and role, generate a projection with the framework's `scripts/context_projection.py` using the exact policy file. A missing policy means no projection is configured; a missing required path or invalid path blocks projection creation. Preserve all requirements, acceptance criteria, relevant source, tests, fixtures, and build/test dependencies needed for the selected task. Treat the generated directory as context minimization only: a copy or symlink view does not prevent tools from reading other paths on the host. Review the manifest's source revision, policy/contract/profile revisions, included/excluded paths, and digests before using it. Remove only tool-owned projections with the helper's cleanup command after the task.
 
 ### 3. Resolve readiness before coding
 

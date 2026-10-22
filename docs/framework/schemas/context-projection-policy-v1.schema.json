@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://adversarial-sdd.example/schemas/context-projection-policy-v1.schema.json",
+  "title": "Adversarial SDD Context Projection Policy v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy_id",
+    "policy_revision",
+    "contract_version",
+    "profile_revision",
+    "policies"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "policy_id": { "type": "string", "minLength": 1 },
+    "policy_revision": { "type": "string", "minLength": 1 },
+    "contract_version": { "type": "string", "minLength": 1 },
+    "profile_revision": { "type": "string", "minLength": 1 },
+    "policies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["gate", "role", "required_paths", "optional_paths", "excluded_paths"],
+        "properties": {
+          "gate": {
+            "enum": ["G-INTENT", "G-SETUP", "G-REQ", "G-FEAS", "G-COVERAGE", "G-CX", "G-ARCH", "G-IMPL", "G-RELEASE", "G-OPERATE"]
+          },
+          "role": { "type": "string", "minLength": 1 },
+          "required_paths": { "$ref": "#/$defs/paths", "minItems": 1 },
+          "optional_paths": { "$ref": "#/$defs/paths" },
+          "excluded_paths": { "$ref": "#/$defs/paths" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "paths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+      }
+    }
+  }
+}

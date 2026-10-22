@@ -3,7 +3,7 @@ id: FRAMEWORK-SPEC-001
 type: framework-specification
 title: Adversarial SDD Framework v1 scope and behavior
 status: draft
-version: 0.15
+version: 0.16
 created: 2026-10-07
 updated: 2026-10-21
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001
@@ -92,6 +92,9 @@ Requirement statements in the tables below use uppercase RFC 2119 keywords for m
 | FR-FW-019 | An initialized application MUST expose a deterministic local gate-transition command that consumes its pinned, approved gate contract and validated gate-run records, reports permitted next actions, and rejects unauthorized or illegal transitions. A downstream transition MUST be rejected when a prerequisite is absent, failed, blocked, or stale under the contract's exact-revision rules. The command MUST NOT define a second policy source or infer PASS from model output. | Positive and negative fixtures cover all ten gates, prerequisite states, exact source/artifact revisions, authorization, reruns, and invalidation against the pinned contract version. |
 | FR-FW-020 | Gate transitions MUST persist as append-only records through atomic, concurrency-safe updates. Stale-source and concurrent writers MUST fail or recover without partial/corrupt authoritative state. Any cache MUST be regenerable from validated gate records and MUST NOT become an authority. | Fault-injection and contention tests demonstrate complete old-or-new records, safe stale-run rejection, deterministic recovery, and cache reconstruction from canonical gate records. |
 | FR-FW-021 | Adversarial review runs MUST freeze their inputs and record reviewer/mode, contract version, findings, dispositions, and rerun identity. Review output MUST remain advisory and separate from verified CI evidence, gate transition authority, and owner authorization. The core validator MUST require no provider credentials; optional review adapters MUST be explicitly configured and separately permissioned. | Review-run schema and tests verify frozen digests, identity/mode, findings/dispositions and reruns; negative cases prove review output alone cannot pass a gate, substitute trusted CI, or authorize an owner decision. |
+| FR-FW-022 | A context projection MUST be generated only from a versioned policy keyed by gate and role. Missing or ambiguous required inputs MUST fail closed with actionable diagnostics; optional inputs and exclusions MUST be explicit. | Policy fixtures cover each supported gate/role, required/optional/forbidden paths, missing required paths, ambiguous matches, and deterministic refusal behavior. |
+| FR-FW-023 | Each projection MUST record the exact source revision, policy and contract/profile revisions, included and excluded paths with reasons, and SHA-256 digests for included files. Generation and cleanup MUST reject symlink/path escapes, preserve canonical source artifacts, and recover safely from interrupted/concurrent runs. | Positive/negative fixtures verify path containment, symlink rejection, digests, manifest completeness, concurrent creation, interruption cleanup, and unchanged canonical files. |
+| FR-FW-024 | A generated projection MUST identify itself as context minimization only. It MUST NOT claim access isolation unless a separately named OS/container sandbox has demonstrated denial of excluded-path reads for the supported host/runtime. | Manifest and CLI output default to `context-minimization-only`; fixtures reject unsupported isolation claims, while any future sandbox claim requires separately scoped host-specific denial evidence. |
 
 ### Non-functional requirements
 
