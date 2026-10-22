@@ -41,8 +41,14 @@ At this revision, local checks passed: 15 focused gate-runner tests, 130 Python 
 
 The runner currently consumes only gate-contract v1.0, an explicitly approved contract version. It rejects draft v1.1/v1.2 and does not migrate existing app locks. Filesystem locks coordinate cooperating writers only; direct writes and hook bypass remain outside their control. Review metadata does not authenticate reviewer identity or cognitive independence.
 
+## Follow-up review — revision `591847987a15dff30c4b6501b4296648995252ae`
+
+- **Reviewer:** `/root/fw021_review`, read-only follow-up against the exact revision above.
+- **ADV-014-01 — CLOSED for runner-plumbing route coverage.** `tests/test_gate_runner.py::test_all_ten_gate_routes_accept_isolated_synthetic_not_applicable_records` builds and validates an accepted chain through all ten gates, pins exact upstream run IDs/versions/digests, and verifies that each downstream candidate is rejected while its immediate prerequisite is `in-progress`. Each fixture is explicitly synthetic `not-applicable` with a fixture-owner decision. This demonstrates positive/negative runner plumbing only; it does not establish application applicability, application evidence, or a PASS route.
+- **ADV-014-02 — OPEN.** Hosted branch-protection/ruleset state and the invalid-transition merge-blocking rehearsal remain unverified. The connected GitHub integration previously returned HTTP 403 when reading branch protection. A passing pipeline does not establish merge enforcement.
+- **Follow-up disposition:** The reviewer accepts this route-coverage evidence for the narrow original finding. FW-TASK-026 remains in progress until hosted policy rehearsal and other required acceptance evidence are complete.
+
 ## Required follow-up
 
-1. Add legitimate positive end-to-end record routes for all ten gates, using evidence-valid fixtures and preserving the rule that fixtures do not assert product PASS without the contract-required evidence.
-2. Have a repository administrator/maintainer expose or configure the required hosted rules, then rehearse that an invalid transition check blocks merge and record the observed settings and exact run.
-3. Obtain a fresh independent review against the final exact revision and update this report and the FW-TASK-026 milestone. Until then, FW-TASK-026 remains in progress.
+1. Have a repository administrator/maintainer expose or configure the required hosted rules, then rehearse that an invalid transition check blocks merge and record the observed settings and exact run.
+2. After the hosted-policy evidence is available, obtain a fresh independent review against the exact final revision and update this report and the FW-TASK-026 milestone. Until then, FW-TASK-026 remains in progress.
