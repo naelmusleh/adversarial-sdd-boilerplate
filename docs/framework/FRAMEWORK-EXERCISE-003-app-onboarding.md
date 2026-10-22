@@ -3,7 +3,7 @@ id: FRAMEWORK-EXERCISE-003
 type: framework-exercise
 title: Progressive application onboarding and bootstrap regression exercise
 status: in-review
-version: 1.1
+version: 1.3
 created: 2026-10-21
 updated: 2026-10-21
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, WORKFLOW-DISCOVERY-001, CAP-004
@@ -98,6 +98,16 @@ The corresponding machine-readable expectations live in [`tests/fixtures/fw021_d
 
 **FW-TASK-021 scripted-fixture checkpoint — 2026-10-21:** The follow-up passed 94 Python tests, `Validated 48 artifact(s).`, `npm run typecheck`, 30 Vitest tests, configured coverage at 100% for statements/branches/functions/lines, `npm run build`, and `git diff --check`. Commit `d2e520f28373502de634d98312cc88c980fd3418` was pushed to `codex/v2-backlog-roadmap`; [Verify Pipeline run 39668502464](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39668502464) completed successfully for that commit. Independent review passes criteria 1–5, 7, and 8 within synthetic bounds; criterion 6 remains partial because no actual owner-facing handoff was observed. FW-TASK-021 remains in progress.
 
+**Observed owner-facing handoff — Infinite Gallery — 2026-10-21:** The following concise setup review was presented in the active owner conversation (observed handoff, not a synthetic fixture):
+
+> **Intent:** A personal, private hosted gallery with sign-in across devices; upload JPEG/JPG, PNG, WebP, or HEIC up to 50 MB; shuffled looping collage; phone/desktop and about 1,000 pictures; additions join the next cycle, removals disappear immediately from current visible/cached views; accessible loop cue; no sharing.
+> **Open:** Hosting/storage/identity/session/access controls, HEIC conversion and original retention, backup retention/deletion, metadata, quota, exact accessibility/browser matrix, performance thresholds, and retry details.
+> **Decisions requested now:** None. Future provider/privacy/HEIC/retention choices require feasibility evidence.
+> **Generated project files:** Mission, constitution, specification, design contract, backlog, decisions and log, review/gate records, setup instructions, artifact helper, workflows, and framework references.
+> **Gate/next action:** G-INTENT, local-only G-SETUP, and G-REQ are passed. Next is design and provider/privacy feasibility with synthetic data only. Provider commitment, implementation dependent on unresolved feasibility, real-photo intake, and deployment remain gated.
+
+The app's G-SETUP record identifies `/Users/naelmusleh/Documents/Codex/infinite-gallery` as a separate local repository with no commit or remote. No commit, remote creation, push, or publication was performed after this handoff. This supplies a real owner-facing example for FW-TASK-021 criterion 6; it does not establish that the framework's scripted intake is consistently followed by an AI or that the app is implementation-ready.
+
 **Earlier failed attempts:** Ordinary recursive template copying overwrote the generated locked gate template and was rejected by app validation. macOS `cp -Rn` then returned non-zero on the expected no-clobber collision. The documented Python-standard-library copier fixed both issues; the passing run above is after that correction.
 
 ## Limitations
@@ -106,3 +116,6 @@ The corresponding machine-readable expectations live in [`tests/fixtures/fw021_d
 - The exercise does not establish owner comprehension, real-market demand, successful provider access, stack support, or product feasibility.
 - Existing app migration remains separate from initialization. The initializer deliberately refuses non-empty targets.
 - The recorded run checked the exact generated file inventory, draft status through validator behavior, named stale markers, and locked-file digests. It did not perform a general scan for every possible stale-history or credential-like string; do not claim comprehensive secret or historical-state detection.
+
+
+**Independent criterion-6 verification — 2026-10-21:** Reviewer `/root/fw021_review`, independent of the author, assessed the observed handoff and the Infinite Gallery G-SETUP boundary. **Criterion 6: PASS for this recorded setup.** The handoff covers captured intent, unresolved items, decisions requested (none at that time), generated project artifact groups, current gate, and next permitted action; the app setup record shows no commit or remote, and no commit/remote/push/publication followed the handoff. This is an instance-level pass, not evidence of consistent framework/AI behavior. Combined with the earlier independent review passing criteria 1–5, 7, and 8 within the synthetic scope, all eight FW-TASK-021 acceptance criteria are now met at their stated boundaries. This finding does not claim real-owner usability testing, consistent model behavior, or application implementation readiness.
