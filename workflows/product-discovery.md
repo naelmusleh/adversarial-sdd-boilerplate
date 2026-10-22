@@ -3,10 +3,10 @@ id: WORKFLOW-DISCOVERY-001
 type: workflow
 title: Product idea framing and requirements discovery
 status: draft
-version: 0.3
+version: 0.4
 created: 2026-10-07
 updated: 2026-10-21
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, WORKFLOW-LIFECYCLE-001, FRAMEWORK-GATE-CONTRACT-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, WORKFLOW-LIFECYCLE-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-EXERCISE-004
 ---
 
 # WORKFLOW-DISCOVERY-001 — Product idea framing and requirements discovery
@@ -44,11 +44,36 @@ Keep a compact working evidence map while discovering:
 | Agent inference | Reasoned conclusion not directly observed | Basis, confidence, and what could disprove it |
 | Unknown | Not supplied or not verifiable yet | Why it matters, who/evidence can resolve it, and dependent work |
 
-Do not make the owner fill a fixed questionnaire. Start from the material already provided, draft the parts that are safe to infer, and ask only the smallest bundle of unresolved questions that changes intent, a consequential decision, or the next action. The owner may answer “unknown”; preserve it as unknown and continue unaffected work. Ask about platforms, data sensitivity, providers, regions, budget, license, and operations only when those topics are relevant to the stated product or necessary to choose the immediate setup action. Detailed provider/service feasibility belongs to G-FEAS and FW-TASK-022; setup must not force premature architecture choices.
+Do not make the owner fill a fixed questionnaire. Start from the material already provided, draft the parts that are safe to infer, and ask only the smallest bundle of unresolved questions that changes intent, a consequential decision, or the next action. The owner may answer “unknown”; preserve it as unknown and continue unaffected work. Ask about platforms, data sensitivity, providers, regions, budget, license, and operations only when those topics are relevant to the stated product or necessary to choose the immediate setup action. Run the bounded pre-specification dependency screen below when a material promise depends on an external system, service, provider, data source, permission, or operating prerequisite. Full feasibility evidence and G-FEAS remain later work; setup must not force premature architecture choices.
 
 For repeat setup, compare the current input and observed repository against accepted decisions and the existing backlog. Reopen only questions affected by changed context or contradicting evidence; preserve unaffected decisions and identify which dependent requirements/tasks need reconsideration. Store accepted product intent in the canonical mission/decision/specification files and work status in the canonical backlog/gate records. Do not create a parallel onboarding tracker or represent a conversational summary as durable approval.
 
 After each setup action, rescan the repository and summarize captured intent, provenance-labeled unknowns, decisions still needed, files actually created/changed, current gate state, and the next permitted action. A generated file or successful structural validator is not owner approval and does not pass G-INTENT, G-SETUP, or G-REQ.
+
+## Early dependency screen — before specification lock
+
+Use this bounded screen when a material outcome or likely requirement depends on an external system, model, service, provider, data source, permission, platform capability, legal/data right, cost, or operational prerequisite. It may run while G-INTENT and requirements drafting proceed. It is discovery evidence only; it is not a formal feasibility assessment or G-FEAS result.
+
+For each material dependency, create a probe with a stable `DEP-XXX` key and record:
+
+- the product promise or pre-specification intent-text anchor it affects; add stable requirement IDs once they exist rather than inventing them early;
+- the narrow claim/question and the scope being checked (capability, account access, region, terms/rights, cost, data flow, operation, or fallback);
+- evidence needed, source/validator, source date/access date (or dated `not checked` observation), result, confidence, and explicit limits; distinguish owner statement/decision, observed fact, primary-source research, inference, and unknown;
+- classification as `supported`, `unsupported`, `unknown`, `constrained`, or `not-applicable`;
+- downstream task IDs and each task's dependency state (`blocked`, `unblocked`, or `conditional`), owner, next action, and state-change trigger; conditional work also states its condition and safe-work boundary;
+- the decision or research route and the consequence if the dependency remains unresolved or evidence is negative.
+
+Apply classifications narrowly:
+
+- **Supported:** primary evidence confirms the exact scoped capability. State what it does not prove. A provider's documentation can establish that an endpoint exists, but does not by itself establish this project's account access, permission, region, data rights, acceptable cost, security, or operating readiness; create separate probes for those claims.
+- **Unsupported:** direct, scope-specific evidence establishes that the required capability is unavailable or incompatible (for example, an authenticated test response or a provider's end-of-life notice). Missing documentation, missing credentials, or an unattempted check is not proof of unavailability.
+- **Unknown:** evidence is absent, access is unavailable, or the check cannot be performed safely. Never ask for credentials in chat or store/read credential values for discovery; record the secure setup needed and keep dependent promises blocked.
+- **Constrained:** a capability exists only subject to a material price, quota, region, permission, license, data-use, reliability, or operational condition. State the constraint and safe boundary; keep dependent tasks blocked or conditional until the condition is resolved.
+- **Not applicable:** the owner-approved scope excludes the dependency. Link the source decision/scope evidence and explain which dependent work is omitted; do not use this category for difficult, costly, or unverified work.
+
+During intent/requirements drafting, link probes to a concise intent-text anchor if requirement IDs do not exist. When requirement and backlog IDs are created, reconcile each probe to those stable IDs before the specification is treated as settled. Keep unaffected work moving, but mark only tasks that are independent of the dependency as `unblocked`. A task whose investigation can continue is not thereby unblocked for provider-dependent promises. For `conditional`, document the exact condition, safe work boundary, and event that reopens the decision.
+
+Store the screen in a traceable section of the draft specification or a linked dependency table; avoid a second canonical tracker. Before specification lock, carry verified constraints into the requirements, link unresolved probes to dependent tasks, and identify the evidence needed in the later feasibility register. If the project is not ready to specify, preserve the probe as discovery output. Do not claim G-FEAS PASS, provider selection, or technical feasibility from this screen. See [FRAMEWORK-EXERCISE-004](../docs/framework/FRAMEWORK-EXERCISE-004-pre-spec-dependency-discovery.md) for source-linked and synthetic examples.
 
 ## Pass A — Frame the idea (G-INTENT)
 

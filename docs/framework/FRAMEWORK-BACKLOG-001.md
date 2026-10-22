@@ -3,10 +3,10 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 4.2
+version: 4.3
 created: 2026-10-07
 updated: 2026-10-21
-related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, DECISION-LOG-001
+related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, DECISION-LOG-001
 ---
 
 # FRAMEWORK-BACKLOG-001 — Remaining work to complete Adversarial SDD Framework v1
@@ -524,8 +524,10 @@ The following candidates incorporate the review of [Fadi88/one-man-startup](http
   4. The discovery pass can continue independent work while blocking only dependent promises/tasks; each blocker has an owner or research route and a state-change trigger.
   5. Product requirements are revised to reflect verified constraints before the formal G-FEAS decision; only the existing gate contract can authorize G-FEAS PASS.
   6. Tests/fixtures cover an available dependency with primary evidence, an unavailable provider, missing credentials/permissions, a cost constraint, and an explicitly non-applicable dependency; each asserts the expected classification and downstream effect.
-- **Evidence:** Updated discovery workflow and feasibility handoff contract; source-linked sample register; positive/negative fixtures with exact diagnostics or routing outcomes; independent review for false capability claims and accidental early PASS.
-- **State:** **TODO — proposed v2; depends on FW-TASK-021 for the polished intake handoff.**
+- **Evidence:** Updated discovery workflow and feasibility handoff contract; source-linked [FRAMEWORK-EXERCISE-004](FRAMEWORK-EXERCISE-004-pre-spec-dependency-discovery.md); deterministic positive/negative fixture and tests for exact classification/downstream routing; independent review for false capability claims and accidental early PASS.
+- **State:** **Complete — all six acceptance criteria met at their stated boundaries.** Active gate: G-IMPL for the bounded discovery procedure, feasibility handoff, source-linked exercise, and deterministic fixtures. Approved scope was FW-TASK-022 only; FW-TASK-021 is complete. This does not approve the full framework v2 scope, assign v2 requirement IDs, or claim v2 release approval. No provider choice is made for Infinite Gallery.
+- **Implementation checkpoint (2026-10-21):** Updated product discovery with an early dependency screen and linked feasibility handoff; added source-linked Google Places capability/billing evidence, synthetic routing examples for unavailable endpoint, absent credentials, cost constraint, and owner-approved not-applicable scope, plus seven deterministic tests. The Google evidence is limited to documented autocomplete and billing conditions; project access, cost acceptability, and real integration remain unverified. Focused FW-022 tests pass (7); full Python suite passes (101); artifact validation reports 49 artifacts; `git diff --check` passes. Independent reviewer `/root/fw021_review` passes all six criteria after requesting and verifying explicit confidence and a dated `not checked` access observation. This process evidence does not pass G-FEAS or choose a provider.
+- **Publication/checkpoint evidence:** Pending scoped commit, push, and exact-commit Verify Pipeline result.
 
 ### FW-TASK-023 — Govern assumptions and falsifiable product experiments
 

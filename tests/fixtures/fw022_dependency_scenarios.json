@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "scope": "pre-specification dependency screening only",
+  "evidence_boundary": "Synthetic routing scenarios; only the linked Google developer documentation is real primary-source evidence. Fixtures do not prove account access, provider availability to a particular project, cost acceptability, or G-FEAS passage.",
+  "formal_g_feas_result": "not-run",
+  "scenarios": [
+    {
+      "id": "documented-capability-with-access-open",
+      "synthetic_product_context": "A repair-shop app is considering address autocomplete for delivery entry.",
+      "probes": [
+        {
+          "probe_id": "DEP-PLACE-CAPABILITY",
+          "claim": "Google Places API (New) documents autocomplete capability.",
+          "classification": "supported",
+          "confidence": "high for documented capability; no inference about this project's access",
+          "evidence": [
+            {
+              "kind": "primary-provider-documentation",
+              "url": "https://developers.google.com/maps/documentation/places/web-service/overview/",
+              "accessed": "2026-10-21",
+              "supports": "The API documents autocomplete endpoints for place predictions.",
+              "limits": "Does not prove this project has an account, enabled service, permissions, regional suitability, acceptable price, or approved data handling."
+            }
+          ],
+          "requirement_anchors": [
+            "intent-claim:delivery-address-autocomplete"
+          ],
+          "requirement_ids": [],
+          "downstream_tasks": [
+            {
+              "task_id": "APP-TASK-ADDRESS-UX",
+              "state": "unblocked",
+              "reason": "Provider-neutral field and interaction exploration does not require a provider account.",
+              "state_change_trigger": "Reassess if the UX starts depending on provider-specific predictions or attribution."
+            }
+          ],
+          "owner": "Product agent; owner decides whether to include autocomplete in scope",
+          "next_action": "Keep provider-independent UX exploration available; investigate provider/account separately.",
+          "downstream_effect": "Provider-neutral UX exploration may continue; no provider integration is promised."
+        },
+        {
+          "probe_id": "DEP-PLACE-ACCESS",
+          "claim": "The project can authenticate and enable the API.",
+          "classification": "unknown",
+          "confidence": "not assessed; no authorized project account probe",
+          "evidence": [],
+          "observation": {
+            "status": "not checked",
+            "date": "2026-10-21",
+            "reason": "No authorized project account or permission probe was available."
+          },
+          "requirement_anchors": [
+            "intent-claim:delivery-address-autocomplete"
+          ],
+          "requirement_ids": [],
+          "downstream_tasks": [
+            {
+              "task_id": "APP-TASK-ADDRESS-INTEGRATION",
+              "state": "blocked",
+              "reason": "No project account or permission check has been authorized or observed.",
+              "state_change_trigger": "Owner provisions access through the approved secure channel and an authorized probe records the result."
+            }
+          ],
+          "owner": "Product owner for account authorization; product agent for secure setup request",
+          "next_action": "Do not request or read a credential in chat; name the secure setup needed.",
+          "credential_value_read": false,
+          "downstream_effect": "Integration remains blocked while provider-neutral design can continue."
+        }
+      ]
+    },
+    {
+      "id": "provider-endpoint-unavailable",
+      "synthetic_product_context": "A chosen parts-catalog sandbox endpoint is checked in a deterministic test fixture.",
+      "probes": [
+        {
+          "probe_id": "DEP-PARTS-ENDPOINT",
+          "claim": "The selected sandbox endpoint can serve the required catalog lookup.",
+          "classification": "unsupported",
+          "confidence": "high for this synthetic fixture response only",
+          "evidence": [
+            {
+              "kind": "synthetic-provider-probe-fixture",
+              "fixture_id": "provider-response:HTTP-410",
+              "accessed": "2026-10-21",
+              "supports": "The fixture returns HTTP 410 for the exact sandbox endpoint under test.",
+              "limits": "Synthetic response only; says nothing about any real provider or other endpoint."
+            }
+          ],
+          "requirement_anchors": [
+            "intent-claim:parts-catalog-lookup"
+          ],
+          "requirement_ids": [],
+          "downstream_tasks": [
+            {
+              "task_id": "APP-TASK-PARTS-INTEGRATION",
+              "state": "blocked",
+              "reason": "The exact selected endpoint in this scenario is unavailable.",
+              "state_change_trigger": "A verified supported endpoint or owner-approved alternative is documented."
+            }
+          ],
+          "owner": "Product owner selects scope alternative; product agent validates evidence",
+          "next_action": "Defer live lookup or investigate an explicitly scoped alternative.",
+          "downstream_effect": "Do not promise live catalog results; independent manual inventory work can continue."
+        }
+      ]
+    },
+    {
+      "id": "missing-credentials-or-permission",
+      "synthetic_product_context": "A private provider integration has no configured access in a test environment.",
+      "probes": [
+        {
+          "probe_id": "DEP-PRIVATE-API-ACCESS",
+          "claim": "The project can access its private inventory API.",
+          "classification": "unknown",
+          "confidence": "high that this test environment lacks the credential; no inference about provider availability",
+          "evidence": [
+            {
+              "kind": "synthetic-environment-observation",
+              "fixture_id": "environment:credential-absent",
+              "accessed": "2026-10-21",
+              "supports": "The test environment reports the expected credential is absent; no credential value was read.",
+              "limits": "Does not establish that the provider or API is unavailable."
+            }
+          ],
+          "requirement_anchors": [
+            "intent-claim:private-inventory-sync"
+          ],
+          "requirement_ids": [],
+          "downstream_tasks": [
+            {
+              "task_id": "APP-TASK-INVENTORY-INTEGRATION",
+              "state": "blocked",
+              "reason": "Authentication/authorization cannot be verified without approved access.",
+              "state_change_trigger": "Owner supplies access through the approved secret manager and a permitted probe verifies scope."
+            }
+          ],
+          "owner": "Product owner for access; product agent for mock-only work",
+          "next_action": "Keep integration blocked; continue mock-only UX; use a secure access request if needed.",
+          "credential_value_read": false,
+          "downstream_effect": "Live sync is blocked; mock-only UX remains unblocked.",
+          "unaffected_tasks": [
+            {
+              "task_id": "APP-TASK-INVENTORY-MOCK-UX",
+              "state": "unblocked",
+              "reason": "Mock-only interaction work does not depend on the private API.",
+              "state_change_trigger": "If mock UX is replaced with live data, this dependency must be re-evaluated."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cost-constrained-provider",
+      "synthetic_product_context": "The proposed address-autocomplete provider requires billing and uses usage-based pricing; the owner has not supplied a budget.",
+      "probes": [
+        {
+          "probe_id": "DEP-PLACE-COST",
+          "claim": "The provider can be used within an approved cost limit.",
+          "classification": "constrained",
+          "confidence": "high for documented billing requirement; project-specific affordability not assessed",
+          "evidence": [
+            {
+              "kind": "primary-provider-documentation",
+              "url": "https://developers.google.com/maps/documentation/places/web-service/usage-and-billing/",
+              "accessed": "2026-10-21",
+              "supports": "The documentation states billing must be enabled and pricing is usage/SKU based.",
+              "limits": "No project-specific usage estimate or owner budget is available; pricing is not assessed for the proposed workload."
+            }
+          ],
+          "requirement_anchors": [
+            "intent-claim:delivery-address-autocomplete"
+          ],
+          "requirement_ids": [],
+          "downstream_tasks": [
+            {
+              "task_id": "APP-TASK-ADDRESS-LIVE-PILOT",
+              "state": "conditional",
+              "condition": "Only continue with provider-neutral design or synthetic/mock data until owner-approved budget and workload estimate exist.",
+              "safe_work_boundary": "No billable calls, live account configuration, or real customer data transfer.",
+              "state_change_trigger": "Owner approves a cost ceiling after a workload-based estimate and current pricing review."
+            }
+          ],
+          "owner": "Product owner decides budget; product agent researches workload/pricing",
+          "next_action": "Estimate request volume using synthetic assumptions, verify current pricing, then present decision options.",
+          "downstream_effect": "Mock-only design remains allowed; billable/live integration stays conditional."
+        }
+      ]
+    },
+    {
+      "id": "explicitly-not-applicable-dependency",
+      "synthetic_product_context": "An owner-approved web-only scope excludes native iOS distribution.",
+      "probes": [
+        {
+          "probe_id": "DEP-IOS-STORE",
+          "claim": "App Store enrollment and review requirements apply to the pilot.",
+          "classification": "not-applicable",
+          "confidence": "high within the synthetic owner-approved web-only scope",
+          "evidence": [
+            {
+              "kind": "synthetic-owner-decision",
+              "decision_id": "DECISION-SYNTH-WEB-ONLY",
+              "accessed": "2026-10-21",
+              "supports": "The owner-approved scope in this synthetic case is web-only and excludes native iOS distribution.",
+              "limits": "Synthetic example only; each real app needs its own owner-approved scope evidence."
+            }
+          ],
+          "requirement_anchors": [
+            "scope:web-only"
+          ],
+          "requirement_ids": [],
+          "downstream_tasks": [],
+          "unaffected_tasks": [
+            {
+              "task_id": "APP-TASK-WEB-DISCOVERY",
+              "state": "unblocked",
+              "reason": "Web discovery has no iOS store dependency."
+            }
+          ],
+          "owner": "Product owner",
+          "next_action": "Do not create a mobile-store task unless scope changes.",
+          "downstream_effect": "No iOS-store work is opened; web discovery proceeds. Reopen if native iOS enters scope."
+        }
+      ]
+    }
+  ]
+}
