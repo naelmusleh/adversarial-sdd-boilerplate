@@ -3,9 +3,9 @@ id: DECISION-LOG-001
 type: decision-log
 title: Reusable template decisions
 status: active
-version: 0.6
+version: 0.7
 created: 2026-10-10
-updated: 2026-10-21
+updated: 2026-10-22
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-EXERCISE-005, FRAMEWORK-GATE-CONTRACT-001
 ---
 
@@ -19,6 +19,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-EXERCISE
 | DECISION-020 | 2026-10-21 | Accept G-INTENT and G-SETUP as the only eligible synthetic PASS fixtures for FW-TASK-020's product-free pilot. | Owner Nael Musleh accepted this pilot-specific reading of “where permitted.” Other gates may have synthetic route/schema probes, but their pilot records remain `in-progress`; no product evidence or PASS is implied. This does not waive or change any gate requirement for initialized applications or amend the versioned gate contract. Revisit only if the FW-TASK-020 scope changes. | FRAMEWORK-ADV-013, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-BACKLOG-001 |
 | DECISION-021 | 2026-10-21 | Approve the bounded v2 scope for FW-TASK-026 and requirements FR-FW-019 through FR-FW-021. | Owner Nael Musleh approved a local transactional transition runner using the pinned approved contract, recoverable append-only gate state, and separately frozen advisory review records. The selected scope excludes other proposed v2 tasks. Approval does not authorize changes to normative gate semantics or adoption of a draft contract version without a separate reviewed decision. | FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001 |
 | DECISION-022 | 2026-10-21 | Approve bounded v2 scope for FW-TASK-027 and requirements FR-FW-022 through FR-FW-024. | Owner Nael Musleh approved versioned gate/role context policies, fail-closed required-input handling, auditable source-bound projections with path/digest evidence and safe cleanup, and truthful context-minimization claims. This scope excludes FW-TASK-028 and other v2 tasks. No OS/container access-isolation claim or sandbox adapter is authorized; any future claim requires separately named host/runtime denial evidence and review. | FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, WORKFLOW-AI-ENGINEERING-001 |
+| DECISION-023 | 2026-10-22 | Approve the bounded FW-TASK-013 scope and requirements FR-FW-025 through FR-FW-027. | Owner Nael Musleh approved a runtime-neutral governance core, explicit versioned Next.js/TypeScript, FastAPI/Python, and Rust/Axum profiles with truthful unsupported-check reporting, and versioned cross-module interfaces with composition/leakage fixtures. Repository splitting, application migration, FW-TASK-028, and FW-TASK-024 are excluded. This opens and records the task scope; implementation remains blocked until the approved multi-platform sample-project prerequisite is evidenced, and no sample contract may be inferred or created under this decision. | FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001 |
 
 ## Decision discipline
 

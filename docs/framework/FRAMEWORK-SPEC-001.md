@@ -3,9 +3,9 @@ id: FRAMEWORK-SPEC-001
 type: framework-specification
 title: Adversarial SDD Framework v1 scope and behavior
 status: draft
-version: 0.16
+version: 0.17
 created: 2026-10-07
-updated: 2026-10-21
+updated: 2026-10-22
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001
 ---
 
@@ -25,7 +25,7 @@ The v1 outcome is that a project can start with a product idea, create and maint
 
 ## Approved bounded v2 increment
 
-On 2026-10-21, the owner approved only FW-TASK-026 and requirements FR-FW-019 through FR-FW-021 for implementation. This increment adds a local transactional lifecycle gate runner and a separate advisory review-run record. It does not authorize other proposed v2 tasks or adoption of a draft gate-contract version.
+On 2026-10-21, the owner approved the bounded FW-TASK-026 scope and requirements FR-FW-019 through FR-FW-021, and the bounded FW-TASK-027 scope and requirements FR-FW-022 through FR-FW-024. On 2026-10-22, the owner approved the FW-TASK-013 scope and requirements FR-FW-025 through FR-FW-027 (DECISION-023). FW-TASK-013 implementation remains blocked until its approved multi-platform sample-project prerequisite is evidenced. These approvals do not authorize FW-TASK-028, FW-TASK-024, other proposed v2 tasks, or adoption of a draft gate-contract version.
 
 ## Current baseline
 
@@ -95,6 +95,9 @@ Requirement statements in the tables below use uppercase RFC 2119 keywords for m
 | FR-FW-022 | A context projection MUST be generated only from a versioned policy keyed by gate and role. Missing or ambiguous required inputs MUST fail closed with actionable diagnostics; optional inputs and exclusions MUST be explicit. | Policy fixtures cover each supported gate/role, required/optional/forbidden paths, missing required paths, ambiguous matches, and deterministic refusal behavior. |
 | FR-FW-023 | Each projection MUST record the exact source revision, policy and contract/profile revisions, included and excluded paths with reasons, and SHA-256 digests for included files. Generation and cleanup MUST reject symlink/path escapes, preserve canonical source artifacts, and recover safely from interrupted/concurrent runs. | Positive/negative fixtures verify path containment, symlink rejection, digests, manifest completeness, concurrent creation, interruption cleanup, and unchanged canonical files. |
 | FR-FW-024 | A generated projection MUST identify itself as context minimization only. It MUST NOT claim access isolation unless a separately named OS/container sandbox has demonstrated denial of excluded-path reads for the supported host/runtime. | Manifest and CLI output default to `context-minimization-only`; fixtures reject unsupported isolation claims, while any future sandbox claim requires separately scoped host-specific denial evidence. |
+| FR-FW-025 | The framework's governance core MUST define lifecycle, artifact, validator, and evidence contracts without requiring an application runtime or invoking stack-specific checks unless a profile is explicitly selected. | Core-only validation runs without application-stack dependencies or commands; selecting a profile is required before stack-specific checks run. |
+| FR-FW-026 | Each supported application profile MUST be separately versioned and declare its language/runtime versions, prerequisites, source-layout assumptions, applicable and unsupported checks, and profile-owned dependencies; initializer composition MUST be explicit and MUST report missing prerequisites or unsupported checks without implying success. | Profile metadata and initializer fixtures cover Next.js/TypeScript, FastAPI/Python, and Rust/Axum independently, including clean-target generation, prerequisite failures, and truthful unsupported-check reporting. |
+| FR-FW-027 | Cross-module governance interfaces MUST use versioned schemas and documented compatibility behavior; profile composition MUST preserve core artifact identity and MUST NOT leak another profile's dependencies or instructions. | Valid/invalid schema fixtures, compatibility cases, and deliberate dependency/instruction-leakage fixtures demonstrate isolated profile composition. |
 
 ### Non-functional requirements
 

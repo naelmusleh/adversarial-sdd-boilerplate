@@ -3,10 +3,10 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 4.6
+version: 4.7
 created: 2026-10-07
 updated: 2026-10-22
-related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-ADV-014, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, FRAMEWORK-EXERCISE-006, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, WORKFLOW-AI-ENGINEERING-001, DECISION-LOG-001, DECISION-022
+related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-ADV-014, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, FRAMEWORK-EXERCISE-006, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, WORKFLOW-AI-ENGINEERING-001, DECISION-LOG-001, DECISION-022, DECISION-023
 ---
 
 # FRAMEWORK-BACKLOG-001 — Remaining work to complete Adversarial SDD Framework v1
@@ -274,7 +274,7 @@ FW-TASK-011 and FW-TASK-013 remain proposed v2 work and are deferred until prior
 ### FW-TASK-013 — Stack-neutral governance core and pluggable application profiles
 
 - **Goal:** Separate stack-neutral SDD governance contracts from optional application-stack profiles so the reusable framework can initialize and verify projects without assuming one application runtime.
-- **Requirements:** Future-version requirements to be assigned when v2 scope is opened.
+- **Requirements:** FR-FW-025, FR-FW-026, and FR-FW-027; bounded scope approved by the owner on 2026-10-22 in DECISION-023.
 - **Dependencies:** An approved multi-platform sample project contract; explicit language/toolchain applicability; a stable cross-module data contract.
 - **Work:** Define a stack-neutral governance core containing lifecycle contracts, artifact schemas, validator interfaces, and evidence rules, plus separately declared stack profiles for at least Next.js/TypeScript, FastAPI/Python, and Rust/Axum; include native targets only where concrete verification commands and ownership are defined. Specify a dynamic initializer interface such as `--stack <profile>` that composes the governance core with explicitly requested profiles, checks prerequisites, and reports unsupported checks without claiming success. Define cross-subproject interfaces with versioned schemas and valid/invalid fixtures. Compare a single repository with independently versioned packages against a split core repository; do not split repositories unless independent release, ownership, or dependency evidence justifies the compatibility and distribution burden.
 - **Acceptance criteria:**
@@ -285,7 +285,7 @@ FW-TASK-011 and FW-TASK-013 remain proposed v2 work and are deferred until prior
 -  5. Automated fixtures detect deliberately injected cross-stack dependency or instruction leakage and pass when the fixture is isolated correctly.
 -  6. Any repository split/profile-composition decision is supported by a compatibility and release-cost comparison; portability claims are limited to executed profile fixtures.
 - **Evidence:** Updated CAP-003, language/platform applicability matrix, versioned serialization schema and fixtures, multi-platform sample tree, and isolation-check results.
-- **State:** **TODO — deferred to v2.**
+- **State:** **BLOCKED before implementation — bounded v2 scope and FR-FW-025 through FR-FW-027 are owner-approved in DECISION-023; active work is G-REQ for the approved scope record.** The required approved multi-platform sample-project contract is not available in the current framework artifacts or connected GitHub repositories. The existing Python ping pilot is a CLI sample; the approved Infinite Gallery target is a responsive browser app for phone and desktop browsers, not an explicit web/native platform contract. No multi-platform contract is inferred or created. Resume only when the owner provides or approves an accessible prerequisite contract and its platform/language/toolchain applicability; this approval excludes FW-TASK-028 and FW-TASK-024.
 
 ### FW-TASK-014 — Weekly platform governance audit and strategic R&D proposal
 
