@@ -3,9 +3,9 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 4.4
+version: 4.5
 created: 2026-10-07
-updated: 2026-10-22
+updated: 2026-10-21
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, DECISION-LOG-001
 ---
 
@@ -586,7 +586,7 @@ The following candidates incorporate the review of [Fadi88/one-man-startup](http
 
 - **Priority:** P1 — closes the gap between a documented lifecycle and a workflow that can reject illegal transitions.
 - **Goal:** Provide a deterministic command-line runner that reads the versioned gate contract, computes permitted next actions, validates transition requests, and records append-only state tied to exact repository and artifact revisions.
-- **Requirements:** Assign v2 requirement IDs only after v2 scope is opened and approved.
+- **Requirements:** FR-FW-019, FR-FW-020, and FR-FW-021, approved for this bounded scope by DECISION-021.
 - **Dependencies:** FW-TASK-017 approved transition contract; FW-TASK-018 validator and complete gate-specific fixtures; FW-TASK-019 CI evidence binding. Reuse these contracts; do not create a second policy source.
 - **Work:** Implement an explicit DAG transition planner with prerequisite checks, upstream evidence invalidation, transition authorization, rerun/supersession links, and deterministic diagnostics. Treat validated gate records as durable source of truth; any `.sdd_state` is a regenerable cache, not an encrypted authority. Encryption without a key owner, recovery model, and threat model is not a security control. Use atomic writes and locking for concurrent updates, detect stale source revisions, and preserve append-only history. A local pre-commit hook can reject prohibited staged paths but cannot prevent arbitrary writes, hook bypass, or direct tool access; required CI and repository rules must enforce merge eligibility. Represent adversarial critique as a separately invoked review run with frozen inputs and structured findings; do not embed an opaque network/API LLM call in the deterministic validator or automatically pass a gate based on model output.
 - **Acceptance criteria:**
@@ -598,7 +598,7 @@ The following candidates incorporate the review of [Fadi88/one-man-startup](http
   6. Review-run records bind reviewer/mode, frozen inputs, contract version, findings, dispositions, and rerun identity; the runner distinguishes model critique from verified CI evidence and owner authorization.
   7. No API credential is required by the core validator; any optional review provider uses an explicitly configured, separately permissioned adapter and remains advisory until accepted under the review contract.
 - **Evidence:** Versioned transition table, runner/cache schema, ten-gate transition fixtures, concurrency/interruption tests, local-hook and hosted-policy rehearsal, independent reliability/security review, and exact-revision verification record.
-- **State:** **TODO — proposed v2; depends on FW-TASK-018/019 evidence and explicit v2 scope.**
+- **State:** **IN PROGRESS — owner approved a bounded FW-TASK-026 v2 scope and FR-FW-019 through FR-FW-021 on 2026-10-21 (DECISION-021); active gate G-IMPL.** Acceptance evidence is the ten-gate transition table/fixtures, atomic append-only runner and recovery tests, frozen advisory review records, hook and hosted-policy rehearsal, independent reliability/security review, and exact-revision checks. Scope excludes FW-TASK-027 and other v2 proposals; no change to app lock compatibility or gate contract semantics is authorized without a separately versioned decision.
 
 ### FW-TASK-027 — Provide gate-scoped context projections with truthful isolation claims
 

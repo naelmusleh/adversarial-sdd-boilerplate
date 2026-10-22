@@ -3,7 +3,7 @@ id: FRAMEWORK-SPEC-001
 type: framework-specification
 title: Adversarial SDD Framework v1 scope and behavior
 status: draft
-version: 0.14
+version: 0.15
 created: 2026-10-07
 updated: 2026-10-21
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001
@@ -22,6 +22,10 @@ The horizontal lifecycle slide is a presentation of the intended destination. Th
 The framework is for a product owner who supplies goals, decisions, and acceptance feedback while AI agents perform the documentation, design preparation, implementation, verification, and operational documentation work. The reusable repository is the **template source**: its workflows, starter files, and local tools are used to create app-specific repositories. It is not a separate framework application or service. Each actual application has its own repository and delivery lifecycle; that repository becomes the source of truth for its requirements, design, code, release history, and operations.
 
 The v1 outcome is that a project can start with a product idea, create and maintain a reviewable SDD package, pass explicit product/CX/technical gates, implement approved work in the application's repository, and produce evidence for release and ongoing operation. The process must identify owner decisions and external access requirements early, without making the owner the routine implementer.
+
+## Approved bounded v2 increment
+
+On 2026-10-21, the owner approved only FW-TASK-026 and requirements FR-FW-019 through FR-FW-021 for implementation. This increment adds a local transactional lifecycle gate runner and a separate advisory review-run record. It does not authorize other proposed v2 tasks or adoption of a draft gate-contract version.
 
 ## Current baseline
 
@@ -85,6 +89,9 @@ Requirement statements in the tables below use uppercase RFC 2119 keywords for m
 | FR-FW-014 | An initialized application MUST record the exact framework source revision and contract versions used to generate its local governance tools. The app's validator MUST check versioned G-REQ and G-ARCH handoff manifests against their frozen source artifacts and must reject a gate record claiming PASS when the required manifest is missing or invalid. | A generated app records a 40-character source commit, artifact/helper contract versions, and locked file digests; controlled valid and invalid handoff fixtures demonstrate that validation accepts matching frozen inputs and rejects drift, missing manifests, duplicate JSON keys, and unsupported contract versions. |
 | FR-FW-015 | The implementation workflow MUST preserve completed authorized changes in Git as scoped, reviewable commits and MUST push them to the authorized feature branch or remote when the owner has granted standing or task-specific push authorization. It MUST inspect the staged diff, exclude unrelated/user changes, preserve review controls, and report commit and push evidence; failed required checks or absent authorization MUST NOT be presented as a completed, merge-ready change. | A workflow tabletop covers a clean change, unrelated pre-existing edits, failing checks, missing remote/authorization, and successful feature-branch publication; every case preserves ownership boundaries and accurately records commit, push, and check status. |
 | FR-FW-016 | The framework MUST guide new and resumed application setup through a progressive, evidence-aware intake that inspects available repository state, distinguishes owner statements, observed facts, researched claims, inferences, and unknowns, asks only relevant unresolved questions, and creates a truthful next-action summary without fabricating decisions or gate outcomes. | Fresh-copy exercises cover minimal and partial input, unknown answers, an existing codebase, a repeat run after one context change, and an invalid target; outputs preserve source/provenance labels, avoid stale template state, validate successfully, and ask only for material owner decisions. |
+| FR-FW-019 | An initialized application MUST expose a deterministic local gate-transition command that consumes its pinned, approved gate contract and validated gate-run records, reports permitted next actions, and rejects unauthorized or illegal transitions. A downstream transition MUST be rejected when a prerequisite is absent, failed, blocked, or stale under the contract's exact-revision rules. The command MUST NOT define a second policy source or infer PASS from model output. | Positive and negative fixtures cover all ten gates, prerequisite states, exact source/artifact revisions, authorization, reruns, and invalidation against the pinned contract version. |
+| FR-FW-020 | Gate transitions MUST persist as append-only records through atomic, concurrency-safe updates. Stale-source and concurrent writers MUST fail or recover without partial/corrupt authoritative state. Any cache MUST be regenerable from validated gate records and MUST NOT become an authority. | Fault-injection and contention tests demonstrate complete old-or-new records, safe stale-run rejection, deterministic recovery, and cache reconstruction from canonical gate records. |
+| FR-FW-021 | Adversarial review runs MUST freeze their inputs and record reviewer/mode, contract version, findings, dispositions, and rerun identity. Review output MUST remain advisory and separate from verified CI evidence, gate transition authority, and owner authorization. The core validator MUST require no provider credentials; optional review adapters MUST be explicitly configured and separately permissioned. | Review-run schema and tests verify frozen digests, identity/mode, findings/dispositions and reruns; negative cases prove review output alone cannot pass a gate, substitute trusted CI, or authorize an owner decision. |
 
 ### Non-functional requirements
 

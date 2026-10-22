@@ -7,10 +7,14 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
+import contextlib
+import time
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -48,6 +52,8 @@ APP_GATE_SCHEMA_V1_2 = Path(".sdd/schemas/gate-run-v1.2.schema.json")
 APP_GATE_TEMPLATE = Path(".sdd/gate-run-v1.json.template")
 APP_GATE_TEMPLATE_V1_2 = Path(".sdd/gate-run-v1.2.json.template")
 APP_GATE_RUNS = Path(".sdd/gate-runs")
+APP_REVIEW_RUNS = Path(".sdd/review-runs")
+APPROVED_GATE_CONTRACT_VERSIONS = {"1.0"}
 APP_LOCKED_FILES_V2 = APP_LOCKED_FILES_V1 + (APP_GATE_SCHEMA.as_posix(), APP_GATE_TEMPLATE.as_posix())
 APP_REQUIRED_CHECKS_SCHEMA = Path(".sdd/schemas/required-checks-v1.schema.json")
 APP_REQUIRED_CHECKS_TEMPLATE = Path(".sdd/required-checks.json.template")
@@ -874,23 +880,28 @@ def _ci_change_control_reference_problems(change_control: object, evidence: obje
     return [f"{label}: successful CI evidence must match a change_control.ci_runs entry by provider, run attempt, SHA, check, status, and scope"]
 
 
-def validate_gate_run_records(root: Path, schema: dict[str, object], application_id: str) -> list[str]:
+def validate_gate_run_records(
+    root: Path,
+    schema: dict[str, object],
+    application_id: str,
+    candidate: dict[str, object] | None = None,
+) -> list[str]:
     """Validate app-local v1 gate-run JSON and cross-record invariants, without mutation."""
     root = root.resolve()
     directory = root / APP_GATE_RUNS
-    if not directory.exists():
+    if not directory.exists() and candidate is None:
         return []
     try:
         directory.resolve().relative_to(root.resolve())
     except ValueError:
         return [f"{APP_GATE_RUNS.as_posix()}: gate-run directory resolves outside the repository"]
-    if directory.is_symlink() or not directory.is_dir():
+    if directory.exists() and (directory.is_symlink() or not directory.is_dir()):
         return [f"{APP_GATE_RUNS.as_posix()}: gate-run path must be a real directory inside the repository"]
     problems: list[str] = []
     contract_version = str(schema.get("properties", {}).get("contract_version", {}).get("const", "unknown"))
     records: dict[str, tuple[Path, dict[str, object]]] = {}
     gate_by_relative_path: dict[str, str] = {}
-    for path in sorted(directory.iterdir()):
+    for path in sorted(directory.iterdir()) if directory.exists() else []:
         if path.is_dir():
             problems.append(f"{path.relative_to(root).as_posix()}: nested gate-run directories are not supported")
             continue
@@ -923,6 +934,22 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
         records[record_id] = (safe_path, record)
         if record.get("application_id") != application_id:
             problems.append(f"{relative}: application_id does not match the app mission artifact identity '{application_id}'")
+
+    if candidate is not None:
+        record_id = candidate.get("record_id")
+        if not isinstance(record_id, str) or not record_id or Path(record_id).name != record_id:
+            problems.append("candidate: record_id must be a safe filename component")
+        else:
+            candidate_path = directory / f"{record_id}.json"
+            relative = candidate_path.relative_to(root).as_posix()
+            if candidate_path.exists() or record_id in records:
+                problems.append(f"{relative}: refusing to overwrite an existing gate-run record")
+            schema_errors = validate_schema_value(candidate, schema, schema)
+            problems.extend(f"{relative}: {problem}" for problem in schema_errors)
+            if not schema_errors and record_id not in records:
+                records[record_id] = (candidate_path, candidate)
+                if candidate.get("application_id") != application_id:
+                    problems.append(f"{relative}: application_id does not match the app mission artifact identity '{application_id}'")
 
     for record_id, (path, record) in records.items():
         relative = path.relative_to(root).as_posix()
@@ -1547,6 +1574,23 @@ def validate_gate_run_records(root: Path, schema: dict[str, object], application
 
     latest, transition_problems = _latest_gate_runs(records)
     problems.extend(transition_problems)
+    if candidate is not None and candidate.get("gate_id") in GATE_ORDER:
+        gate_id = str(candidate["gate_id"])
+        scope = candidate.get("scope", {})
+        refs = scope.get("artifact_refs", []) if isinstance(scope, dict) else []
+        refs_by_path = {ref.get("path"): ref for ref in refs if isinstance(ref, dict)}
+        for prerequisite in GATE_ORDER[:GATE_ORDER.index(gate_id)]:
+            current = latest.get(prerequisite)
+            if current is None:
+                problems.append(f"candidate {gate_id}: prerequisite {prerequisite} has no current run")
+                continue
+            current_path, current_record = current
+            if current_record.get("gate_result") not in {"passed", "passed-with-accepted-risk", "not-applicable"}:
+                problems.append(f"candidate {gate_id}: prerequisite {prerequisite} is {current_record.get('gate_result')}, not complete")
+            relative_path = current_path.relative_to(root).as_posix()
+            ref = refs_by_path.get(relative_path)
+            if ref is None or ref.get("artifact_id") != current_record.get("record_id") or str(ref.get("version")) != str(current_record.get("record_version")) or ref.get("sha256") != file_sha256(current_path):
+                problems.append(f"candidate {gate_id}: exact current run for prerequisite {prerequisite} is absent or stale in scope.artifact_refs")
     relative_by_record_id = {
         record_id: (path.relative_to(root).as_posix(), str(record.get("gate_id", "unknown-gate")))
         for record_id, (path, record) in records.items()
@@ -1923,6 +1967,41 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
             _, trusted_policy_problems = trusted_ci_policy(root)
             problems.extend(trusted_policy_problems)
 
+    review_directory = root / APP_REVIEW_RUNS
+    if review_directory.exists() or review_directory.is_symlink():
+        if review_directory.is_symlink() or not review_directory.is_dir():
+            problems.append(f"{APP_REVIEW_RUNS.as_posix()}: review-run path must be a real directory inside the repository")
+        elif not lock_path.exists():
+            problems.append(f"{APP_REVIEW_RUNS.as_posix()}: a versioned app framework lock is required")
+        else:
+            app_lock, _ = load_json_object(lock_path)
+            version = str(app_lock.get("gate_contract_version")) if app_lock else ""
+            for path in sorted(review_directory.iterdir()):
+                relative = path.relative_to(root).as_posix()
+                if path.is_dir() or path.suffix.lower() != ".json":
+                    problems.append(f"{relative}: review-run directory may contain only JSON record files")
+                    continue
+                safe_path, safe_error = safe_file(root, relative)
+                if safe_error or safe_path is None:
+                    problems.append(f"{relative}: {safe_error or 'could not resolve review-run file'}")
+                    continue
+                record, parse_error = load_json_object(safe_path)
+                if parse_error or record is None:
+                    problems.append(f"{relative}: invalid review-run JSON: {parse_error or 'invalid object'}")
+                    continue
+                if path.stem != record.get("record_id"):
+                    problems.append(f"{relative}: filename stem must equal record_id")
+                problems.extend(f"{relative}: {message}" for message in validate_review_run(root, record, version))
+                if record.get("rerun_of"):
+                    prior_path = review_directory / f"{record['rerun_of']}.json"
+                    prior, prior_error = load_json_object(prior_path)
+                    if prior_error or prior is None:
+                        problems.append(f"{relative}: rerun_of must reference an existing review run")
+                    elif prior.get("target_ids") != record.get("target_ids"):
+                        problems.append(f"{relative}: rerun target_ids must match the referenced review")
+                    elif record.get("record_version") != prior.get("record_version", 0) + 1:
+                        problems.append(f"{relative}: rerun record_version must increment prior record_version by one")
+
     for gate_id, manifest_path in APP_HANDOFFS.items():
         if (root / manifest_path).exists():
             if not revision:
@@ -1950,7 +2029,7 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
 
     if has_manifest and not lock_path.exists():
         problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: required because a handoff manifest is present")
-    if has_gate_runs and lock_path.exists():
+    if (has_gate_runs or review_directory.exists()) and lock_path.exists():
         lock, _ = load_json_object(lock_path)
         if not lock or lock.get("lock_version") not in {2, 3, 4}:
             problems.append(f"{APP_GATE_RUNS.as_posix()}: version-2, version-3, or version-4 framework lock and explicit gate-contract migration are required")
@@ -1967,7 +2046,7 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
                     problems.append("mission.md: application ID cannot be derived from canonical mission artifact identity")
                 else:
                     problems.extend(validate_gate_run_records(root, schema, application_id))
-    elif has_gate_runs:
+    elif has_gate_runs or review_directory.exists():
         problems.append(f"{APP_GATE_RUNS.as_posix()}: version-2, version-3, or version-4 framework lock and explicit gate-contract migration are required")
     elif lock_path.exists():
         lock, _ = load_json_object(lock_path)
@@ -2506,6 +2585,424 @@ def command_new(args: argparse.Namespace) -> int:
     return 0
 
 
+def _application_identity(root: Path) -> tuple[dict[str, object] | None, str | None, list[str]]:
+    lock, error = load_json_object(root / APP_FRAMEWORK_LOCK)
+    if error or lock is None:
+        return None, None, [f"{APP_FRAMEWORK_LOCK}: {error or 'missing app framework lock'}"]
+    raw_lock_version = lock.get("lock_version", 0)
+    if not isinstance(raw_lock_version, int) or isinstance(raw_lock_version, bool):
+        return lock, None, [f"{APP_FRAMEWORK_LOCK}: lock_version must be an integer"]
+    contract_id, contract_version = _app_contract_id_and_version(lock, raw_lock_version)
+    if not contract_id or not contract_version:
+        return lock, None, [f"{APP_FRAMEWORK_LOCK}: no versioned gate contract is pinned"]
+    if contract_id != "FRAMEWORK-GATE-CONTRACT-001" or contract_version not in APPROVED_GATE_CONTRACT_VERSIONS:
+        return lock, contract_version, [f"{APP_FRAMEWORK_LOCK}: gate runner requires an explicitly approved contract version; v{contract_version} is not approved for runner use"]
+    mission_ids = []
+    mission, _ = read_front_matter(root / "mission.md")
+    if isinstance(mission.get("id"), str):
+        mission_ids.append(mission["id"])
+    if len(mission_ids) != 1:
+        return lock, contract_version, ["mission.md: expected exactly one application identity"]
+    return lock, contract_version, []
+
+
+def gate_transition_table(contract_version: str) -> dict[str, object]:
+    """Return a machine-readable view derived from the validator's policy constants."""
+    transitions = []
+    all_results = sorted(set().union(*GATE_RESULT_TRANSITIONS.values()))
+    for gate_id in GATE_ORDER:
+        gate_index = GATE_ORDER.index(gate_id)
+        for prior_result, next_results in GATE_RESULT_TRANSITIONS.items():
+            for result in all_results:
+                legal = result in next_results
+                next_action = (
+                    "reject the requested transition; select a result allowed by contract §5"
+                    if not legal else
+                    "advance to the next gate only after this run and all exact-revision prerequisites validate"
+                    if result in {"passed", "passed-with-accepted-risk", "not-applicable"} else
+                    "resolve blockers or findings, then append a linked rerun; do not edit prior records"
+                )
+                transitions.append({
+                    "gate_id": gate_id,
+                    "from_result": prior_result,
+                    "to_result": result,
+                    "legal": legal,
+                    "prerequisite_gates": list(GATE_ORDER[:gate_index]),
+                    "authorized_actor": "record preparer may submit; accountable owner supplies owner decisions, risk acceptance, and scope exclusion per contract §5",
+                    "invalidation_effect": "a changed upstream scope/source/evidence requires linked downstream reruns; exact current run ID, version, and digest are checked",
+                    "next_action": next_action,
+                })
+    return {"contract_id": "FRAMEWORK-GATE-CONTRACT-001", "contract_version": contract_version,
+            "policy_source": "scripts/artifacts.py:GATE_ORDER,GATE_RESULT_TRANSITIONS,validate_gate_run_records",
+            "transitions": transitions}
+
+
+def _mission_application_id(root: Path) -> str | None:
+    mission, _ = read_front_matter(root / "mission.md")
+    identity = mission.get("id")
+    if not isinstance(identity, str) or not identity.endswith("-MISSION-001"):
+        return None
+    return identity.removesuffix("-MISSION-001")
+
+
+@contextlib.contextmanager
+def _gate_write_lock(root: Path, timeout: float = 5.0):
+    sdd_directory = root / ".sdd"
+    sdd_directory.mkdir(parents=True, exist_ok=True)
+    if sdd_directory.is_symlink() or not sdd_directory.is_dir():
+        raise ValueError(".sdd must be a real directory inside the repository")
+    lock_path = sdd_directory / ".governance-write.lock"
+    if lock_path.is_symlink():
+        raise ValueError("governance lock path must not be a symlink")
+    flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(lock_path, flags, 0o600)
+    handle = os.fdopen(descriptor, "r+b")
+    if handle.seek(0, os.SEEK_END) == 0:
+        handle.write(b"0")
+        handle.flush()
+    deadline = time.monotonic() + timeout
+    acquired = False
+    try:
+        while True:
+            try:
+                if os.name == "nt":
+                    import msvcrt
+                    handle.seek(0)
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired = True
+                break
+            except (BlockingIOError, OSError):
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("governance record lock contention exceeded 5 seconds")
+                time.sleep(0.05)
+        yield
+    finally:
+        try:
+            if acquired and os.name == "nt":
+                import msvcrt
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            elif acquired:
+                import fcntl
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        finally:
+            handle.close()
+
+
+def _atomic_create_json(root: Path, path: Path, record: dict[str, object]) -> None:
+    root = root.resolve()
+    try:
+        path.resolve(strict=False).relative_to(root)
+    except ValueError as exc:
+        raise ValueError("governance record target must remain inside the repository") from exc
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.parent.is_symlink() or not path.parent.is_dir():
+        raise ValueError("governance record directory must be a real directory")
+    try:
+        path.parent.resolve().relative_to(root)
+    except ValueError as exc:
+        raise ValueError("governance record directory resolves outside the repository") from exc
+    staging_directory = root / ".sdd"
+    staging_directory.mkdir(parents=True, exist_ok=True)
+    if staging_directory.is_symlink() or not staging_directory.is_dir():
+        raise ValueError(".sdd must be a real directory inside the repository")
+    fd, temp_name = tempfile.mkstemp(prefix=".governance-", suffix=".tmp", dir=staging_directory)
+    temp_path = Path(temp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as out:
+            json.dump(record, out, indent=2, ensure_ascii=False)
+            out.write("\n")
+            out.flush()
+            os.fsync(out.fileno())
+        # Hard-link gives create-only publication semantics on the same filesystem.
+        os.link(temp_path, path)
+        temp_path.unlink()
+        if hasattr(os, "O_DIRECTORY"):
+            dir_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+    finally:
+        try:
+            temp_path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def _cleanup_governance_temps(root: Path) -> None:
+    """Remove abandoned pre-publication temp files while holding the writer lock."""
+    staging_directory = root / ".sdd"
+    if not staging_directory.is_dir() or staging_directory.is_symlink():
+        return
+    for path in staging_directory.glob(".governance-*.tmp"):
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            continue
+
+
+def candidate_source_revision_problems(root: Path, record: dict[str, object], input_path: str) -> list[str]:
+    """Require a candidate's declared clean revision to be the current clean app tree."""
+    snapshot = record.get("source_snapshot")
+    if not isinstance(snapshot, dict):
+        return ["candidate source_snapshot is required"]
+    commit = snapshot.get("commit_sha")
+    if isinstance(commit, str):
+        try:
+            head = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"], capture_output=True, check=False)
+        except OSError as exc:
+            return [f"cannot verify candidate source revision: {exc}"]
+        if head.returncode or head.stdout.decode("ascii", "replace").strip() != commit:
+            return ["candidate source_snapshot.commit_sha is stale; it must equal the app's current HEAD"]
+        pathspecs = [".", f":(exclude){input_path}", ":(exclude).sdd/.governance-write.lock",
+                     ":(exclude).sdd/gate-runs/**", ":(exclude).sdd/review-runs/**"]
+        status = subprocess.run(
+            ["git", "-C", str(root), "status", "--porcelain", "--untracked-files=all", "--", *pathspecs],
+            capture_output=True, check=False,
+        )
+        if status.returncode:
+            return ["cannot verify candidate source working-tree state"]
+        if status.stdout.strip():
+            return ["candidate claims a clean commit, but the app has uncommitted source changes"]
+        return []
+    if snapshot.get("revision_state") != "archive-pinned":
+        return ["candidate without commit_sha must use an archive-pinned source snapshot"]
+    files = snapshot.get("files")
+    if not isinstance(files, list) or not files:
+        return ["archive-pinned candidate must enumerate source files and digests"]
+    problems: list[str] = []
+    for item in files:
+        if not isinstance(item, dict) or not isinstance(item.get("path"), str):
+            problems.append("archive-pinned source snapshot contains a malformed file entry")
+            continue
+        source_path, error = safe_file(root, item["path"])
+        if error or source_path is None:
+            problems.append(f"archive-pinned source file {item['path']}: {error or 'unavailable'}")
+        elif item.get("sha256") != file_sha256(source_path):
+            problems.append(f"archive-pinned source file {item['path']} has changed since the candidate snapshot")
+    return problems
+
+
+REVIEW_MODES = {"independent", "self-review", "automated-critique"}
+REVIEW_DISPOSITIONS = {"open", "resolved", "rejected", "deferred", "owner-decision-required", "accepted-risk", "verified-resolved", "not-resolved", "not-applicable-with-rationale"}
+REVIEW_RUN_SCHEMA: dict[str, object] = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "urn:adversarial-sdd:review-run:1",
+    "title": "Adversarial SDD Advisory Review Run v1",
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["record_id", "record_version", "created_at", "application_id", "contract_id", "contract_version", "reviewer", "mode", "target_ids", "frozen_inputs", "findings", "rerun_of", "result", "authority_boundary"],
+    "properties": {
+        "record_id": {"type": "string", "pattern": "^[A-Z0-9][A-Z0-9-]{2,79}$"},
+        "record_version": {"type": "integer", "minimum": 1},
+        "created_at": {"type": "string", "format": "date-time"},
+        "application_id": {"type": "string", "minLength": 1},
+        "contract_id": {"const": "FRAMEWORK-GATE-CONTRACT-001"},
+        "contract_version": {"enum": ["1.0"]},
+        "reviewer": {"type": "object", "additionalProperties": False, "required": ["identity", "mode", "context_disclosure", "author_overlap"], "properties": {
+            "identity": {"type": "string", "minLength": 1},
+            "mode": {"enum": sorted(REVIEW_MODES)},
+            "context_disclosure": {"type": "string", "minLength": 1},
+            "author_overlap": {"type": "string", "minLength": 1},
+        }},
+        "mode": {"enum": sorted(REVIEW_MODES)},
+        "target_ids": {"type": "array", "minItems": 1, "uniqueItems": True, "items": {"type": "string", "minLength": 1}},
+        "frozen_inputs": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": False, "required": ["path", "sha256"], "properties": {
+            "path": {"type": "string", "minLength": 1}, "sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+        }}},
+        "findings": {"type": "array", "items": {"type": "object", "additionalProperties": False, "required": ["finding_id", "severity", "evidence", "disposition", "disposition_evidence"], "properties": {
+            "finding_id": {"type": "string", "minLength": 1},
+            "severity": {"enum": ["blocking", "major", "minor", "question"]},
+            "evidence": {"type": "string", "minLength": 1},
+            "disposition": {"enum": sorted(REVIEW_DISPOSITIONS)},
+            "disposition_evidence": {"type": "string"},
+        }}},
+        "rerun_of": {"oneOf": [{"type": "string", "pattern": "^[A-Z0-9][A-Z0-9-]{2,79}$"}, {"type": "null"}]},
+        "result": {"const": "advisory"},
+        "authority_boundary": {"const": {"gate_authority": False, "ci_evidence": False, "owner_authorization": False}},
+    },
+}
+
+
+def validate_review_run(root: Path, record: object, contract_version: str) -> list[str]:
+    if not isinstance(record, dict):
+        return ["review run must be a JSON object"]
+    errors = validate_schema_value(record, REVIEW_RUN_SCHEMA, REVIEW_RUN_SCHEMA)
+    if errors:
+        return [f"review schema: {error}" for error in errors]
+    errors = []
+    if record.get("contract_id") != "FRAMEWORK-GATE-CONTRACT-001" or record.get("contract_version") != contract_version:
+        errors.append("review run must name the app's exact pinned gate contract")
+    reviewer = record.get("reviewer")
+    if reviewer.get("mode") != record.get("mode"):
+        errors.append("mode must match the reviewer mode")
+    if record.get("application_id") != _mission_application_id(root):
+        errors.append("application_id must match the app mission")
+    inputs = record.get("frozen_inputs")
+    seen: set[str] = set()
+    for item in inputs:
+        rel = item["path"]
+        if rel in seen:
+            errors.append("frozen input paths must be unique")
+            continue
+        seen.add(rel)
+        safe, err = safe_file(root, rel)
+        if err or safe is None:
+            errors.append(f"frozen input {rel}: {err or 'unavailable'}")
+        elif item["sha256"] != file_sha256(safe):
+            errors.append(f"frozen input {rel}: digest does not match current bytes")
+    findings = record.get("findings")
+    finding_ids = [finding["finding_id"] for finding in findings]
+    if len(finding_ids) != len(set(finding_ids)):
+        errors.append("finding IDs must be unique")
+    for finding in findings:
+        if finding["disposition"] != "open" and not finding["disposition_evidence"].strip():
+            errors.append(f"finding {finding['finding_id']}: non-open disposition requires evidence")
+    return errors
+
+
+def staged_governance_problems(root: Path) -> list[str]:
+    """Reject staged edits to immutable governance records; additions are append-only."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "diff", "--cached", "--no-renames", "--name-status", "-z", "--", APP_GATE_RUNS.as_posix(), APP_REVIEW_RUNS.as_posix()],
+            capture_output=True, check=False,
+        )
+    except OSError as exc:
+        return [f"could not inspect staged governance paths: {exc}"]
+    if result.returncode:
+        return [f"git could not inspect staged governance paths: {result.stderr.decode('utf-8', 'replace').strip()}"]
+    fields = result.stdout.decode("utf-8", "replace").split("\0")
+    problems: list[str] = []
+    index = 0
+    while index < len(fields) and fields[index]:
+        status = fields[index]
+        index += 1
+        if index >= len(fields) or not fields[index]:
+            problems.append("staged governance diff has a malformed name-status record")
+            break
+        path = fields[index]
+        index += 1
+        if status != "A":
+            problems.append(f"{path}: immutable governance records may only be added; staged status is {status}")
+        elif not path.endswith(".json"):
+            problems.append(f"{path}: append-only governance directories accept only JSON records")
+    return problems
+
+
+def command_staged_check(args: argparse.Namespace) -> int:
+    problems = staged_governance_problems(Path(args.root).resolve())
+    if problems:
+        print("\n".join(problems), file=sys.stderr)
+        return 1
+    print("staged governance paths are append-only")
+    return 0
+
+
+def command_gate(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    lock, contract_version, problems = _application_identity(root)
+    if not problems:
+        problems.extend(application_governance_problems(root, []))
+    if problems:
+        print("\n".join(problems), file=sys.stderr)
+        return 2
+    assert contract_version is not None
+    if args.gate_command == "plan":
+        plan = gate_transition_table(contract_version)
+        if args.json:
+            print(json.dumps(plan, indent=2))
+        else:
+            print(f"Pinned contract {plan['contract_id']} v{contract_version}; {len(plan['transitions'])} derived legal transitions across {len(GATE_ORDER)} gates.")
+        return 0
+    schema, errors = _gate_schema_for_app(root, contract_version)
+    if errors or schema is None:
+        print("\n".join(errors), file=sys.stderr)
+        return 2
+    record_path = Path(args.record)
+    safe, path_error = safe_file(root, record_path.as_posix())
+    if path_error or safe is None:
+        print(path_error or "record path unavailable", file=sys.stderr)
+        return 2
+    record, parse_error = load_json_object(safe)
+    if parse_error or record is None:
+        print(f"invalid gate record JSON: {parse_error}", file=sys.stderr)
+        return 2
+    app_id = _mission_application_id(root)
+    if not app_id:
+        print("mission.md: application identity is missing", file=sys.stderr)
+        return 2
+    target = root / APP_GATE_RUNS / f"{record.get('record_id', '')}.json"
+    try:
+        with _gate_write_lock(root):
+            _cleanup_governance_temps(root)
+            errors = validate_gate_run_records(root, schema, app_id, candidate=record)
+            errors.extend(candidate_source_revision_problems(root, record, record_path.as_posix()))
+            if errors:
+                print("\n".join(errors), file=sys.stderr)
+                return 1
+            _atomic_create_json(root, target, record)
+    except (OSError, TimeoutError, ValueError) as exc:
+        print(f"gate run was not published: {exc}", file=sys.stderr)
+        return 1
+    print(target.relative_to(root))
+    return 0
+
+
+def command_review(args: argparse.Namespace) -> int:
+    if args.review_command == "schema":
+        print(json.dumps(REVIEW_RUN_SCHEMA, indent=2))
+        return 0
+    root = Path(args.root).resolve()
+    _, contract_version, problems = _application_identity(root)
+    if not problems:
+        problems.extend(application_governance_problems(root, []))
+    if problems:
+        print("\n".join(problems), file=sys.stderr)
+        return 2
+    assert contract_version is not None
+    record_path = Path(args.record)
+    safe, error = safe_file(root, record_path.as_posix())
+    if error or safe is None:
+        print(error or "record path unavailable", file=sys.stderr)
+        return 2
+    record, parse_error = load_json_object(safe)
+    if parse_error or record is None:
+        print(f"invalid review JSON: {parse_error}", file=sys.stderr)
+        return 2
+    if args.review_command == "validate":
+        problems = validate_review_run(root, record, contract_version)
+    else:
+        try:
+            with _gate_write_lock(root):
+                _cleanup_governance_temps(root)
+                problems = validate_review_run(root, record, contract_version)
+                if not problems and record.get("rerun_of"):
+                    prior_path = root / APP_REVIEW_RUNS / f"{record['rerun_of']}.json"
+                    prior, prior_error = load_json_object(prior_path)
+                    if prior_error or prior is None:
+                        problems = [f"rerun_of '{record['rerun_of']}' does not reference an existing immutable review run"]
+                    elif prior.get("target_ids") != record.get("target_ids") or record.get("record_version") != prior.get("record_version", 0) + 1:
+                        problems = ["rerun must preserve target_ids and increment record_version by exactly one"]
+                if not problems:
+                    target = root / APP_REVIEW_RUNS / f"{record['record_id']}.json"
+                    if target.exists():
+                        problems = [f"{target.relative_to(root)}: refusing to overwrite immutable review record"]
+                    else:
+                        _atomic_create_json(root, target, record)
+        except (OSError, TimeoutError, ValueError) as exc:
+            problems = [f"review record was not published: {exc}"]
+    if problems:
+        print("\n".join(problems), file=sys.stderr)
+        return 1
+    print("valid advisory review record" if args.review_command == "validate" else target.relative_to(root))
+    return 0
+
+
 def parser() -> argparse.ArgumentParser:
     cli = argparse.ArgumentParser(description=__doc__)
     sub = cli.add_subparsers(dest="command", required=True)
@@ -2522,6 +3019,26 @@ def parser() -> argparse.ArgumentParser:
     validate_records.add_argument("path")
     validate_records.add_argument("--today", default=dt.date.today().isoformat(), help="validation date (YYYY-MM-DD), primarily for reproducible checks")
     validate_records.set_defaults(run=command_assumptions_validate)
+    gate = sub.add_parser("gate", help="plan and append evidence-backed lifecycle gate runs")
+    gate.add_argument("--root", default=".", help="initialized application repository")
+    gate_sub = gate.add_subparsers(dest="gate_command", required=True)
+    plan = gate_sub.add_parser("plan", help="show transitions derived from the app-pinned contract")
+    plan.add_argument("--json", action="store_true")
+    plan.set_defaults(run=command_gate)
+    append_run = gate_sub.add_parser("append", help="validate and atomically append one immutable gate run")
+    append_run.add_argument("--record", required=True, help="repository-relative candidate JSON record")
+    append_run.set_defaults(run=command_gate)
+    review = sub.add_parser("review", help="validate or append a separate advisory review run")
+    review.add_argument("--root", default=".", help="initialized application repository")
+    review_sub = review.add_subparsers(dest="review_command", required=True)
+    for action in ("schema", "validate", "append"):
+        review_action = review_sub.add_parser(action, help=f"{action} an advisory review record")
+        if action != "schema":
+            review_action.add_argument("--record", required=True, help="repository-relative review JSON record")
+        review_action.set_defaults(run=command_review)
+    staged_check = sub.add_parser("staged-check", help="reject staged edits or deletions of immutable governance records")
+    staged_check.add_argument("--root", default=".", help="repository root")
+    staged_check.set_defaults(run=command_staged_check)
     return cli
 
 
