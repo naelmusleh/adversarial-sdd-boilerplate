@@ -3,10 +3,10 @@ id: WORKFLOW-DISCOVERY-001
 type: workflow
 title: Product idea framing and requirements discovery
 status: draft
-version: 0.4
+version: 0.5
 created: 2026-10-07
-updated: 2026-10-21
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, WORKFLOW-LIFECYCLE-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-EXERCISE-004
+updated: 2026-10-22
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, WORKFLOW-LIFECYCLE-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005
 ---
 
 # WORKFLOW-DISCOVERY-001 — Product idea framing and requirements discovery
@@ -74,6 +74,16 @@ Apply classifications narrowly:
 During intent/requirements drafting, link probes to a concise intent-text anchor if requirement IDs do not exist. When requirement and backlog IDs are created, reconcile each probe to those stable IDs before the specification is treated as settled. Keep unaffected work moving, but mark only tasks that are independent of the dependency as `unblocked`. A task whose investigation can continue is not thereby unblocked for provider-dependent promises. For `conditional`, document the exact condition, safe work boundary, and event that reopens the decision.
 
 Store the screen in a traceable section of the draft specification or a linked dependency table; avoid a second canonical tracker. Before specification lock, carry verified constraints into the requirements, link unresolved probes to dependent tasks, and identify the evidence needed in the later feasibility register. If the project is not ready to specify, preserve the probe as discovery output. Do not claim G-FEAS PASS, provider selection, or technical feasibility from this screen. See [FRAMEWORK-EXERCISE-004](../docs/framework/FRAMEWORK-EXERCISE-004-pre-spec-dependency-discovery.md) for source-linked and synthetic examples.
+
+## Assumptions and product experiments
+
+Track only material assumptions: a claim whose failure could change user outcomes, scope, cost, risk, or a dependent task. Use the canonical specification to explain product assumptions and the canonical decision log for owner choices; use the versioned machine-readable assumption/experiment bundle only for due dates, falsifiable tests, and validation. Do not create a parallel backlog or decision system.
+
+Each open assumption records a stable ID, source type, confidence and limits, impact if wrong, distinct confirmation and disproof methods, accountable owner, due/review dates, linked requirement/task IDs, blocking state, evidence, and disposition. Unknown or overdue assumptions cannot silently support a gate PASS. A disproved or materially changed assumption reopens affected decisions and marks dependent work blocked or conditional until reviewed; independent work can continue.
+
+Each experiment links to one assumption and records hypothesis, prediction, explicit `wrong_if` falsifier, method, sample/data limits, privacy handling, owner, status, decision rule, read date, evidence, and outcome. A result is complete only when the observation date, actual result, and linked evidence are recorded. Synthetic evidence is allowed for validator/tabletop routing only; it cannot substantiate user demand, provider capability, or production outcomes.
+
+Use `python3 scripts/artifacts.py assumptions validate <bundle.json> --today YYYY-MM-DD` for deterministic structure, expiry, status-transition, canonical-link, and evidence-boundary checks. A product decision cites its evidence and experiment but still requires its authorized decision-maker; an experiment never authorizes scope, spend, publication, release, or a gate transition. See [FRAMEWORK-EXERCISE-005](../docs/framework/FRAMEWORK-EXERCISE-005-assumptions-experiments.md) and schema v1 for the bounded lifecycle example.
 
 ## Pass A — Frame the idea (G-INTENT)
 

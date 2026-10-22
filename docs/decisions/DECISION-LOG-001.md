@@ -3,10 +3,10 @@ id: DECISION-LOG-001
 type: decision-log
 title: Reusable template decisions
 status: active
-version: 0.3
+version: 0.4
 created: 2026-10-10
-updated: 2026-10-21
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001
+updated: 2026-10-22
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-EXERCISE-005
 ---
 
 # DECISION-LOG-001 — Reusable template decisions
@@ -21,3 +21,5 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001
 ## Decision discipline
 
 Add a stable ID for each new material decision. Record the decision authority, date, rationale, impacted artifacts, consequences, and revisit conditions. Preserve app-specific decisions in that app's repository.
+
+Decisions based on an assumption or experiment link its stable ID and evidence IDs, state the limits considered, and record the accountable owner’s actual choice and date. A recommendation, experiment status, or synthetic result is not an owner decision. Reopened or superseded decisions preserve prior records and identify affected requirements/tasks for reevaluation.

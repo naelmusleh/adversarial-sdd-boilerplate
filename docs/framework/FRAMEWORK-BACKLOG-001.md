@@ -3,10 +3,10 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 4.3
+version: 4.4
 created: 2026-10-07
-updated: 2026-10-21
-related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, DECISION-LOG-001
+updated: 2026-10-22
+related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, DECISION-LOG-001
 ---
 
 # FRAMEWORK-BACKLOG-001 — Remaining work to complete Adversarial SDD Framework v1
@@ -544,7 +544,7 @@ The following candidates incorporate the review of [Fadi88/one-man-startup](http
   5. Synthetic evidence is typed and labeled so validators/reviewers cannot mistake it for customer research, provider verification, or production outcomes.
   6. Schema and negative tests reject missing owners/dates/methods, invalid status transitions, broken requirement links, overdue open items, and fabricated experiment results.
 - **Evidence:** Versioned templates/schema, validator changes, fixture matrix, sample assumption/experiment lifecycle, exact test output, and independent review of expiry and synthetic-evidence boundaries.
-- **State:** **TODO — proposed v2.**
+- **State:** **IN PROGRESS — owner selected FW-TASK-023 on 2026-10-22; bounded implementation only, with no v2 requirement IDs or framework-wide scope approval.** Independent review passes all six criteria; focused regression, initializer, and artifact tests pass (49); full-suite clean-checkout run pending.
 
 ### FW-TASK-024 — Add risk-scaled work tracks without weakening invariant controls
 

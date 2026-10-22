@@ -63,6 +63,9 @@ APP_LOCKED_FILES_V4 = APP_LOCKED_FILES_V3 + (
     APP_GATE_SCHEMA_V1_2.as_posix(), APP_GATE_TEMPLATE_V1_2.as_posix(),
     APP_TRUSTED_CI_SCHEMA.as_posix(), APP_TRUSTED_CI_TEMPLATE.as_posix(),
 )
+APP_ASSUMPTION_SCHEMA = Path(".sdd/schemas/assumption-experiment-v1.schema.json")
+APP_ASSUMPTION_BUNDLE = Path(".sdd/assumption-experiments.json")
+ASSUMPTION_SCHEMA_SHA256 = "7c27d0c0cc66e6e365f7afb5e95c8e565e9ecad521c0e8de6e15d4a5d1e7fd33"
 APP_LOCK_VERSIONS = {1, 2, 3, 4}
 HANDOFF_CONTRACT_VERSION = 1
 MAX_JSON_BYTES = 1_048_576
@@ -1883,7 +1886,7 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
         if lock_version in {2, 3} and (lock.get("gate_contract_id") != "FRAMEWORK-GATE-CONTRACT-001" or lock.get("gate_contract_version") != "1.0"):
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: unsupported gate contract identity or version")
         if lock_version == 4 and (lock.get("gate_contract_id") != "FRAMEWORK-GATE-CONTRACT-001" or lock.get("gate_contract_version") != "1.2"):
-            problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: lock version 4 requires FRAMEWORK-GATE-CONTRACT-001 v1.2")
+            problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: lock version {lock_version} requires FRAMEWORK-GATE-CONTRACT-001 v1.2")
         if not isinstance(revision_value, str) or not FRAMEWORK_REVISION_RE.fullmatch(revision_value):
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: framework_revision must be a 40-character lowercase commit SHA")
         else:
@@ -1893,7 +1896,7 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: framework_repository must be an HTTPS GitHub repository URL")
         if lock_version == 4 and repository != CANONICAL_FRAMEWORK_URL:
             problems.append(
-                f"{APP_FRAMEWORK_LOCK.as_posix()}: lock-v4 trusted CI requires the canonical framework repository "
+                f"{APP_FRAMEWORK_LOCK.as_posix()}: lock-v{lock_version} trusted CI requires the canonical framework repository "
                 f"{CANONICAL_FRAMEWORK_URL}"
             )
         locked_files = lock.get("locked_files")
@@ -2214,6 +2217,13 @@ def command_validate(_: argparse.Namespace) -> int:
         problems.append("no artifacts discovered; refusing to validate an empty repository")
     if app_project:
         problems.extend(application_requirement_problems(ROOT))
+        assumption_bundle = ROOT / APP_ASSUMPTION_BUNDLE
+        if assumption_bundle.exists():
+            data, parse_error = load_json_object(assumption_bundle)
+            if parse_error or data is None:
+                problems.append(f"{APP_ASSUMPTION_BUNDLE.as_posix()}: invalid assumption/experiment bundle: {parse_error or 'invalid object'}")
+            else:
+                problems.extend(f"{APP_ASSUMPTION_BUNDLE.as_posix()}: {item}" for item in validate_assumption_records(data, dt.date.today()))
     else:
         problems.extend(framework_contract_problems(ROOT))
     for path in markdown_files(ROOT):
@@ -2280,6 +2290,145 @@ def command_validate(_: argparse.Namespace) -> int:
         print("\n".join(f"ERROR {item}" for item in problems), file=sys.stderr)
         return 1
     print(f"Validated {len(seen)} artifact(s).")
+    return 0
+
+
+def validate_assumption_records(data: object, today: dt.date) -> list[str]:
+    """Validate the bounded v1 assumption and experiment record bundle."""
+    problems: list[str] = []
+    schema_path = ROOT / "docs/framework/schemas/assumption-experiment-v1.schema.json"
+    if not schema_path.is_file():
+        schema_path = ROOT / APP_ASSUMPTION_SCHEMA
+    schema, schema_error = load_json_object(schema_path)
+    if schema_error or schema is None:
+        return [f"assumption/experiment schema is invalid: {schema_error or 'not an object'}"]
+    if file_sha256(schema_path) != "sha256:" + ASSUMPTION_SCHEMA_SHA256:
+        return ["assumption/experiment schema digest does not match the pinned v1 schema"]
+    schema_problems = schema_definition_problems(schema)
+    if schema_problems:
+        return [f"assumption/experiment schema: {problem}" for problem in schema_problems]
+    problems.extend(validate_schema_value(data, schema, schema))
+    if problems:
+        return problems
+    assumptions = data.get("assumptions")
+    experiments = data.get("experiments")
+    if not isinstance(assumptions, list) or not isinstance(experiments, list):
+        return ["assumptions and experiments must be arrays"]
+    assumption_ids: set[str] = set()
+    experiment_ids: set[str] = set()
+    requirement_ids = set(re.findall(r"(?m)^\|\s*((?:FR|NFR)-[A-Z0-9-]+)\s*\|", (ROOT / "specification.md").read_text(encoding="utf-8") if (ROOT / "specification.md").exists() else ""))
+    task_ids = set(re.findall(r"(?m)^\s*[-*]?\s*((?:[A-Z][A-Z0-9]*-)?TASK-[A-Z0-9-]+)\b", (ROOT / "backlog.md").read_text(encoding="utf-8") if (ROOT / "backlog.md").exists() else ""))
+    for kind, records, allowed, seen in (
+        ("assumption", assumptions, {"open", "confirmed", "disproved", "superseded", "retired"}, assumption_ids),
+        ("experiment", experiments, {"proposed", "running", "completed", "abandoned"}, experiment_ids),
+    ):
+        for index, record in enumerate(records):
+            label = f"{kind}[{index}]"
+            if not isinstance(record, dict):
+                problems.append(f"{label} must be an object")
+                continue
+            identifier = record.get("id")
+            if not isinstance(identifier, str) or not ID_RE.fullmatch(identifier):
+                problems.append(f"{label}.id must be a stable artifact ID")
+            elif identifier in seen:
+                problems.append(f"{label}.id is duplicated: {identifier}")
+            else:
+                seen.add(identifier)
+            if record.get("status") not in allowed:
+                problems.append(f"{label}.status is invalid")
+            previous = record.get("previous_status")
+            initial_status = "open" if kind == "assumption" else "proposed"
+            if previous is None and record.get("status") != initial_status:
+                problems.append(f"{label}.previous_status is required for a non-initial lifecycle status")
+            if previous is not None:
+                transitions = {"open": {"confirmed", "disproved", "superseded"}, "confirmed": {"open", "superseded", "retired"}, "disproved": {"open", "superseded", "retired"}, "superseded": {"retired"}, "retired": set()} if kind == "assumption" else {"proposed": {"running", "abandoned"}, "running": {"completed", "abandoned"}, "completed": {"abandoned"}, "abandoned": set()}
+                if record.get("status") not in transitions.get(previous, set()):
+                    problems.append(f"{label}.status transition from {previous!r} to {record.get('status')!r} is invalid")
+            if kind == "assumption":
+                history = record.get("status_history", [])
+                history_statuses = [event.get("status") for event in history if isinstance(event, dict)]
+                if len(history_statuses) != len(history) or not history_statuses or history_statuses[-1] != record.get("status"):
+                    problems.append(f"{label}.status_history must record the current status as its final event")
+                elif history_statuses[0] != "open":
+                    problems.append(f"{label}.status_history must begin with the initial open status")
+                if len(history_statuses) > 1:
+                    history_transitions = {"open": {"confirmed", "disproved", "superseded"}, "confirmed": {"open", "superseded", "retired"}, "disproved": {"open", "superseded", "retired"}, "superseded": {"retired"}, "retired": set()}
+                    for old_status, new_status in zip(history_statuses, history_statuses[1:]):
+                        if new_status not in history_transitions.get(old_status, set()):
+                            problems.append(f"{label}.status_history contains invalid transition {old_status!r} to {new_status!r}")
+                reopened = len(history_statuses) > 1 and history_statuses[-2] in {"confirmed", "disproved"} and history_statuses[-1] == "open"
+                if record.get("source_type") not in {"owner-statement", "observed-fact", "external-evidence", "inference"}:
+                    problems.append(f"{label}.source_type is invalid")
+                for field in ("due_date", "review_date"):
+                    value = record.get(field)
+                    if value is not None:
+                        try:
+                            date_value = dt.date.fromisoformat(value)
+                            if field == "due_date" and record.get("status") == "open" and date_value < today:
+                                problems.append(f"{label}.due_date is overdue while assumption is open")
+                                if any(item.get("depends_on_assumption") and item.get("state") == "unblocked" for item in record.get("task_effects", []) if isinstance(item, dict)):
+                                    problems.append(f"{label} overdue assumption must block or condition dependent tasks until reassessment")
+                            if field == "review_date" and record.get("status") == "confirmed" and date_value < today:
+                                problems.append(f"{label}.review_date has expired while assumption is confirmed; reopen and reevaluate it")
+                        except (TypeError, ValueError):
+                            problems.append(f"{label}.{field} must be YYYY-MM-DD")
+                if record.get("status") == "disproved" and not record.get("disposition"):
+                    problems.append(f"{label}.disposition is required for a disproved assumption")
+                if reopened or (previous in {"confirmed", "disproved"} and record.get("status") == "open"):
+                    if not record.get("disposition"):
+                        problems.append(f"{label}.disposition must describe why the assumption was reopened")
+                    if any(item.get("depends_on_assumption") and item.get("state") == "unblocked" for item in record.get("task_effects", []) if isinstance(item, dict)):
+                        problems.append(f"{label} reopened after confirmation must block or condition dependent tasks until re-evaluation")
+                if record.get("gate_supporting") and (record.get("status") != "confirmed" or not any(isinstance(item, dict) and item.get("type") in {"observed", "external"} for item in record.get("evidence", []))):
+                    problems.append(f"{label} cannot support a gate PASS unless confirmed with linked observed or external evidence")
+                for field, known in (("requirement_ids", requirement_ids), ("task_ids", task_ids)):
+                    values = record.get(field, [])
+                    if not isinstance(values, list) or not values:
+                        problems.append(f"{label}.{field} must be a non-empty list")
+                    elif known and any(value not in known for value in values):
+                        problems.append(f"{label}.{field} contains an unknown canonical link")
+                task_effects = record.get("task_effects", [])
+                effect_ids = [item.get("task_id") for item in task_effects if isinstance(item, dict)]
+                if set(effect_ids) != set(record.get("task_ids", [])):
+                    problems.append(f"{label}.task_effects must account for every linked task exactly by ID")
+                if record.get("status") == "disproved" and any(item.get("depends_on_assumption") and item.get("state") == "unblocked" for item in task_effects if isinstance(item, dict)):
+                    problems.append(f"{label} disproval cannot leave an affected task unblocked")
+            else:
+                if not any(item.get("id") == record.get("assumption_id") for item in assumptions if isinstance(item, dict)):
+                    problems.append(f"{label}.assumption_id must link to an assumption in this bundle")
+                if record.get("status") == "completed":
+                    outcome = record.get("outcome")
+                    if not isinstance(outcome, dict) or not outcome.get("observed_at") or not outcome.get("actual_result") or not isinstance(outcome.get("evidence_ids"), list) or not outcome["evidence_ids"]:
+                        problems.append(f"{label}.outcome requires observed_at, actual_result, and evidence_ids")
+                    else:
+                        evidence_by_id = {item.get("id"): item for item in record.get("evidence", []) if isinstance(item, dict)}
+                        eligible = {evidence_id for evidence_id, item in evidence_by_id.items() if item.get("type") in {"observed", "external"}}
+                        if not set(outcome["evidence_ids"]) <= eligible:
+                            problems.append(f"{label} completed outcome may cite only linked observed/external evidence; synthetic, owner-statement, and inference evidence cannot substantiate it")
+                    if outcome and record.get("read_date") != outcome.get("observed_at"):
+                        problems.append(f"{label}.read_date must match the completed outcome observation date")
+                if record.get("status") in {"proposed", "running"} and record.get("outcome") not in (None, {}):
+                    problems.append(f"{label}.outcome cannot be set before experiment completion")
+                if record.get("decision_id"):
+                    decision_logs = [path for path in markdown_files(ROOT) if read_front_matter(path)[0].get("type") == "decision-log"]
+                    decision_text = "\n".join(path.read_text(encoding="utf-8") for path in decision_logs)
+                    outcome = record.get("outcome") if isinstance(record.get("outcome"), dict) else {}
+                    linked_evidence = outcome.get("evidence_ids", []) if isinstance(outcome, dict) else []
+                    if not decision_logs or record["decision_id"] not in decision_text or record["id"] not in decision_text or not linked_evidence or any(item not in decision_text for item in linked_evidence):
+                        problems.append(f"{label}.decision_id must resolve in the canonical decision log, which must cite this experiment and non-synthetic evidence IDs")
+                    if record.get("status") != "completed":
+                        problems.append(f"{label}.decision_id cannot imply a decision based on an experiment without a completed result")
+    return problems
+
+
+def command_assumptions_validate(args: argparse.Namespace) -> int:
+    path = Path(args.path).resolve()
+    data, error = load_json_object(path)
+    problems = [f"{args.path}: {error}"] if error or data is None else validate_assumption_records(data, dt.date.fromisoformat(args.today))
+    if problems:
+        print("\n".join(f"ERROR {item}" for item in problems), file=sys.stderr)
+        return 1
+    print(f"Validated assumption/experiment bundle: {args.path}")
     return 0
 
 
@@ -2367,6 +2516,12 @@ def parser() -> argparse.ArgumentParser:
     create.add_argument("artifact_id", help="stable ID, such as ADR-001")
     create.add_argument("title")
     create.set_defaults(run=command_new)
+    assumptions = sub.add_parser("assumptions", help="validate assumption and experiment records")
+    assumption_sub = assumptions.add_subparsers(dest="assumption_command", required=True)
+    validate_records = assumption_sub.add_parser("validate", help="validate a versioned assumption/experiment JSON bundle")
+    validate_records.add_argument("path")
+    validate_records.add_argument("--today", default=dt.date.today().isoformat(), help="validation date (YYYY-MM-DD), primarily for reproducible checks")
+    validate_records.set_defaults(run=command_assumptions_validate)
     return cli
 
 

@@ -77,6 +77,7 @@ LIFECYCLE_FILES = {
     "verification-record.md.template": "delivery/verification/VERIFY-001.md",
     "release-record.md.template": "delivery/releases/RELEASE-001.md",
     "operations-runbook.md.template": "operations/RUNBOOK.md",
+    "assumption-experiment-records.json.template": ".sdd/assumption-experiments.json",
 }
 
 
@@ -457,6 +458,9 @@ def main() -> int:
         .replace("<FRAMEWORK_REVISION>", framework_revision)
     )
     outputs[".sdd/trusted-ci.json"] = outputs[".sdd/trusted-ci.json.template"]
+    outputs[".sdd/schemas/assumption-experiment-v1.schema.json"] = (
+        (ROOT / "docs" / "framework" / "schemas" / "assumption-experiment-v1.schema.json").read_text(encoding="utf-8")
+    )
     outputs["scripts/ci_checks.py"] = (ROOT / "scripts" / "ci_checks.py").read_text(encoding="utf-8")
     outputs[".sdd/schemas/required-checks-v1.schema.json"] = (
         (ROOT / "docs" / "framework" / "schemas" / "required-checks-v1.schema.json").read_text(encoding="utf-8")

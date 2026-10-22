@@ -31,6 +31,7 @@ SUPPORTING_ARTIFACTS = {
     "delivery/verification/VERIFY-001.md",
     "delivery/releases/RELEASE-001.md",
     "operations/RUNBOOK.md",
+    ".sdd/assumption-experiments.json",
 }
 BASE_FILES = {
     "README.md",
@@ -46,6 +47,7 @@ BASE_FILES = {
     ".sdd/gate-run-v1.2.json.template",
     ".sdd/schemas/gate-run-v1.2.schema.json",
     ".sdd/schemas/trusted-ci-v1.schema.json",
+    ".sdd/schemas/assumption-experiment-v1.schema.json",
     ".sdd/trusted-ci.json.template",
     ".sdd/trusted-ci.json",
     ".sdd/schemas/required-checks-v1.schema.json",
@@ -118,7 +120,7 @@ class InitAppProjectTests(unittest.TestCase):
 
             files = {str(path.relative_to(target)) for path in target.rglob("*") if path.is_file()}
             self.assertEqual(files, CORE_ARTIFACTS | BASE_FILES)
-            self.assertEqual(len(files), 25)
+            self.assertEqual(len(files), 26)
             generated_readme = (target / "README.md").read_text(encoding="utf-8")
             self.assertIn("EXAMPLE-DECISION-001", generated_readme)
             self.assertIn("Give your AI agent the app idea", generated_readme)
@@ -132,6 +134,8 @@ class InitAppProjectTests(unittest.TestCase):
             self.assertIn(".sdd/schemas/required-checks-v1.schema.json", lock["locked_files"])
             self.assertIn(".sdd/schemas/gate-run-v1.2.schema.json", lock["locked_files"])
             self.assertIn(".sdd/schemas/trusted-ci-v1.schema.json", lock["locked_files"])
+            schema = target / ".sdd/schemas/assumption-experiment-v1.schema.json"
+            self.assertTrue(schema.is_file())
             check_manifest = json.loads((target / ".sdd/required-checks.json").read_text(encoding="utf-8"))
             check_schema = json.loads((target / ".sdd/schemas/required-checks-v1.schema.json").read_text(encoding="utf-8"))
             from scripts.artifacts import validate_schema_value
@@ -218,7 +222,7 @@ class InitAppProjectTests(unittest.TestCase):
 
             files = {str(path.relative_to(target)) for path in target.rglob("*") if path.is_file()}
             self.assertEqual(files, CORE_ARTIFACTS | SUPPORTING_ARTIFACTS | BASE_FILES)
-            self.assertEqual(len(files), 37)
+            self.assertEqual(len(files), 39)
             generated_readme = (target / "README.md").read_text(encoding="utf-8")
             self.assertIn("EXAMPLE-DECISION-002", generated_readme)
             validation = subprocess.run(
@@ -230,6 +234,14 @@ class InitAppProjectTests(unittest.TestCase):
             )
             self.assertEqual(validation.returncode, 0, validation.stderr)
             self.assertIn("Validated 17 artifact(s).", validation.stdout)
+            schema = target / ".sdd/schemas/assumption-experiment-v1.schema.json"
+            schema.write_text(schema.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+            tampered_schema = subprocess.run(
+                [sys.executable, str(target / "scripts" / "artifacts.py"), "validate"],
+                cwd=target, capture_output=True, text=True, check=False,
+            )
+            self.assertNotEqual(tampered_schema.returncode, 0)
+            self.assertIn("schema digest does not match", tampered_schema.stderr)
             handshake = (target / "architecture" / "EXAMPLE-ARCH-HANDSHAKE-001.md").read_text(encoding="utf-8")
             self.assertIn("./.sdd/G-ARCH-CONTRACT.json", handshake)
             self.assertIn("Choose commands for this app's actual stack", handshake)
