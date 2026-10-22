@@ -3,7 +3,7 @@ id: GATE-RUNNER-001
 type: framework-capability
 title: Transactional lifecycle gate runner
 status: in-review
-version: 0.1
+version: 0.2
 created: 2026-10-21
 updated: 2026-10-21
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-BACKLOG-001, WORKFLOW-ADV-001
@@ -29,6 +29,8 @@ python3 scripts/artifacts.py staged-check --root APP_ROOT
 ```
 
 The plan emits each gate/result transition as legal or illegal, its prior-gate prerequisites, actor boundary, invalidation rule, and next action. The runner validates a candidate record in memory alongside current immutable runs before publishing it. Candidate records must reference every exact current upstream run by ID, version, and digest; absent, failed, blocked, or stale prerequisites reject the append. Existing evidence and owner-decision checks remain in the pinned validator.
+
+The FW-026 unit suite builds a complete accepted route through all ten gates using explicitly test-only synthetic `not-applicable` records and fixture-owner decisions. Negative cases hold each downstream prerequisite `in-progress` and verify rejection. These tests exercise runner plumbing only; they neither create application gate decisions nor assert PASS.
 
 Append takes a repository-local interprocess lock, writes and syncs a same-filesystem temporary file, then uses create-only hard-link publication. A duplicate ID is never overwritten. A failed publication removes its temporary file. The canonical JSON records are authoritative; no cache is created. Lock timeout and I/O errors fail closed. A crash before publication may leave a hidden temporary file, which is not a gate record; remove it only after confirming no runner is active.
 

@@ -16,6 +16,7 @@ from scripts.artifacts import (
     _gate_write_lock,
     candidate_source_revision_problems,
     _cleanup_governance_temps,
+    file_sha256,
     gate_transition_table,
     staged_governance_problems,
     validate_gate_run_records,
@@ -108,6 +109,128 @@ class GateRunnerTests(unittest.TestCase):
                 invalid["application_id"] = "SYNTHETIC"
                 invalid_errors = validate_gate_run_records(root, schema, "SYNTHETIC", candidate=invalid)
                 self.assertTrue(invalid_errors, f"invalid {gate_id} fixture unexpectedly validated")
+
+    def test_all_ten_gate_routes_accept_isolated_synthetic_not_applicable_records(self) -> None:
+        """Exercise a complete accepted route without asserting application evidence or PASS."""
+        schema = json.loads(V1_SCHEMA.read_text(encoding="utf-8"))
+        fixture_dir = ROOT / "docs/framework/examples/gate-contract-v1/valid"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = self._app_root(Path(temporary))
+            decisions = root / "decisions"
+            decisions.mkdir()
+            (decisions / "DECISION-001.md").write_text(
+                "---\nid: FIXTURE-DECISION-001\ntype: decision\ntitle: Synthetic route fixture\nstatus: draft\nversion: 1.0\ncreated: 2026-10-21\nupdated: 2026-10-21\n---\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "init", "-q", "-b", "main", str(root)], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.email", "fixture@example.invalid"], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.name", "Synthetic Fixture"], check=True)
+            subprocess.run(["git", "-C", str(root), "add", "-A"], check=True)
+            subprocess.run(["git", "-C", str(root), "commit", "-qm", "synthetic route fixture source"], check=True)
+            revision = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"], check=True, capture_output=True, text=True,
+            ).stdout.strip()
+            runs_dir = root / APP_GATE_RUNS
+            runs_dir.mkdir(parents=True)
+
+            for index, gate_id in enumerate(GATE_ORDER):
+                with self.subTest(gate=gate_id):
+                    record = json.loads((fixture_dir / f"{gate_id}.json").read_text(encoding="utf-8"))
+                    record.update({
+                        "record_id": f"SYNTHETIC-ROUTE-{index + 1:02d}",
+                        "application_id": "SYNTHETIC",
+                        "created_at": f"2026-10-21T12:{index:02d}:00Z",
+                        "gate_result": "not-applicable",
+                        "result_rationale": "Test-only synthetic route fixture; not an application decision or gate PASS.",
+                    })
+                    for section in (record["source_snapshot"]["files"], record["scope"]["artifact_refs"]):
+                        for ref in section:
+                            ref["source_revision"] = revision
+                    record["source_snapshot"]["commit_sha"] = revision
+                    record["change_control"]["commit_sha"] = revision
+                    record["scope"]["exclusions"] = [{
+                        "item": f"{gate_id} synthetic route fixture only",
+                        "reason": "The fixture exercises transition plumbing and does not represent an app scope decision.",
+                        "authority": "synthetic fixture owner",
+                        "downstream_effect": "No application gate result or product evidence is implied.",
+                    }]
+                    if gate_id == "G-REQ":
+                        record["gate_data"]["decision_ids"] = ["FIXTURE-DECISION-001"]
+                    decision_id = f"FIXTURE-OWNER-NA-{index + 1:02d}"
+                    record["authority"]["owner_decisions"] = [{
+                        "decision_id": decision_id,
+                        "decision_maker": "fixture-owner",
+                        "role": "test-only synthetic fixture owner",
+                        "decided_at": f"2026-10-21T11:{index:02d}:00Z",
+                        "choice": f"fixture-only not-applicable route for {gate_id}",
+                        "affected_ids": [record["record_id"]],
+                        "rationale": "Synthetic harness exercises an allowed completed route without asserting real applicability.",
+                        "revisit_condition": "Not applicable outside this isolated test fixture.",
+                    }]
+                    for criterion in record["criteria_results"]:
+                        criterion.update({
+                            "outcome": "not-applicable",
+                            "evidence_ids": [],
+                            "rationale": "Test-only synthetic route plumbing; no product criterion was assessed.",
+                            "owner_decision_ids": [decision_id],
+                        })
+
+                    for prior_gate in GATE_ORDER[:index]:
+                        prior_record = next(
+                            item for item in runs_dir.glob("*.json")
+                            if json.loads(item.read_text(encoding="utf-8"))["gate_id"] == prior_gate
+                        )
+                        prior = json.loads(prior_record.read_text(encoding="utf-8"))
+                        record["scope"]["artifact_refs"].append({
+                            "artifact_id": prior["record_id"],
+                            "version": str(prior["record_version"]),
+                            "path": prior_record.relative_to(root).as_posix(),
+                            "sha256": file_sha256(prior_record),
+                            "source_revision": revision,
+                        })
+
+                    errors = validate_gate_run_records(root, schema, "SYNTHETIC", candidate=record)
+                    self.assertEqual(errors, [], f"{gate_id} positive route rejected: {errors}")
+                    _atomic_create_json(root, runs_dir / f"{record['record_id']}.json", record)
+
+                    if index:
+                        prior_gate = GATE_ORDER[index - 1]
+                        prior_path = next(
+                            item for item in runs_dir.glob("*.json")
+                            if json.loads(item.read_text(encoding="utf-8"))["gate_id"] == prior_gate
+                        )
+                        prior_bytes = prior_path.read_bytes()
+                        prior_record = json.loads(prior_bytes)
+                        prior_record["gate_result"] = "in-progress"
+                        for criterion in prior_record["criteria_results"]:
+                            criterion.update({
+                                "outcome": "not-checked",
+                                "owner_decision_ids": [],
+                                "rationale": "Negative route fixture holds this prerequisite open.",
+                            })
+                        prior_path.write_text(json.dumps(prior_record, indent=2) + "\n", encoding="utf-8")
+                        negative = json.loads(json.dumps(record))
+                        negative.update({
+                            "record_id": f"SYNTHETIC-ROUTE-NEG-{index + 1:02d}",
+                            "record_version": record["record_version"] + 1,
+                            "supersedes_run_id": record["record_id"],
+                            "created_at": f"2026-10-22T12:{index:02d}:00Z",
+                        })
+                        for decision in negative["authority"]["owner_decisions"]:
+                            decision["affected_ids"] = [negative["record_id"]]
+                        prior_ref = next(
+                            ref for ref in negative["scope"]["artifact_refs"]
+                            if ref["path"] == prior_path.relative_to(root).as_posix()
+                        )
+                        prior_ref["sha256"] = file_sha256(prior_path)
+                        try:
+                            blocked = validate_gate_run_records(root, schema, "SYNTHETIC", candidate=negative)
+                            self.assertTrue(any(
+                                f"candidate {gate_id}: prerequisite {prior_gate} is in-progress, not complete" in item
+                                for item in blocked
+                            ), blocked)
+                        finally:
+                            prior_path.write_bytes(prior_bytes)
 
     def test_atomic_create_never_overwrites_and_cleans_temp_on_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
