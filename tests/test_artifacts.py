@@ -199,6 +199,9 @@ class ArtifactValidationTests(unittest.TestCase):
             self.assertEqual(result.returncode, 1)
             self.assertIn("constitution.md: required app SDD root file is missing", result.stderr)
 
+    def test_fw026_hosted_merge_block_rehearsal_deliberately_fails_required_check(self) -> None:
+        self.fail("FW-026 hosted rehearsal sentinel: deliberate required-check failure; do not merge")
+
 
 if __name__ == "__main__":
     unittest.main()
