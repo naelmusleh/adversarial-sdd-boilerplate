@@ -89,6 +89,8 @@ jobs:
           test "$(npm --version)" = "12.1.0"
           node --version
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          sha256sum package-lock.json | tee "$RUNNER_TEMP/fw013-web-lock.sha256"
+          cp package-lock.json "$RUNNER_TEMP/fw013-web-package-lock.json"
           mkdir -p "$RUNNER_TEMP/fw013-replay/web"
           cp -R . "$RUNNER_TEMP/fw013-replay/web/"
           cp -R "$PROBE_ROOT/fixtures" "$RUNNER_TEMP/fw013-replay/fixtures"
@@ -97,8 +99,6 @@ jobs:
           npm run typecheck
           npm test
           npm run build
-          sha256sum package-lock.json | tee "$RUNNER_TEMP/fw013-web-lock.sha256"
-          cp package-lock.json "$RUNNER_TEMP/fw013-web-package-lock.json"
       - name: Run FastAPI profile and capture lock
         if: matrix.profile == 'python'
         shell: bash
