@@ -3,7 +3,7 @@ id: FRAMEWORK-ARCHITECTURE-002
 type: framework-architecture
 title: FW-TASK-028 risk-scaled quality and traceability architecture
 status: draft
-version: 0.3
+version: 0.4
 created: 2026-10-23
 updated: 2026-10-23
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-009, FRAMEWORK-COVERAGE-001, FRAMEWORK-CX-001, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, DECISION-026, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
@@ -149,10 +149,12 @@ All units must revalidate against approved FRAMEWORK-GATE-CONTRACT-001 v1.0 and 
 - **FRAMEWORK-ARCHITECTURE-002/FINDING-002 — Major, critical contract verification:** Profile, trace and result contracts lacked typed schemas and positive/negative fixtures; relational invariants were underspecified. **Disposition:** accepted; v0.2 adds three Draft 2020-12 schemas, paired fixtures, semantic diagnostic cases, and explicit limits on schema-only claims.
 - **CI correction:** Verify Pipeline [40015807647](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40015807647) failed on the v0.2 transfer commit because the architecture artifact was truncated before its front matter; the artifact validator stopped with “missing front matter opening delimiter.” The full architecture content and schemas/fixtures are restored in v0.3. No implementation code or framework check policy changed.
 - **Findings/disposition:** Both findings are addressed in this revision; full-scope independent rerun is pending.
-- **Gate result:** In progress; round-1 BLOCK remains immutable historical evidence.
+- **Round 2 result:** BLOCK at exact architecture commit `94fadf4766b2ae4cc499239120de8f083e0cfc0b`; Verify Pipeline [40016142180](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40016142180) passed all three jobs on that SHA. GARCH-01 and GARCH-02 passed; GARCH-03 blocked.
+- **FRAMEWORK-ARCHITECTURE-002/FINDING-003 — Major, semantic verification fixtures:** `fixtures/cases.json` references `semantic-negative-cases` without defining a fixture payload; its listed diagnostic IDs have no concrete inputs/expected observations. Missing source/profile binding, risk-floor downgrade, symlink escape, provider head mismatch, and exception-authority cases are therefore not reviewable. The suite also lacks explicit cases for missing required checks and incomplete metric/check rollups. **Disposition:** accepted; G-ARCH remains blocked pending a manual checkpoint before any further reviewer loop.
+- **Gate result:** Blocked. Round-1 and round-2 findings remain immutable historical evidence; no finding is waived.
 
 ## Exclusions and next action
 
 This design does not choose numeric thresholds, select real app stacks/providers, implement validators/adapters, set repository protection, accept exceptions, or authorize FW-TASK-024 or other v2 work.
 
-**Next action:** Commit v0.3 with complete schemas, fixtures, finding dispositions, and the CI correction; pass Verify Pipeline on that exact revision; then request full-scope independent G-ARCH rerun. G-IMPL remains unauthorized until G-ARCH passes and implementation is separately authorized under the applicable gate contract.
+**Next action:** Manual user gating is required before another correction/review loop under the repository operating contract. The specific unresolved work is to add concrete semantic fixture inputs and expected diagnostics for the listed cross-record attacks, missing required checks, and incomplete result rollups. G-IMPL remains unauthorized.
