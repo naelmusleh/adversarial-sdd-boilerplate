@@ -6,7 +6,7 @@ status: draft
 version: 1.0
 created: 2026-10-23
 updated: 2026-10-23
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-020, DECISION-026, FRAMEWORK-EXERCISE-007
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, DECISION-026, FRAMEWORK-EXERCISE-007
 ---
 
 # FRAMEWORK-FEASIBILITY-009 — FW-TASK-028 risk-quality and traceability feasibility
@@ -31,7 +31,7 @@ Official tool documentation indicates candidate measurement capabilities:
 - Mutmut is a Python mutation-testing candidate: [mutmut documentation](https://mutmut.readthedocs.io/en/latest/).
 - cargo-mutants is a Rust mutation-testing candidate: [cargo-mutants documentation](https://mutants.rs/).
 
-These documents establish that candidate tools describe relevant features, not that their exact pinned versions interoperate with this repository's synthetic profiles or produce directly comparable scores. Mutation operators, equivalent-mutant handling, generated-code treatment, test selection, runtime, and tool support can vary. The probes must retain exact toolchain/tool versions and classify unsupported or unavailable results explicitly.
+For a first reproducible probe, freeze these candidate pins as observed from official project documentation/registries on 2026-10-23: Node.js 22.23.3 and npm 12.1.0 (FW-013 hosted profile baseline), Vitest and @vitest/coverage-v8 5.0.5, Stryker core and Vitest runner 10.0.0, TypeScript 5.9.3; Python 3.13.2, pip 26.2.2, pytest 9.1.1, Coverage.py 7.16.2, mutmut 3.7.0; Rust/Cargo 1.97.0, cargo-llvm-cov 0.9.1, cargo-mutants 27.1.0. Pins and transitive lock digests are candidate experiment inputs, not ongoing recommendations. Sources: [Vitest 5 coverage package](https://www.npmjs.com/package/@vitest/coverage-v8), [Stryker core](https://www.npmjs.com/package/@stryker-mutator/core), [Stryker Vitest runner](https://www.npmjs.com/package/@stryker-mutator/vitest-runner), [Coverage.py 7.16.2](https://pypi.org/project/coverage/7.16.2/), [mutmut 3.7.0](https://pypi.org/project/mutmut/3.7.0/), [cargo-llvm-cov 0.9.1 release](https://github.com/taiki-e/cargo-llvm-cov/releases/tag/0.9.1), and [cargo-mutants 27.1.0](https://docs.rs/crate/cargo-mutants/27.1.0). These documents establish candidate capabilities, not compatibility with each other or directly comparable scores. Mutation operators, equivalent-mutant handling, generated-code treatment, test selection, runtime, and tool support can vary. The probes must retain exact toolchain/tool versions and classify unsupported or unavailable results explicitly.
 
 ## Applicability screen
 
@@ -40,6 +40,32 @@ Applicable: toolchain installation and runtime compatibility; coverage and mutat
 Not applicable to this synthetic probe: real product security classification, customer/privacy data, data rights, application deployment, provider costs, production service SLOs, photo/media behavior, release authorization, and operational support. No production threshold or user-data decision is made.
 
 Security boundary: use a temporary GitHub-hosted VM, read-only permissions, no secrets, no persistent checkout credentials, no product data, no source/host mounts, and no privileged token in child processes. Package-registry/network egress during setup remains exposed and must be disclosed. If a safe read-only runner cannot execute a probe, mark it unavailable; do not weaken permissions or claim isolation.
+
+## Frozen setup and deterministic fixture catalog
+
+The probe generator and temporary workflow must be committed and reviewed before execution. Generate three isolated toy workspaces from one versioned fixture manifest; retain the generator and manifest SHA-256. Use an ephemeral `ubuntu-24.04` runner. Each profile is sequential, has a 15-minute soft budget and 20-minute hard timeout; the full job has a 60-minute hard timeout. Record unavailable/tool-install/timeout separately from a failed assertion. Resolve and retain exact lockfiles before the clean replay; no floating version tags or unpinned package installs are allowed.
+
+| Profile | Exact setup and commands |
+| --- | --- |
+| Next.js/TypeScript | Node 22.23.3, npm 12.1.0; direct pins Vitest/@vitest/coverage-v8 5.0.5, @stryker-mutator/core/@stryker-mutator/vitest-runner 10.0.0, TypeScript 5.9.3. Generate package manifest and run `npm install --package-lock-only --ignore-scripts --no-audit --no-fund`; clean replay with `npm ci --ignore-scripts --no-audit --no-fund`; run `npm exec -- vitest run --coverage`, then `npm exec -- stryker run --concurrency 1 --reporters clear-text,json`. |
+| FastAPI/Python | Python 3.13.2; create a clean venv, install pip 26.2.2, then install pytest 9.1.1, coverage 7.16.2, mutmut 3.7.0 from exact direct pins; capture `python -m pip freeze --all > requirements.lock`, create a second clean venv, install with `python -m pip install -r requirements.lock`, and run from the clean replay. Run `python -m coverage run --branch -m pytest -q`, `python -m coverage json -o coverage.json`, and `mutmut run`. |
+| Rust/Axum | Rust/Cargo 1.97.0 edition 2024; exact Cargo dependencies from a retained lockfile. Create and retain Cargo.lock from exact direct dependencies, then clean replay with `cargo fetch --locked`. Install with `cargo install cargo-llvm-cov --locked --version 0.9.1` and `cargo install cargo-mutants --locked --version 27.1.0`. Run stable line/region coverage as `cargo llvm-cov --json --output-path target/coverage.json`; separately attempt `cargo llvm-cov --branch --json --output-path target/branch-coverage.json` and `cargo mutants --no-shuffle --timeout 30`. If branch mode, the tool, or exact pinned install is unsupported on the stable toolchain, record that metric unavailable; do not change toolchain or substitute an unpinned version. |
+
+The identical hand-authored behavior fixture is `classify(n) = "positive" if n > 0 else "nonpositive"`. A coverage-only test invokes `classify(1)` without asserting its result; the assertion test checks both `classify(1) == "positive"` and `classify(0) == "nonpositive"`. The paired mutant changes only `n > 0` to `n >= 0`. Expected outcomes: the no-assertion test executes the positive branch and still exits successfully against the mutant; the assertion test fails against the mutant at `n=0`. Each profile must report source/branch outcomes where its tool supports them. This is a named toy mutant, not a comparable mutation score or proof of semantic quality.
+
+The trace probe uses an explicit manifest fixture with this canonical shape: `repository`, `source_commit`, `task_id`, sorted complete `criterion_ids`, sorted `changed_paths`, sorted `required_checks`, `generated_paths` entries with declared treatment/rationale, and `exceptions`. The probe computes the Git changed-path set for the supplied base/head and compares exact commit, task/criteria completeness, path set, and the named check-result set. Expected diagnostic strings identify each bad field, for example `stale source_commit`, `missing criterion FR-FW-030/AC-5`, `unmapped changed path src/ui/card.tsx`, and `missing required check TypeScript Static Code Analysis`. It must not write to the fixture repo. A synthetic exception with only a free-text `approved_by` must be rejected. A positive exception is accepted only if the workflow can independently read a matching approval by an app-configured authorized identity against the same pull request/head commit; otherwise report authorization as unsupported and keep the path fail-closed.
+
+Anti-gaming fixtures and exact outcomes:
+
+| Fixture | Input mutation | Required observable result |
+| --- | --- | --- |
+| Ineffective assertion | Replace the assertion test with a call-only test | Test exits 0 for original and mutant; report explains that execution/line coverage cannot establish assertion adequacy. |
+| Omitted export | Each profile declares expected `classify` in a checked-in independent `expected_exports.json`; remove the public declaration/export from the module | A separate consumer contract test fails with a named missing-export diagnostic. TS checks module namespace keys; Python imports the named symbol; Rust compiles an integration test importing the expected public item. |
+| Generated-file accounting | A generated fixture carries a marker and has an explicit path/policy entry with `include` or `exclude` plus rationale | Declared include/exclude appears in measured/unmeasured inventory exactly as configured; deleting its policy entry yields `unclassified generated path` and no silent exclusion. |
+| Mixed-scope trace | Synthetic Git diff changes one task-mapped policy path plus an unrelated UI path | Trace check names the unmapped UI path; adding an authorized exception yields a pending/accepted exception result only if provider identity evidence validates. |
+| Stale or incomplete trace | Change source SHA, remove one criteria ID, required check, or changed-path mapping | Each case rejects with the relevant missing/stale diagnostic. |
+
+The fixture generator records SHA-256 for the generator, manifests, and complete input tree before execution; the harness compares the tree digest after all tests and mutation-tool runs. All test/mutant execution occurs in disposable generated directories. A mismatch is a hard stop and invalidates the probe. No workflow checkout token is persisted (`actions/checkout` uses `persist-credentials: false`); workflow permissions are `contents: read`; no token is passed to package, test, or mutation subprocesses. The runner has outbound registry access during setup; that risk is documented rather than described as network-isolated.
 
 ## Probe register
 
@@ -73,4 +99,4 @@ Even a G-FEAS PASS would authorize only architecture planning within DECISION-02
 
 ## Initial status
 
-Plan prepared 2026-10-23. No FW-028 feasibility probe has run. The three FW-013 profile toolchains are prior setup observations only. Next action: independent exact-revision plan review; after plan approval, run the bounded probes and record results.
+Plan prepared 2026-10-23. First independent review blocked execution for missing exact pins/commands and underspecified omitted-export/generated-file fixtures. This revision adds pinned candidate toolchains, concrete commands, fixture contents and expected outcomes, frozen input/tree digests, source-mutation detection, permissions and timeouts. No FW-028 feasibility probe has run. The three FW-013 profile toolchains remain prior setup observations only. Next action: independent exact-revision plan review; after plan approval, run the bounded probes and record results.
