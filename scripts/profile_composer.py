@@ -150,12 +150,9 @@ def compose_profiles(
         raise ValueError("Unknown application profile(s): " + ", ".join(unknown) + ". Available profiles: " + ", ".join(sorted(all_ids)))
 
     profiles: dict[str, dict[str, Any]] = {}
-    source_bytes: dict[str, bytes] = {}
-    prerequisites: dict[str, dict[str, Any]] = {}
-    missing_required: list[str] = []
-    output_files: dict[str, str] = {}
-    profile_owners: dict[str, str] = {}
-    for profile_id in sorted(selected_ids):
+    registry_profiles: dict[str, dict[str, Any]] = {}
+    registry_source_bytes: dict[str, bytes] = {}
+    for profile_id in sorted(all_ids):
         profile_dir = profile_root / profile_id
         manifest_path = profile_dir / "profile.json"
         try:
@@ -164,6 +161,18 @@ def compose_profiles(
         except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
             raise ValueError(f"{profile_id}: could not load strict JSON profile manifest: {exc}") from exc
         validate_profile(profile, profile_id)
+        registry_profiles[profile_id] = profile
+        registry_source_bytes[profile_id] = raw
+
+    source_bytes: dict[str, bytes] = {}
+    prerequisites: dict[str, dict[str, Any]] = {}
+    missing_required: list[str] = []
+    output_files: dict[str, str] = {}
+    profile_owners: dict[str, str] = {}
+    for profile_id in sorted(selected_ids):
+        profile_dir = profile_root / profile_id
+        raw = registry_source_bytes[profile_id]
+        profile = registry_profiles[profile_id]
         profiles[profile_id] = profile
         source_bytes[profile_id] = raw
         for prereq_name, declaration in profile["prerequisites"].items():
@@ -202,7 +211,7 @@ def compose_profiles(
 
     for profile_id, profile in profiles.items():
         foreign_markers: dict[str, set[str]] = {}
-        for other_id, other in profiles.items():
+        for other_id, other in registry_profiles.items():
             if other_id == profile_id:
                 continue
             markers = {other_id.casefold(), other["language"]["name"].casefold(), other["runtime"]["name"].casefold()}

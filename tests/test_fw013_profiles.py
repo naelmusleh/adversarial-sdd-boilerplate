@@ -99,6 +99,20 @@ class FrameworkProfileCompositionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Profile leakage detected"):
             self.compose(["nextjs-typescript", "fastapi-python"])
 
+    def test_unselected_profile_dependency_leakage_is_rejected(self) -> None:
+        package = self.profile_root / "nextjs-typescript/files/package.json"
+        package.write_text(package.read_text(encoding="utf-8").replace(
+            '"react-dom": "19.2.8"', '"react-dom": "19.2.8", "fastapi": "0.157.0"',
+        ), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "Profile leakage detected: nextjs-typescript"):
+            self.compose(["nextjs-typescript"])
+
+    def test_unselected_profile_instruction_leakage_is_rejected(self) -> None:
+        readme = self.profile_root / "nextjs-typescript/files/README.md"
+        readme.write_text(readme.read_text(encoding="utf-8") + "\nprofile-instructions: fastapi-python\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "Profile leakage detected: nextjs-typescript"):
+            self.compose(["nextjs-typescript"])
+
 
 if __name__ == "__main__":
     unittest.main()
