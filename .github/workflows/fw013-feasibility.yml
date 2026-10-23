@@ -39,7 +39,7 @@ jobs:
             echo "## FW-013 core isolation"
             echo "- Result: ${RESULT:-not-run}"
             echo "- Run commit: $RUN_SHA"
-            echo "- Plan SHA-256: e35cdb129e9391a0177775c55a1d9b217bc5d4139f2019d67077b769530f8cfb"
+            echo "- Plan SHA-256: 012163203f6f41477d84a969cc46fbea18965efd37e44ed67555abd11e88df60"
             echo "- Command: python3 -I scripts/artifacts.py validate (PYTHONPATH empty)"
             python3 --version || true
           } >> "$GITHUB_STEP_SUMMARY"
@@ -97,7 +97,7 @@ jobs:
           cd "$RUNNER_TEMP/fw013-replay/web"
           npm ci --no-audit --no-fund
           npm run typecheck
-          npm test
+          npm test -- --reporter=verbose
           npm run build
       - name: Run FastAPI profile and capture lock
         if: matrix.profile == 'python'
@@ -113,7 +113,7 @@ jobs:
           "$RUNNER_TEMP/fw013-python-replay/bin/python" -m pip install -r "$RUNNER_TEMP/fw013-requirements.lock"
           cd "$PROBE_ROOT/api"
           "$RUNNER_TEMP/fw013-python-replay/bin/python" -m compileall -q .
-          "$RUNNER_TEMP/fw013-python-replay/bin/python" -m pytest -q
+          "$RUNNER_TEMP/fw013-python-replay/bin/python" -m pytest -v
           sha256sum "$RUNNER_TEMP/fw013-requirements.lock" | tee "$RUNNER_TEMP/fw013-python-lock.sha256"
       - name: Run Rust/Axum profile and capture lock
         if: matrix.profile == 'rust'
@@ -142,7 +142,12 @@ jobs:
             echo "- Job result: $JOB_STATUS"
             echo "- Run commit: $RUN_SHA"
             echo "- Fixture generator SHA-256: $GENERATOR_SHA"
-            echo "- Plan SHA-256: e35cdb129e9391a0177775c55a1d9b217bc5d4139f2019d67077b769530f8cfb"
+            echo "- Plan SHA-256: 012163203f6f41477d84a969cc46fbea18965efd37e44ed67555abd11e88df60"
+            if [ "$JOB_STATUS" = success ]; then
+              echo "- Classification: pass for this synthetic profile probe"
+            else
+              echo "- Classification: failed/unavailable; not passing"
+            fi
             echo "- Runner: $ImageOS / $ImageVersion ($RUNNER_ARCH)"
             echo "- Commands and individual fixture results: see this job's step logs."
             case "$PROFILE" in
