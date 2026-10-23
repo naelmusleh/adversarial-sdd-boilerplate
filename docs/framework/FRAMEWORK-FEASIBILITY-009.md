@@ -3,7 +3,7 @@ id: FRAMEWORK-FEASIBILITY-009
 type: feasibility-register
 title: FW-TASK-028 risk-quality and traceability feasibility
 status: draft
-version: 1.3
+version: 1.4
 created: 2026-10-23
 updated: 2026-10-23
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, DECISION-026, FRAMEWORK-EXERCISE-007
@@ -161,3 +161,20 @@ Coverage and supplementary mutation observations again matched the prior runs: w
 A follow-up review identified one remaining fixture weakness: values could be swapped between paths while still covering the expected criterion set. The probe pins the expected mapping for this synthetic fixture (`src/policy.py` → `AC-1`; `src/ui/card.tsx` → `AC-5`) and rejects a swapped mapping. Generator SHA-256: `629c5876de65f829a3e73239c60ca27c95d9f085a1bdcd483e1edb16f294bc74`.
 
 The all-profile hosted run [39970815307](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39970815307) passed all three profile jobs on exact commit `f7ba2304b71913c960912870823d33c0e2755332`. Every profile emitted the expected `path-to-criterion mapping mismatch src/policy.py` diagnostic for the swapped pair. Verify Pipeline [39970805893](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39970805893) also passed on that exact commit. The evidence-record commit `249c420174bbb6489c4a3b5b8aabcf998091b90a` then passed Verify Pipeline [39973881443](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39973881443). These results validate only the synthetic fixture's fixed mapping; they do not establish app-specific mapping correctness or provider-backed evidence. All prior coverage, lockfile, and path-digest limitations remain as recorded above. Independent disposition is pending; no implementation is authorized.
+
+
+### Provider-bound required-check feasibility (2026-10-23)
+
+The approved FEAS-FW028-03 plan requires provider check identity and conclusion to be verified against the exact repository revision. A temporary, separate read-only CI job now queries GitHub's commit check-runs API for the workflow-dispatch `github.sha`. It requires all three configured checks to be completed with conclusion `success`, their `head_sha` to equal the dispatch SHA, and provider slug `github-actions`. The job has `checks: read`; the generated-test/profile jobs receive no repository token, and this token is not passed to package, test, or mutation subprocesses. This demonstrates that the GitHub provider API exposes usable exact-revision check identities in the bounded pilot. It does not integrate a production validator or authorize exceptions.
+
+The provider-binding and all-profile run [39974646889](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39974646889) succeeded on exact commit `c9beaeb1a1a4d88c8f93ae7c93a12c3aebf4728d`. Verify Pipeline [39974542393](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39974542393) also succeeded on that exact commit. The validated GitHub check-run identities were:
+
+| Check | Run ID | Conclusion | Head SHA |
+| --- | ---: | --- | --- |
+| Initializer Regression Gate | `120485600213` | success | `c9beaeb1a1a4d88c8f93ae7c93a12c3aebf4728d` |
+| Metadata & Artifact Audit | `120485600208` | success | `c9beaeb1a1a4d88c8f93ae7c93a12c3aebf4728d` |
+| TypeScript Static Code Analysis | `120485599932` | success | `c9beaeb1a1a4d88c8f93ae7c93a12c3aebf4728d` |
+
+**Exception authorization disposition:** No app-configured authorized identity/role or positive independent approval was available to test. The workflow remains fail-closed for exceptions; no exception is accepted. This is the approved G-FEAS alternative pending a future owner-authorized exception model, not evidence that positive exception authorization is feasible. A product/framework validator and its integration remain unimplemented and outside this feasibility result.
+
+**FEAS-FW028-03 bounded result:** PASS for deterministic synthetic task/path mapping and for provider-backed exact-commit check identity/conclusion availability; exception acceptance remains blocked and unsupported as stated above. This does not complete FW-TASK-028 implementation acceptance criteria or authorize implementation.

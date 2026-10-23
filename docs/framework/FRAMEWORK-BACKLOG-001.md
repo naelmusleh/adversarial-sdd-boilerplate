@@ -3,7 +3,7 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 4.22
+version: 4.23
 created: 2026-10-07
 updated: 2026-10-23
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-ADV-014, FRAMEWORK-ADV-015, FRAMEWORK-ADV-017, FRAMEWORK-ADV-018, FRAMEWORK-ADV-019, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, FRAMEWORK-EXERCISE-006, FRAMEWORK-EXERCISE-007, FRAMEWORK-FEASIBILITY-008, FRAMEWORK-ARCHITECTURE-001, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, WORKFLOW-AI-ENGINEERING-001, DECISION-LOG-001, DECISION-022, DECISION-023, DECISION-024, DECISION-025, DECISION-026, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, FRAMEWORK-FEASIBILITY-009
@@ -789,3 +789,6 @@ When FW-TASK-010 is complete, report only:
 
 
 - **FW-TASK-028 evidence-record CI checkpoint (2026-10-23):** The feasibility register now records swapped criterion/path negative replay [39970815307](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39970815307), Verify Pipeline on that probe revision [39970805893](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39970805893), and Verify Pipeline [39973881443](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39973881443) passing on exact evidence commit `249c420174bbb6489c4a3b5b8aabcf998091b90a`. Independent disposition of this final record commit remains pending; G-FEAS remains pending and no implementation is authorized.
+
+
+- **FW-TASK-028 provider-binding feasibility checkpoint (2026-10-23):** Temporary read-only check-runs probe [39974646889](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39974646889) and Verify Pipeline [39974542393](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39974542393) both passed on exact commit `c9beaeb1a1a4d88c8f93ae7c93a12c3aebf4728d`. GitHub returned three completed successful required check identities with matching `head_sha`; IDs and limitations are in FRAMEWORK-FEASIBILITY-009. Positive exception authorization remains unavailable; exceptions are explicitly blocked/fail-closed pending a future owner-authorized model. Independent review of the final evidence is pending; no implementation is authorized.
