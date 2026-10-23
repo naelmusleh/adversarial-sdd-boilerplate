@@ -1,0 +1,46 @@
+{
+  "version": "1",
+  "profiles": {
+    "web": [
+      "package.json",
+      "tsconfig.json",
+      "vitest.config.ts",
+      "stryker.config.json",
+      "src/classify.ts",
+      "src/public_api.ts",
+      "expected_exports.json",
+      "tests/quality.test.ts",
+      "tests/exports.test.ts"
+    ],
+    "python": [
+      "pyproject.toml",
+      "src/__init__.py",
+      "src/classify.py",
+      "src/public_api.py",
+      "expected_exports.json",
+      "tests/test_quality.py",
+      "tests/test_exports.py"
+    ],
+    "rust": [
+      "Cargo.toml",
+      "src/lib.rs",
+      "expected_exports.json",
+      "tests/quality_fixture.rs",
+      "tests/export_consumer.rs"
+    ]
+  },
+  "shared_contract": {
+    "behavior": "classify(n) returns positive only when n > 0",
+    "mutant": "replace n > 0 with n >= 0",
+    "matrix": [
+      "original+call-only=pass",
+      "mutant+call-only=pass",
+      "original+assertion=pass",
+      "mutant+assertion=fail at n=0"
+    ],
+    "export": [
+      "classify"
+    ],
+    "generated_path": "src/generated/build_stamp.py"
+  }
+}
