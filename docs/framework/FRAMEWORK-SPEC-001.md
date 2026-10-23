@@ -6,7 +6,7 @@ status: draft
 version: 0.17
 created: 2026-10-07
 updated: 2026-10-22
-related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001
+related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-007, DECISION-024
 ---
 
 # FRAMEWORK-SPEC-001 — Adversarial SDD Framework v1 scope and behavior
@@ -25,7 +25,7 @@ The v1 outcome is that a project can start with a product idea, create and maint
 
 ## Approved bounded v2 increment
 
-On 2026-10-21, the owner approved the bounded FW-TASK-026 scope and requirements FR-FW-019 through FR-FW-021, and the bounded FW-TASK-027 scope and requirements FR-FW-022 through FR-FW-024. On 2026-10-22, the owner approved the FW-TASK-013 scope and requirements FR-FW-025 through FR-FW-027 (DECISION-023). FW-TASK-013 implementation remains blocked until its approved multi-platform sample-project prerequisite is evidenced. These approvals do not authorize FW-TASK-028, FW-TASK-024, other proposed v2 tasks, or adoption of a draft gate-contract version.
+On 2026-10-21, the owner approved the bounded FW-TASK-026 scope and requirements FR-FW-019 through FR-FW-021, and the bounded FW-TASK-027 scope and requirements FR-FW-022 through FR-FW-024. On 2026-10-22, the owner approved the FW-TASK-013 scope and requirements FR-FW-025 through FR-FW-027 (DECISION-023), then authorized the separate bounded FW-TASK-032 task to define and review a small multi-platform sample contract (DECISION-024). FR-FW-028 records the traceability and acceptance conditions for that task. FW-TASK-032 must produce an independently reviewed draft and obtain owner acceptance of its exact revision before that artifact is used to unblock FW-TASK-013. The synthetic native lanes and stack assignments are framework fixtures only, not Infinite Gallery product decisions. These approvals do not authorize FW-TASK-028, FW-TASK-024, other proposed v2 tasks, or adoption of a draft gate-contract version.
 
 ## Current baseline
 
@@ -98,6 +98,7 @@ Requirement statements in the tables below use uppercase RFC 2119 keywords for m
 | FR-FW-025 | The framework's governance core MUST define lifecycle, artifact, validator, and evidence contracts without requiring an application runtime or invoking stack-specific checks unless a profile is explicitly selected. | Core-only validation runs without application-stack dependencies or commands; selecting a profile is required before stack-specific checks run. |
 | FR-FW-026 | Each supported application profile MUST be separately versioned and declare its language/runtime versions, prerequisites, source-layout assumptions, applicable and unsupported checks, and profile-owned dependencies; initializer composition MUST be explicit and MUST report missing prerequisites or unsupported checks without implying success. | Profile metadata and initializer fixtures cover Next.js/TypeScript, FastAPI/Python, and Rust/Axum independently, including clean-target generation, prerequisite failures, and truthful unsupported-check reporting. |
 | FR-FW-027 | Cross-module governance interfaces MUST use versioned schemas and documented compatibility behavior; profile composition MUST preserve core artifact identity and MUST NOT leak another profile's dependencies or instructions. | Valid/invalid schema fixtures, compatibility cases, and deliberate dependency/instruction-leakage fixtures demonstrate isolated profile composition. |
+| FR-FW-028 | The framework MUST provide a small, versioned multi-platform sample contract that identifies owner-approved source facts separately from synthetic platform/profile fixtures, defines platform and toolchain applicability, and specifies one stable cross-module interface without changing any real application's approved scope. | The sample contract includes a provenance map, explicit supported/fixture-only/excluded platform and profile matrix, a versioned interface with positive and negative examples, and independent review plus owner acceptance of the exact revision before FW-TASK-013 may consume it. |
 
 ### Non-functional requirements
 
