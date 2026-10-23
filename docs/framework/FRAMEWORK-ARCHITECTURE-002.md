@@ -1,12 +1,9 @@
-Warning: truncated output (original token count: 5055)
-Total output lines: 158
-
 ---
 id: FRAMEWORK-ARCHITECTURE-002
 type: framework-architecture
 title: FW-TASK-028 risk-scaled quality and traceability architecture
 status: draft
-version: 0.2
+version: 0.3
 created: 2026-10-23
 updated: 2026-10-23
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-009, FRAMEWORK-COVERAGE-001, FRAMEWORK-CX-001, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, DECISION-026, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
@@ -53,21 +50,21 @@ The schemas and fixture cases under `docs/framework/schemas/fw028/` are architec
 
 ### Quality profile
 
-Schema: `docs/framework/schemas/fw028/quality-profile-v1.schema.json`. It types profile identity/version, owner reference, adapter, dimensions, risk tiers, metric rules, path scope, escalation floors, and supersession. Fixtures: `fixtures/quality-profile.valid.json` and `fixtures/quality-profile.missing-rationale.invalid.json`.
+Schema: `docs/framework/schemas/fw028/quality-profile-v1.schema.json`. It types profile identity/version, owner reference, adapter, dimensions, risk tiers, metric rules, path scope, escalation floors, and supersession. Fixtures: `docs/framework/schemas/fw028/fixtures/quality-profile.valid.json` and `docs/framework/schemas/fw028/fixtures/quality-profile.missing-rationale.invalid.json`.
 
 Invariants: thresholds are typed and justified by linked app policy/decision; exclusions cannot hide a path required by a stricter rule; unavailable metrics cannot satisfy mandatory conditions; task-level overrides cannot weaken accepted policy; lowering a threshold requires a reviewed new profile version; exact accepted profile bytes are digest-bound.
 
 ### Trace manifest
 
-Schema: `docs/framework/schemas/fw028/trace-manifest-v1.schema.json`. It types repository/source identity, task and criterion IDs, canonical paths, criterion/path links, required checks, profile digest, and exception references. Fixtures: `fixtures/trace-manifest.valid.json` and `fixtures/trace-manifest.missing-path-link.invalid.json`.
+Schema: `docs/framework/schemas/fw028/trace-manifest-v1.schema.json`. It types repository/source identity, task and criterion IDs, canonical paths, criterion/path links, required checks, profile digest, and exception references. Fixtures: `docs/framework/schemas/fw028/fixtures/trace-manifest.valid.json` and `docs/framework/schemas/fw028/fixtures/trace-manifest.missing-path-link.invalid.json`.
 
 Invariants: repository/source/profile revisions match the evaluated checkout; every in-scope changed path and required criterion is mapped; each pair is checked for correctness rather than accepting only complete sets; traversal, ambiguous normalization, aliases and symlink escape are rejected; generated paths are explicit. Exceptions require exact paths/criteria, reason and independently verifiable authority; until that authority contract is approved, every positive exception is rejected. Check names or local outcome strings are insufficient.
 
 ### Normalized measurement/check result
 
-Schema: `docs/framework/schemas/fw028/measurement-result-v1.schema.json`. It types repository/source and policy bindings, adapter/tool invocation, metrics, unavailable reasons, provider check-run evidence, overall state, evidence reference, and timestamp. Fixtures: `fixtures/measurement-result.valid.json` and `fixtures/measurement-result.unavailable-claimed-pass.invalid.json`.
+Schema: `docs/framework/schemas/fw028/measurement-result-v1.schema.json`. It types repository/source and policy bindings, adapter/tool invocation, metrics, unavailable reasons, provider check-run evidence, overall state, evidence reference, and timestamp. Fixtures: `docs/framework/schemas/fw028/fixtures/measurement-result.valid.json` and `docs/framework/schemas/fw028/fixtures/measurement-result.unavailable-claimed-pass.invalid.json`.
 
-Invariants: missing, failed, skipped, pending, stale, unsupported or unauthenticated evidence never becomes PASS; percentages from different tools/stacks are not compared as equivalent; a green aggregate cannot hide missing checks or weak-assertion findings. `fixtures/cases.json` records expected schema and semantic outcomes. The semantic validator must reject missing path/criterion pairs, profile digest mismatch, risk-floor downgrade, or a required unavailable metric paired with overall pass; JSON Schema alone cannot establish these cross-record facts.
+Invariants: missing, failed, skipped, pending, stale, unsupported or unauthenticated evidence never becomes PASS; percentages from different tools/stacks are not compared as equivalent; a green aggregate cannot hide missing checks or weak-assertion findings. `docs/framework/schemas/fw028/fixtures/cases.json` records expected schema and semantic outcomes. The semantic validator must reject missing path/criterion pairs, profile digest mismatch, risk-floor downgrade, or a required unavailable metric paired with overall pass; JSON Schema alone cannot establish these cross-record facts.
 
 ## Data, security, privacy, and operations
 
@@ -81,7 +78,9 @@ Invariants: missing, failed, skipped, pending, stale, unsupported or unauthentic
 | Failure | Result | Recovery |
 | --- | --- | --- |
 | Missing/invalid policy, task, criterion or mapping | Named failure; no PASS | Correct versioned input and evaluate new SHA. |
-| Conflicting or downgraded risk labels | Strictest rule or blocked | Owner reviews the classification…55 tokens truncated…A details | Await or rerun for exact current SHA. |
+| Conflicting or downgraded risk labels | Strictest rule or blocked | Owner reviews the classification and rationale. |
+| Unsupported mandatory metric/adapter | UNAVAILABLE and non-pass | Select a reviewed supported method; never substitute zero. |
+| Failed, pending, skipped or stale provider check | Non-pass with run/SHA details | Await or rerun for exact current SHA. |
 | Self-asserted or wrongly scoped exception | Reject | Resolve mapping; future authority requires separate owner-approved contract. |
 | Tool error, timeout or malformed output | Failed/unavailable with bounded diagnostic | Diagnose and retry under existing CI controls; no automatic retry loop. |
 | Source/policy changes during run | Stale/invalidated | Recompute on clean checkout at new revision. |
@@ -148,7 +147,7 @@ All units must revalidate against approved FRAMEWORK-GATE-CONTRACT-001 v1.0 and 
 - **Round 1 result:** BLOCK at exact commit `198ca0dc6e057694dda7a4401f790fa4926ac893`; Verify Pipeline [40015129630](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40015129630) passed all three jobs on that SHA.
 - **FRAMEWORK-ARCHITECTURE-002/FINDING-001 — Major, task-ready decomposition:** FW028-IMPL-01–03 lacked unit-level criteria, dependencies and checks. **Disposition:** accepted; v0.2 supplies a scope/dependency/check matrix.
 - **FRAMEWORK-ARCHITECTURE-002/FINDING-002 — Major, critical contract verification:** Profile, trace and result contracts lacked typed schemas and positive/negative fixtures; relational invariants were underspecified. **Disposition:** accepted; v0.2 adds three Draft 2020-12 schemas, paired fixtures, semantic diagnostic cases, and explicit limits on schema-only claims.
-- **Owner decisions:** Reviewer found none needed; corrections remain within DECISION-026.
+- **CI correction:** Verify Pipeline [40015807647](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40015807647) failed on the v0.2 transfer commit because the architecture artifact was truncated before its front matter; the artifact validator stopped with “missing front matter opening delimiter.” The full architecture content and schemas/fixtures are restored in v0.3. No implementation code or framework check policy changed.
 - **Findings/disposition:** Both findings are addressed in this revision; full-scope independent rerun is pending.
 - **Gate result:** In progress; round-1 BLOCK remains immutable historical evidence.
 
@@ -156,4 +155,4 @@ All units must revalidate against approved FRAMEWORK-GATE-CONTRACT-001 v1.0 and 
 
 This design does not choose numeric thresholds, select real app stacks/providers, implement validators/adapters, set repository protection, accept exceptions, or authorize FW-TASK-024 or other v2 work.
 
-**Next action:** Commit v0.2 with schemas, fixtures, and finding dispositions; pass Verify Pipeline on that exact revision; then request full-scope independent G-ARCH rerun. G-IMPL remains unauthorized until G-ARCH passes and implementation is separately authorized under the applicable gate contract.
+**Next action:** Commit v0.3 with complete schemas, fixtures, finding dispositions, and the CI correction; pass Verify Pipeline on that exact revision; then request full-scope independent G-ARCH rerun. G-IMPL remains unauthorized until G-ARCH passes and implementation is separately authorized under the applicable gate contract.

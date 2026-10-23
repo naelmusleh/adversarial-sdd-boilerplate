@@ -3,7 +3,7 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 4.31
+version: 4.32
 created: 2026-10-07
 updated: 2026-10-23
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-ADV-014, FRAMEWORK-ADV-015, FRAMEWORK-ADV-017, FRAMEWORK-ADV-018, FRAMEWORK-ADV-019, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, FRAMEWORK-EXERCISE-006, FRAMEWORK-EXERCISE-007, FRAMEWORK-FEASIBILITY-008, FRAMEWORK-ARCHITECTURE-001, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, WORKFLOW-AI-ENGINEERING-001, DECISION-LOG-001, DECISION-022, DECISION-023, DECISION-024, DECISION-025, DECISION-026, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, FRAMEWORK-FEASIBILITY-009
@@ -816,3 +816,6 @@ When FW-TASK-010 is complete, report only:
 
 
 - **FW-TASK-028 G-ARCH review round 1 (2026-10-23):** Reviewer `/root/infinite_gallery_reviewer` passed GARCH-01 and blocked GARCH-02/03 on FRAMEWORK-ARCHITECTURE-002 v0.1 at exact commit `198ca0dc6e057694dda7a4401f790fa4926ac893`; Verify Pipeline [40015129630](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40015129630) passed all three jobs on that SHA. Major findings: implementation units lacked unit-level acceptance criteria/dependencies/checks; quality-profile, trace-manifest, and measurement-result contracts lacked typed schemas, fixture pairs, and precise cross-record invariants. No owner decision was needed. v0.2 adds proposed Draft 2020-12 schemas in `docs/framework/schemas/fw028/`, valid/invalid fixture pairs plus semantic negative-case IDs, detailed task-ready unit contracts, and finding dispositions. Full-scope independent G-ARCH rerun and exact-revision Verify Pipeline are pending; G-IMPL remains unauthorized.
+
+
+- **FW-TASK-028 G-ARCH artifact-transfer correction (2026-10-23):** Verify Pipeline [40015807647](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40015807647) failed on commit `580a1f87e5a5a3076401b93b53d51aba0cfa758c` because FRAMEWORK-ARCHITECTURE-002 was truncated before its opening front matter; the artifact validator stopped with a missing-delimiter diagnostic. The full v0.3 architecture and contract fixtures are being restored. G-ARCH remains blocked pending exact-revision CI and independent full-scope rerun; no implementation is authorized.
