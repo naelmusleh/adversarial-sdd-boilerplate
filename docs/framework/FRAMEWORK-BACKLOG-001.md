@@ -3,7 +3,7 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 4.24
+version: 4.25
 created: 2026-10-07
 updated: 2026-10-23
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-ADV-014, FRAMEWORK-ADV-015, FRAMEWORK-ADV-017, FRAMEWORK-ADV-018, FRAMEWORK-ADV-019, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, FRAMEWORK-EXERCISE-006, FRAMEWORK-EXERCISE-007, FRAMEWORK-FEASIBILITY-008, FRAMEWORK-ARCHITECTURE-001, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, WORKFLOW-AI-ENGINEERING-001, DECISION-LOG-001, DECISION-022, DECISION-023, DECISION-024, DECISION-025, DECISION-026, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, FRAMEWORK-FEASIBILITY-009
@@ -795,3 +795,6 @@ When FW-TASK-010 is complete, report only:
 
 
 - **FW-TASK-028 G-FEAS disposition (2026-10-23):** Independent reviewer `/root/fw028_results_review` recommended **PASS within the approved bounded feasibility scope** at exact evidence commit `a5f43a7c172bbc09685cd88eef8c3bda679e1a71`. FEASIBILITY-009 records criterion-level results, provider-bound exact-SHA check IDs, and residual limits. The temporary workflow and fixtures were removed in `09e252da5a7e204eabbf14ee30e57041a2980f5e`; Verify Pipeline [39999916417](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39999916417) passed on that exact cleanup revision. **FW-TASK-028 remains unimplemented.** Exceptions stay fail-closed, thresholds remain unchosen, and production validator/application integration are unproven. This PASS permits only subsequent lifecycle planning; G-IMPL and excluded tasks are not authorized.
+
+
+- **FW-TASK-028 G-COVERAGE work record (2026-10-23):** G-FEAS passed within bounded scope under DECISION-026; its exact evidence and limits are in FRAMEWORK-FEASIBILITY-009. Active gate: G-COVERAGE. Selected task: FW-TASK-028; requirements: FR-FW-029–031. Planned acceptance evidence: a versioned journey/state and applicability matrix mapping each approved requirement to actors, preconditions, success/failure exits, recovery, failure categories, and applicable interaction surfaces, plus independent review and exact-revision Verify Pipeline. Scope assumption for review: this is a framework/agent governance capability with CLI/local-repository, GitHub pull-request review, and hosted CI surfaces; the three tested language profiles are runtime adapters, not user-facing platform commitments. No Android/iOS product UI is declared in the approved task. G-COVERAGE will remain pending until coverage and exclusions are independently reviewed; no implementation or threshold selection is authorized. Potential blocker for review: confirm that this surface interpretation is consistent with DECISION-026 and the framework mission; if not, identify an owner decision before advancing to G-CX.
