@@ -3,7 +3,7 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 4.27
+version: 4.28
 created: 2026-10-07
 updated: 2026-10-23
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-ADV-014, FRAMEWORK-ADV-015, FRAMEWORK-ADV-017, FRAMEWORK-ADV-018, FRAMEWORK-ADV-019, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, FRAMEWORK-EXERCISE-006, FRAMEWORK-EXERCISE-007, FRAMEWORK-FEASIBILITY-008, FRAMEWORK-ARCHITECTURE-001, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, WORKFLOW-AI-ENGINEERING-001, DECISION-LOG-001, DECISION-022, DECISION-023, DECISION-024, DECISION-025, DECISION-026, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, FRAMEWORK-FEASIBILITY-009
@@ -804,3 +804,6 @@ When FW-TASK-010 is complete, report only:
 
 
 - **FW-TASK-028 G-COVERAGE disposition / G-CX work record (2026-10-23):** Independent reviewer `/root/infinite_gallery_reviewer` passed GCOV-01–03 for FRAMEWORK-COVERAGE-001 at exact commit `6e03862030c9fa9471b9326216d31639a2c6d12b`; Verify Pipeline [40013507495](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40013507495) passed all three jobs on that SHA. G-COVERAGE is passed within the bounded framework capability scope. Active gate: G-CX. Next evidence: a nonvisual interaction contract and full-scope tool-neutral critique of the four covered journeys across repository/CLI, hosted CI/checks, and pull-request review, including failure and recovery states. No Figma prototype is claimed for this nonvisual workflow. G-CX remains pending; implementation, numeric thresholds, positive exception authorization, and excluded v2 work remain prohibited.
+
+
+- **FW-TASK-028 G-CX interaction-contract checkpoint (2026-10-23):** Drafted FRAMEWORK-CX-001 as a product-appropriate nonvisual CLI/CI/review interaction contract for all four FRAMEWORK-COVERAGE-001 journeys. It uses conceptual, explicitly non-executable traces; distinguishes pass/fail/stale/in-progress/unavailable/blocked; preserves fail-closed exception behavior; and claims no UI prototype or runtime/accessibility verification. Active G-CX remains in progress pending independent full-scope critique and exact-revision Verify Pipeline. No implementation or numeric thresholds are authorized.
