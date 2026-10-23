@@ -211,7 +211,7 @@ def test_public_exports_match_independent_manifest():
     for name in expected:
         assert hasattr(module, name), f"missing public export: {name}"
 """)
-    write(root / "pyproject.toml", '[tool.mutmut]\nsource_paths = ["src/classify.py"]\npytest_add_cli_args_test_selection = ["tests"]\n')
+    write(root / "pyproject.toml", '[tool.mutmut]\nsource_paths = ["src/classify.py"]\npytest_add_cli_args_test_selection = ["tests"]\nalso_copy = ["expected_exports.json"]\n')
     return [root / name for name in ["pyproject.toml", "src/__init__.py", "src/classify.py", "src/public_api.py", "expected_exports.json", "tests/test_quality.py", "tests/test_exports.py"]]
 
 
@@ -301,7 +301,9 @@ def python_probe(work: Path) -> None:
     pristine = digest_paths(inputs)
     execute([py, "-m", "coverage", "run", "--branch", "-m", "pytest", "-q", "tests/test_quality.py", "-k", "call_only"], work, "pass")
     execute([py, "-m", "coverage", "json", "-o", "coverage.json"], work, "pass")
+    execute([py, "-m", "coverage", "report", "--branch", "--include=src/classify.py"], work, "pass")
     execute([py, "-m", "coverage", "run", "--branch", "-m", "pytest", "-q", "tests/test_quality.py", "-k", "assertion"], work, "pass")
+    execute([py, "-m", "coverage", "report", "--branch", "--include=src/classify.py"], work, "pass")
     execute([py, "-m", "pytest", "-q", "tests/test_quality.py", "-k", "call_only"], work, "pass")
     execute([py, "-m", "pytest", "-q", "tests/test_quality.py", "-k", "assertion"], work, "pass")
     original = (work / "src/classify.py").read_text()
@@ -327,7 +329,7 @@ def python_probe(work: Path) -> None:
     final_digest = digest_paths(inputs)
     if final_digest != pristine:
         raise RuntimeError("canonical Python fixture source digest changed")
-    print(json.dumps({"profile": "python", "mutmut": mutation, "source_digest_unchanged": True, "requirements_lock_sha256": hashlib.sha256(lock.encode()).hexdigest()}))
+    print(json.dumps({"profile": "python", "mutmut": mutation, "input_tree_sha256": final_digest, "source_digest_unchanged": True, "requirements_lock_sha256": hashlib.sha256(lock.encode()).hexdigest()}))
 
 
 def rust_probe(work: Path) -> None:
@@ -352,6 +354,10 @@ def rust_probe(work: Path) -> None:
     try:
         execute(["cargo", "install", "cargo-llvm-cov", "--locked", "--version", "0.9.1"], work, "pass", 480)
         execute(["cargo", "llvm-cov", "--locked", "--json", "--output-path", "target/coverage.json"], work, "pass", 480)
+        report = json.loads((work / "target/coverage.json").read_text())
+        data = report.get("data", [])
+        totals = data[0].get("totals") if data else report.get("totals")
+        print(json.dumps({"profile": "rust", "coverage_totals": totals, "coverage_summary_available": totals is not None}))
         line_coverage = "observed"
     except (RuntimeError, subprocess.TimeoutExpired) as error:
         print(json.dumps({"coverage_tool": "unavailable", "reason": type(error).__name__}))
