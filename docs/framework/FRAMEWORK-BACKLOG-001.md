@@ -3,7 +3,7 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 4.19
+version: 4.20
 created: 2026-10-07
 updated: 2026-10-23
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-ADV-014, FRAMEWORK-ADV-015, FRAMEWORK-ADV-017, FRAMEWORK-ADV-018, FRAMEWORK-ADV-019, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, FRAMEWORK-EXERCISE-006, FRAMEWORK-EXERCISE-007, FRAMEWORK-FEASIBILITY-008, FRAMEWORK-ARCHITECTURE-001, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, WORKFLOW-AI-ENGINEERING-001, DECISION-LOG-001, DECISION-022, DECISION-023, DECISION-024, DECISION-025, DECISION-026, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, FRAMEWORK-FEASIBILITY-009
@@ -780,3 +780,6 @@ When FW-TASK-010 is complete, report only:
 
 
 - **FW-TASK-028 trace-evidence limitation (2026-10-23):** Source review of the frozen probe confirmed its required-check values are synthetic strings rather than provider check/run identities. The fixture does not query GitHub or prove provider-backed exact-revision check binding. Its exception case is rejected as authorization-unavailable, but a nonempty exception list suppresses the unmapped-path diagnostic and no authorized, scoped exception acceptance case was exercised. FRAMEWORK-FEASIBILITY-009 now states these limits explicitly; FR-FW-030 / AC-5 evidence is incomplete pending independent disposition. No implementation is authorized.
+
+
+- **FW-TASK-028 repeatability replay (2026-10-23):** Second all-profile hosted run [39964952218](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39964952218) succeeded on exact commit `264bfebb5d49398c5cf1e5c3e58ed2559b2067c5`; Verify Pipeline [39964940274](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39964940274) passed on that SHA. Controlled matrix outcomes, coverage summaries, generated/trace diagnostics, and generic mutation counts reproduced. Python/Cargo lock digests matched; npm package-lock changed because it is regenerated from the registry each run, and per-run fixture-tree digests include random absolute temporary paths. See FRAMEWORK-FEASIBILITY-009 for exact hashes and interpretation. Independent disposition is pending; G-FEAS is not passed, FW-TASK-028 remains unimplemented, and current checks/thresholds remain unchanged.
