@@ -3,7 +3,7 @@ id: FRAMEWORK-CX-001
 type: framework-interaction-contract
 title: FW-TASK-028 nonvisual quality and traceability interactions
 status: draft
-version: 0.1
+version: 0.2
 created: 2026-10-23
 updated: 2026-10-23
 related-artifacts: FRAMEWORK-COVERAGE-001, FRAMEWORK-FEASIBILITY-009, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-026, GATE-CATALOG-001
@@ -107,12 +107,13 @@ Required provider checks:
   <check name> — <run ID> — <conclusion> — <head SHA>
 
 Unavailable: <metric/check> — <reason>
-Overall state: <PASS | FAIL | BLOCKED | UNAVAILABLE>
+Overall state: <PASS | FAIL | STALE | IN_PROGRESS | BLOCKED | UNAVAILABLE>
+Evidence freshness: <CURRENT | STALE | IN_PROGRESS>
 Evidence: <stable links/digests>
 Limits: coverage and mutation evidence do not prove semantic correctness
 ```
 
-The summary can show PASS only when the app policy’s declared conditions and exact-revision checks are satisfied. Missing, in-progress, failed, stale, or provider-unverified checks remain distinct and block a pass claim. A high line percentage beside an ineffective assertion is explicitly called out as weak evidence.
+The overall-state vocabulary is identical in local summaries, hosted check summaries, and pull-request review. If more than one condition applies, list every affected item in the detail rows and choose the overall state with this precedence: FAIL, STALE, IN_PROGRESS, BLOCKED, UNAVAILABLE, PASS. PASS is permitted only when all mandatory evidence is current and successful. STALE means a result references a different source SHA; IN_PROGRESS means at least one required check has not completed. Neither may be collapsed into BLOCKED or UNAVAILABLE. A high line percentage beside an ineffective assertion is explicitly called out as weak evidence.
 
 **Success exit:** Reviewer can inspect the evidence and exact-revision provider checks without inferring success from a score.
 
@@ -172,11 +173,13 @@ The reviewer can request changes or leave the result blocked. There is no pass-t
 - **Scope to inspect:** Traces A–D; all seven failure categories; all three interaction surfaces; six synthetic profile and product-boundary statements in FRAMEWORK-COVERAGE-001; accessibility of textual status and evidence navigation; clarity of recovery actions and owner-decision boundaries.
 - **Evidence location:** This artifact at its exact committed revision; G-COVERAGE evidence in FRAMEWORK-COVERAGE-001; product requirements FR-FW-029–031 and DECISION-026.
 - **Runtime/device limits:** No command/UI execution, screen-reader, responsive/mobile, or production CI behavior is verified by these text traces. Those are later implementation checks only if approved.
-- **Findings/disposition:** Pending independent critique. No finding is silently treated as resolved.
+- **Initial independent critique:** Reviewer `/root/infinite_gallery_reviewer`, manual tool-neutral review, exact artifact commit `8693634ead0fbf975a4ea53c4b6cdd83b13cd598`; Verify Pipeline [40014174253](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40014174253) passed on that SHA.
+- **FRAMEWORK-CX-001/FINDING-001 — Major, Trace C overall state:** Initial vocabulary omitted STALE and IN_PROGRESS although the contract required those states to remain distinct. **Disposition:** accepted and corrected in v0.2 by adding both states, separating evidence freshness, defining shared cross-surface labels, and specifying rollup precedence. Full-scope independent rerun is pending; the gate remains blocked until that rerun passes.
+- **Findings/disposition:** No other findings have been dispositioned; the reviewer explicitly found no owner decision needed for the frozen surface scope.
 - **Gate result:** In progress.
 
 ## Exclusions and next action
 
 This interaction contract does not choose thresholds or configuration fields, implement commands, integrate production profile validators, introduce an authorized-exception workflow, or claim correctness/security from a coverage number. Provider-check binding was shown in bounded G-FEAS only; production integration remains unproven.
 
-**Next action:** Independent reviewer critiques this complete artifact against GCX-01–03. Resolve and rerun the full scope if findings are raised. G-CX can pass only after review and exact-revision Verify Pipeline succeed. G-ARCH is the next permitted lifecycle stage if G-CX passes; G-IMPL remains unauthorized pending architecture and its other required evidence.
+**Next action:** Independent reviewer reruns the complete affected scope (Traces A–D, state table, and cross-surface contract) against GCX-01–03 after FINDING-001 remediation. G-CX can pass only after review and exact-revision Verify Pipeline succeed. G-ARCH is the next permitted lifecycle stage if G-CX passes; G-IMPL remains unauthorized pending architecture and its other required evidence.

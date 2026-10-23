@@ -3,7 +3,7 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 4.28
+version: 4.29
 created: 2026-10-07
 updated: 2026-10-23
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-ADV-014, FRAMEWORK-ADV-015, FRAMEWORK-ADV-017, FRAMEWORK-ADV-018, FRAMEWORK-ADV-019, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, FRAMEWORK-EXERCISE-006, FRAMEWORK-EXERCISE-007, FRAMEWORK-FEASIBILITY-008, FRAMEWORK-ARCHITECTURE-001, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, WORKFLOW-AI-ENGINEERING-001, DECISION-LOG-001, DECISION-022, DECISION-023, DECISION-024, DECISION-025, DECISION-026, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, FRAMEWORK-FEASIBILITY-009
@@ -807,3 +807,6 @@ When FW-TASK-010 is complete, report only:
 
 
 - **FW-TASK-028 G-CX interaction-contract checkpoint (2026-10-23):** Drafted FRAMEWORK-CX-001 as a product-appropriate nonvisual CLI/CI/review interaction contract for all four FRAMEWORK-COVERAGE-001 journeys. It uses conceptual, explicitly non-executable traces; distinguishes pass/fail/stale/in-progress/unavailable/blocked; preserves fail-closed exception behavior; and claims no UI prototype or runtime/accessibility verification. Active G-CX remains in progress pending independent full-scope critique and exact-revision Verify Pipeline. No implementation or numeric thresholds are authorized.
+
+
+- **FW-TASK-028 G-CX review round 1 (2026-10-23):** Reviewer `/root/infinite_gallery_reviewer` passed GCX-01/02 and blocked GCX-03 at exact commit `8693634ead0fbf975a4ea53c4b6cdd83b13cd598`. Major finding FRAMEWORK-CX-001/FINDING-001: Trace C's overall-state list omitted STALE and IN_PROGRESS, conflicting with the distinct-state contract. FRAMEWORK-CX-001 v0.2 adds both states, freshness field, shared cross-surface labels, and explicit rollup precedence. Full-scope independent rerun and Verify Pipeline on the fix commit are required; G-CX remains blocked pending that evidence.
