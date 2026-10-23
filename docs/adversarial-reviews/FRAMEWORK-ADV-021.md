@@ -2,8 +2,8 @@
 id: FRAMEWORK-ADV-021
 type: adversarial-review
 title: FW-TASK-028 G-FEAS plan review
-status: draft
-version: 0.2
+status: approved
+version: 1.0
 created: 2026-10-23
 updated: 2026-10-23
 related-artifacts: FRAMEWORK-FEASIBILITY-009, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-020, DECISION-026
@@ -38,3 +38,13 @@ The round-1 pin, fixture-definition, and no-mutation gaps were substantially add
 **Required correction:** Run a deterministic four-case matrix in each profile-native test runner using original source and a hand-authored source differing only by `n > 0` versus `n >= 0`: original+call-only PASS, mutant+call-only PASS, original+assertions PASS, mutant+assertions FAIL at `n=0`. Record each command, exit code, and source digest. Assess external mutation-tool integration separately and call it unavailable unless its report identifies the same mutant and test variant outcomes.
 
 This correction has been prepared in FRAMEWORK-FEASIBILITY-009. A third independent-review round would exceed the repository instruction's limit of two consecutive adversarial loops and is awaiting explicit owner authorization. G-FEAS remains blocked before probe execution.
+
+## Round 3 — pass
+
+The owner authorized this third independent review. Reviewer: `/root/infinite_gallery_reviewer`, separately assigned and read-only. Exact reviewed plan: commit `7143ac19f65820278779c420b62df02792f2a8dc`.
+
+The reviewer confirmed that every profile-native command is bound to four isolated cases: original+call-only PASS, mutant+call-only PASS, original+assertions PASS, and mutant+assertions FAIL at `n=0`. Each case records command, exit code, and source digest. The third-party mutation tools are distinct optional capability probes and are unavailable unless they identify the same mutant and test variants.
+
+The reviewer also confirmed that exact pins, synthetic trace/anti-gaming cases, mutation detection, runner bounds, and read-only/no-secret settings are present. Numeric thresholds remain undecided; no exception is approved; exception handling remains fail-closed without independently verified authority.
+
+**Verdict:** **PASS for execution of the bounded FW-TASK-028 G-FEAS plan only.** No probe was run by the reviewer; this is not a G-FEAS pass or implementation authorization.
