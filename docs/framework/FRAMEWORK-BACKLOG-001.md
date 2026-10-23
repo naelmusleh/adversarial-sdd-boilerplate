@@ -3,10 +3,10 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 4.9
+version: 4.10
 created: 2026-10-07
 updated: 2026-10-23
-related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-ADV-014, FRAMEWORK-ADV-015, FRAMEWORK-ADV-017, FRAMEWORK-ADV-018, FRAMEWORK-ADV-019, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, FRAMEWORK-EXERCISE-006, FRAMEWORK-EXERCISE-007, FRAMEWORK-FEASIBILITY-008, FRAMEWORK-ARCHITECTURE-001, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, WORKFLOW-AI-ENGINEERING-001, DECISION-LOG-001, DECISION-022, DECISION-023, DECISION-024, DECISION-025
+related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-ADV-014, FRAMEWORK-ADV-015, FRAMEWORK-ADV-017, FRAMEWORK-ADV-018, FRAMEWORK-ADV-019, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, FRAMEWORK-EXERCISE-006, FRAMEWORK-EXERCISE-007, FRAMEWORK-FEASIBILITY-008, FRAMEWORK-ARCHITECTURE-001, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, WORKFLOW-AI-ENGINEERING-001, DECISION-LOG-001, DECISION-022, DECISION-023, DECISION-024, DECISION-025, DECISION-026
 ---
 
 # FRAMEWORK-BACKLOG-001 — Remaining work to complete Adversarial SDD Framework v1
@@ -636,7 +636,7 @@ The following candidates incorporate the review of [Fadi88/one-man-startup](http
 
 - **Priority:** P1 — avoids both brittle universal thresholds and untraceable changes.
 - **Goal:** Define a stack-neutral impact policy that strongly verifies critical behavior and links code changes to approved intent without treating coverage or AST output as proof of correctness.
-- **Requirements:** Assign v2 requirement IDs only after v2 scope is opened and approved.
+- **Requirements:** FR-FW-029, FR-FW-030, and FR-FW-031, approved for this bounded scope by DECISION-026.
 - **Dependencies:** FW-TASK-017 gate/evidence contract; FW-TASK-019 check manifest and trusted CI evidence; FW-TASK-013 stack profiles. The framework repository's current checks retain their policy until a separately reviewed, evidence-backed change is approved.
 - **Work:** Define an app-owned impact matrix by behavior criticality, data/security consequence, failure severity, change type, and testability, with stack-specific measurement adapters. Permit strict thresholds for critical domain logic where coverage is meaningful and calibrated lower or alternative evidence for presentation/configuration code; do not adopt universal 100% or arbitrary 80% thresholds without rationale. Define test evidence beyond line counts, including branch/condition coverage where applicable and mutation/property/contract tests for high-impact invariants. Add deterministic change traceability binding a selected task and acceptance criteria to changed paths and required checks. AST analysis may flag exported symbols without trace links for review; it cannot prove product intent, force a one-method-to-one-task mapping, or automatically strip source code.
 - **Acceptance criteria:**
@@ -648,7 +648,9 @@ The following candidates incorporate the review of [Fadi88/one-man-startup](http
   6. No tool deletes or rewrites code because an AST symbol lacks a backlog entry; diagnostics identify the symbol/path and required disposition without mutating source.
   7. Adversarial tests show that high coverage with ineffective tests, trivial tests written only to inflate coverage, omitted exports, generated code, and unrelated changes do not produce misleading quality claims.
 - **Evidence:** Versioned impact matrix/profile schema, stack-specific fixtures, traceability validator and negative cases, threshold rationale, mutation/property/contract evidence for selected critical invariants, and independent review of gaming and false-pass vectors.
-- **State:** **TODO — proposed v2; FW-TASK-024 must consume this policy rather than define competing thresholds.**
+- **State:** **Owner-approved scope; G-REQ in progress.** Implementation is not authorized yet. This task defines app-owned policy only; it must leave the framework repository's existing required checks and thresholds unchanged. FW-TASK-024 remains out of scope and must consume this policy only after its own approval.
+
+- **Scope approval / G-REQ work record (2026-10-23):** Owner approved FW-TASK-028 only and FR-FW-029–031 in DECISION-026. Active gate is G-REQ. Selected task: FW-TASK-028. Approved scope: (a) app-owned risk/quality profiles with explicit dimensions, metrics, thresholds, exclusions, unavailable reporting and rationale; (b) deterministic, exact-revision traceability from selected task and acceptance criteria to changed paths and required checks, with only authorized documented exceptions; and (c) adversarial quality fixtures that challenge gaming and false-pass claims while producing diagnostics only. Explicit exclusions: changing framework repository check thresholds, FW-TASK-024, signed receipts, sandboxing, agent budgets, draft gate-contract adoption, app implementation, and all other proposed v2 work. Acceptance evidence is mapped to the seven existing task criteria and FR-FW-029–031; G-REQ requires an independent review of the revised specification/backlog/decision and frozen inputs. `python3 scripts/artifacts.py validate` passed on the prepared local snapshot with 61 artifacts; implementation has not started. Following G-REQ, proceed to G-FEAS for app-owned profile metrics and supported stack adapters; no quality thresholds may be inferred or imposed on this framework repository.
 
 ### FW-TASK-029 — Produce verifiable signed CI evidence receipts
 

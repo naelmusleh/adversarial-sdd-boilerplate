@@ -3,10 +3,10 @@ id: FRAMEWORK-SPEC-001
 type: framework-specification
 title: Adversarial SDD Framework v1 scope and behavior
 status: draft
-version: 0.17
+version: 0.18
 created: 2026-10-07
-updated: 2026-10-22
-related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-007, FRAMEWORK-ARCHITECTURE-001, DECISION-024, DECISION-025
+updated: 2026-10-23
+related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-007, FRAMEWORK-ARCHITECTURE-001, DECISION-024, DECISION-025, DECISION-026
 ---
 
 # FRAMEWORK-SPEC-001 — Adversarial SDD Framework v1 scope and behavior
@@ -25,7 +25,7 @@ The v1 outcome is that a project can start with a product idea, create and maint
 
 ## Approved bounded v2 increment
 
-On 2026-10-21, the owner approved the bounded FW-TASK-026 scope and requirements FR-FW-019 through FR-FW-021, and the bounded FW-TASK-027 scope and requirements FR-FW-022 through FR-FW-024. On 2026-10-22, the owner approved the FW-TASK-013 scope and requirements FR-FW-025 through FR-FW-027 (DECISION-023), then authorized the separate bounded FW-TASK-032 task to define and review a small multi-platform sample contract (DECISION-024). FR-FW-028 records the traceability and acceptance conditions for that task. The owner accepted FRAMEWORK-EXERCISE-007 v0.2's exact digest for use as FW-TASK-013's prerequisite in DECISION-025. Its synthetic native lanes and stack assignments remain framework fixtures only, not Infinite Gallery product decisions. These approvals do not authorize FW-TASK-028, FW-TASK-024, other proposed v2 tasks, or adoption of a draft gate-contract version.
+On 2026-10-21, the owner approved the bounded FW-TASK-026 scope and requirements FR-FW-019 through FR-FW-021, and the bounded FW-TASK-027 scope and requirements FR-FW-022 through FR-FW-024. On 2026-10-22, the owner approved the FW-TASK-013 scope and requirements FR-FW-025 through FR-FW-027 (DECISION-023), then authorized the separate bounded FW-TASK-032 task to define and review a small multi-platform sample contract (DECISION-024). FR-FW-028 records the traceability and acceptance conditions for that task. The owner accepted FRAMEWORK-EXERCISE-007 v0.2's exact digest for use as FW-TASK-013's prerequisite in DECISION-025. On 2026-10-23, the owner approved FW-TASK-028 only and FR-FW-029 through FR-FW-031 in DECISION-026. This scope defines app-owned quality/risk profiles, deterministic task-to-check traceability, and adversarial anti-gaming evidence; it does not change the framework repository's existing thresholds and does not authorize FW-TASK-024 or other proposed tasks. Synthetic native lanes and stack assignments in FRAMEWORK-EXERCISE-007 remain framework fixtures only, not Infinite Gallery product decisions. These approvals do not authorize adoption of a draft gate-contract version.
 
 ## Current baseline
 
@@ -99,6 +99,9 @@ Requirement statements in the tables below use uppercase RFC 2119 keywords for m
 | FR-FW-026 | Each supported application profile MUST be separately versioned and declare its language/runtime versions, prerequisites, source-layout assumptions, applicable and unsupported checks, and profile-owned dependencies; initializer composition MUST be explicit and MUST report missing prerequisites or unsupported checks without implying success. | Profile metadata and initializer fixtures cover Next.js/TypeScript, FastAPI/Python, and Rust/Axum independently, including clean-target generation, prerequisite failures, and truthful unsupported-check reporting. |
 | FR-FW-027 | Cross-module governance interfaces MUST use versioned schemas and documented compatibility behavior; profile composition MUST preserve core artifact identity and MUST NOT leak another profile's dependencies or instructions. | Valid/invalid schema fixtures, compatibility cases, and deliberate dependency/instruction-leakage fixtures demonstrate isolated profile composition. |
 | FR-FW-028 | The framework MUST provide a small, versioned multi-platform sample contract that identifies owner-approved source facts separately from synthetic platform/profile fixtures, defines platform and toolchain applicability, and specifies one stable cross-module interface without changing any real application's approved scope. | The sample contract includes a provenance map, explicit supported/fixture-only/excluded platform and profile matrix, a versioned interface with positive and negative examples, and independent review plus owner acceptance of the exact revision before FW-TASK-013 may consume it. |
+| FR-FW-029 | An application adopting risk-scaled quality MUST define a versioned, app-owned impact policy for each supported profile that states risk dimensions, applicable metrics, thresholds, exclusions, unavailable states, and rationale; the policy MUST NOT imply that coverage alone proves correctness or change the framework repository's default checks. | Profile-specific fixtures exercise high-risk and low-risk examples, applicable/unavailable metric reporting, exclusions, rationale and diagnostics; no app threshold is inherited silently from the framework. |
+| FR-FW-030 | A quality assessment MUST bind the selected backlog task and its acceptance criteria to changed paths and required checks through a deterministic, revision-bound trace record; unmapped changes MUST fail or require an explicit authorized, documented exception. | Positive and negative trace fixtures cover full mapping, missing criteria/path/check links, stale revisions and authorized exceptions; the validator identifies unmapped items without modifying source files. |
+| FR-FW-031 | Verification strength MUST increase for critical domain, security, authorization, tenancy, and migration behavior, and policy fixtures MUST detect misleading quality claims from ineffective/trivial tests, omitted exports, generated code and unrelated changes; no tool may delete or rewrite source because an AST symbol lacks a trace link. | Adversarial fixtures cover high coverage with ineffective tests, trivial coverage inflation, omitted exports, generated files and mixed-scope changes; diagnostics require review/disposition and never mutate code. |
 
 ### Non-functional requirements
 
