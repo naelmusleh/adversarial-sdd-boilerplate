@@ -1,0 +1,12 @@
+{
+  "schema_version": "1",
+  "cases": [
+    {"id": "FW028-FIX-01", "file": "quality-profile.valid.json", "expected": "schema-valid"},
+    {"id": "FW028-FIX-02", "file": "quality-profile.missing-rationale.invalid.json", "expected": "reject", "diagnostic_id": "PROFILE-MISSING-RATIONALE"},
+    {"id": "FW028-FIX-03", "file": "trace-manifest.valid.json", "expected": "schema-valid-and-semantic-pass"},
+    {"id": "FW028-FIX-04", "file": "trace-manifest.missing-path-link.invalid.json", "expected": "reject", "diagnostic_id": "TRACE-CHANGED-PATH-UNMAPPED"},
+    {"id": "FW028-FIX-05", "file": "measurement-result.valid.json", "expected": "schema-valid-and-semantic-pass"},
+    {"id": "FW028-FIX-06", "file": "measurement-result.unavailable-claimed-pass.invalid.json", "expected": "reject", "diagnostic_id": "RESULT-REQUIRED-METRIC-NONPASS"},
+    {"id": "FW028-FIX-07", "file": "semantic-negative-cases", "expected": "reject", "diagnostic_ids": ["TRACE-SOURCE-SHA-MISMATCH", "TRACE-PROFILE-DIGEST-MISMATCH", "RISK-FLOOR-DOWNGRADE", "PATH-SYMLINK-ESCAPE", "CHECK-HEAD-SHA-MISMATCH", "EXCEPTION-AUTHORITY-UNAVAILABLE"]}
+  ]
+}
