@@ -211,7 +211,7 @@ def test_public_exports_match_independent_manifest():
     for name in expected:
         assert hasattr(module, name), f"missing public export: {name}"
 """)
-    write(root / "pyproject.toml", '[tool.mutmut]\npaths_to_mutate = "src/classify.py"\ntests_dir = "tests"\n')
+    write(root / "pyproject.toml", '[tool.mutmut]\nsource_paths = ["src/classify.py"]\npytest_add_cli_args_test_selection = ["tests"]\n')
     return [root / name for name in ["pyproject.toml", "src/__init__.py", "src/classify.py", "src/public_api.py", "expected_exports.json", "tests/test_quality.py", "tests/test_exports.py"]]
 
 
@@ -269,7 +269,7 @@ def web_probe(work: Path) -> None:
     api.write_text(saved)
     try:
         execute(["npm", "install", "--no-save", "--package-lock=false", "--ignore-scripts", "--no-audit", "--no-fund", "@stryker-mutator/core@10.0.0", "@stryker-mutator/vitest-runner@10.0.0"], work, "pass", 480)
-        _, out = execute(["npm", "exec", "--", "stryker", "run", "--concurrency", "1", "--reporters", "clear-text", "json"], work, "pass", 480)
+        _, out = execute(["npm", "exec", "--", "stryker", "run", "--concurrency", "1", "--reporters", "clear-text,json"], work, "pass", 480)
         mutation = "observed"
     except (RuntimeError, subprocess.TimeoutExpired) as error:
         print(json.dumps({"optional_mutation_tool": "unavailable", "reason": type(error).__name__}))

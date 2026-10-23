@@ -1,19 +1,24 @@
 name: FW-028 Feasibility Probes (Temporary)
 
 on:
-  push:
-    branches:
-      - codex/v2-backlog-roadmap
-    paths:
-      - .github/workflows/fw028-feasibility.yml
-      - experiments/fw028/**
   workflow_dispatch:
+    inputs:
+      profile:
+        description: Synthetic profile to run
+        required: true
+        type: choice
+        options:
+          - web
+          - python
+          - rust
+          - all
 
 permissions:
   contents: read
 
 jobs:
   nextjs-typescript:
+    if: inputs.profile == 'all' || inputs.profile == 'web'
     name: Synthetic Next.js TypeScript profile
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -36,6 +41,7 @@ jobs:
         run: timeout 900s python3 experiments/fw028/run_probe.py web
 
   fastapi-python:
+    if: inputs.profile == 'all' || inputs.profile == 'python'
     name: Synthetic FastAPI Python profile
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -52,6 +58,7 @@ jobs:
         run: timeout 900s python3 experiments/fw028/run_probe.py python
 
   rust-axum:
+    if: inputs.profile == 'all' || inputs.profile == 'rust'
     name: Synthetic Rust Axum profile
     runs-on: ubuntu-24.04
     timeout-minutes: 20
