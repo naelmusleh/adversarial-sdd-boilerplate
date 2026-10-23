@@ -3,7 +3,7 @@ id: FRAMEWORK-FEASIBILITY-009
 type: feasibility-register
 title: FW-TASK-028 risk-quality and traceability feasibility
 status: draft
-version: 1.4
+version: 1.5
 created: 2026-10-23
 updated: 2026-10-23
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, DECISION-026, FRAMEWORK-EXERCISE-007
@@ -178,3 +178,12 @@ The provider-binding and all-profile run [39974646889](https://github.com/naelmu
 **Exception authorization disposition:** No app-configured authorized identity/role or positive independent approval was available to test. The workflow remains fail-closed for exceptions; no exception is accepted. This is the approved G-FEAS alternative pending a future owner-authorized exception model, not evidence that positive exception authorization is feasible. A product/framework validator and its integration remain unimplemented and outside this feasibility result.
 
 **FEAS-FW028-03 bounded result:** PASS for deterministic synthetic task/path mapping and for provider-backed exact-commit check identity/conclusion availability; exception acceptance remains blocked and unsupported as stated above. This does not complete FW-TASK-028 implementation acceptance criteria or authorize implementation.
+
+
+## Independent G-FEAS disposition (2026-10-23)
+
+**PASS within the approved, bounded FW-TASK-028 feasibility scope.** The independent results reviewer `/root/fw028_results_review` reviewed the final evidence at exact commit `a5f43a7c172bbc09685cd88eef8c3bda679e1a71` and recommended PASS for FEAS-FW028-01 through -04, with the limits recorded in this register. The review specifically accepted the provider-binding probe's exact-SHA check-run identity/conclusion evidence and the explicit fail-closed exception disposition.
+
+The temporary workflow and generated fixtures were removed in cleanup commit `09e252da5a7e204eabbf14ee30e57041a2980f5e`; Verify Pipeline [39999916417](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39999916417) passed all three jobs on that exact cleanup commit. The evidence remains in this register and the GitHub workflow run records.
+
+This gate result is feasibility evidence only. Exceptions remain disabled until an owner-authorized identity/role model exists; no positive authorized exception was verified. No numeric quality thresholds or rationale were selected, and no production validator or real app-stack integration was implemented. npm lock drift, unavailable stable Rust branch coverage, and path-dependent temporary tree digests remain explicit limits. FW-TASK-028 implementation acceptance criteria are incomplete. G-FEAS PASS authorizes progression to subsequent lifecycle planning only; it does not authorize G-IMPL or any excluded v2 task.
