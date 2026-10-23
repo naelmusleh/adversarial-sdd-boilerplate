@@ -15,8 +15,45 @@ on:
 
 permissions:
   contents: read
+  checks: read
 
 jobs:
+  provider-check-binding:
+    name: Provider-bound required check identity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify required checks against dispatch revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GH_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          response="$(gh api "repos/${GH_REPO}/commits/${GH_SHA}/check-runs?per_page=100")"
+          python3 -c '
+          import json, os, sys
+          checks = json.load(sys.stdin)["check_runs"]
+          expected = {
+              "Metadata & Artifact Audit",
+              "Initializer Regression Gate",
+              "TypeScript Static Code Analysis",
+          }
+          selected = [check for check in checks if check["name"] in expected]
+          found = {check["name"] for check in selected}
+          missing = expected - found
+          if missing:
+              raise SystemExit("missing provider check(s): " + ", ".join(sorted(missing)))
+          for check in selected:
+              if check["head_sha"] != os.environ["GH_SHA"]:
+                  raise SystemExit("wrong head SHA for " + check["name"])
+              if check["status"] != "completed" or check["conclusion"] != "success":
+                  raise SystemExit("required check did not pass: " + check["name"])
+              if not check.get("app") or check["app"].get("slug") != "github-actions":
+                  raise SystemExit("unexpected check provider: " + check["name"])
+              print(json.dumps({"id": check["id"], "name": check["name"], "head_sha": check["head_sha"], "status": check["status"], "conclusion": check["conclusion"], "app": check["app"]["slug"]}, sort_keys=True))
+          ' <<< "$response"
+
   nextjs-typescript:
     if: inputs.profile == 'all' || inputs.profile == 'web'
     name: Synthetic Next.js TypeScript profile
