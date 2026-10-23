@@ -127,6 +127,10 @@ def selection_fixture(profile: dict[str, Any], core: dict[str, Any]) -> dict[str
                 "sha256": "d" * 64,
                 "owner": {"kind": "profile", "profile_id": "sample-next-ts"},
             },
+            "tsconfig.json": {
+                "sha256": "f" * 64,
+                "owner": {"kind": "profile", "profile_id": "sample-next-ts"},
+            },
         },
         "prerequisites": {
             "sample-next-ts/node": {
