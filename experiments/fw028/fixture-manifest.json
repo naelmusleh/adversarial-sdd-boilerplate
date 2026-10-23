@@ -14,9 +14,8 @@
     ],
     "python": [
       "pyproject.toml",
-      "src/__init__.py",
-      "src/classify.py",
-      "src/public_api.py",
+      "classify.py",
+      "public_api.py",
       "expected_exports.json",
       "tests/test_quality.py",
       "tests/test_exports.py"

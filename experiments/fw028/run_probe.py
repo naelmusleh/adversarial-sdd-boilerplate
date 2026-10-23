@@ -26,7 +26,7 @@ def execute(command: list[str], cwd: Path, expected: str, timeout: int = 300) ->
         stderr=subprocess.STDOUT, timeout=timeout,
         env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
     )
-    source = next((candidate for candidate in [cwd / "src/classify.ts", cwd / "src/classify.py", cwd / "src/lib.rs"] if candidate.exists()), None)
+    source = next((candidate for candidate in [cwd / "src/classify.ts", cwd / "classify.py", cwd / "src/lib.rs"] if candidate.exists()), None)
     source_digest = hashlib.sha256(source.read_bytes()).hexdigest() if source else None
     print(json.dumps({"command": command, "cwd": str(cwd.name), "exit": completed.returncode, "elapsed_seconds": round(time.monotonic() - started, 3), "source_sha256": source_digest, "stdout_tail": completed.stdout[-2500:]}))
     if expected == "pass" and completed.returncode != 0:
@@ -189,10 +189,9 @@ it('public exports match independent manifest', () => { for (const name of expec
 
 def make_python(root: Path) -> list[Path]:
     write(root / "expected_exports.json", '["classify"]\n')
-    write(root / "src/__init__.py", "")
-    write(root / "src/classify.py", "def classify(n: int) -> str:\n    return 'positive' if n > 0 else 'nonpositive'\n")
-    write(root / "src/public_api.py", "def classify(n: int) -> str:\n    return 'positive' if n > 0 else 'nonpositive'\n")
-    write(root / "tests/test_quality.py", """from src.classify import classify
+    write(root / "classify.py", "def classify(n: int) -> str:\n    if n > 0:\n        return 'positive'\n    return 'nonpositive'\n")
+    write(root / "public_api.py", "def classify(n: int) -> str:\n    return 'positive' if n > 0 else 'nonpositive'\n")
+    write(root / "tests/test_quality.py", """from classify import classify
 
 def test_call_only():
     classify(1)
@@ -207,12 +206,12 @@ from pathlib import Path
 
 def test_public_exports_match_independent_manifest():
     expected = json.loads(Path("expected_exports.json").read_text())
-    module = importlib.import_module("src.public_api")
+    module = importlib.import_module("public_api")
     for name in expected:
         assert hasattr(module, name), f"missing public export: {name}"
 """)
-    write(root / "pyproject.toml", '[tool.mutmut]\nsource_paths = ["src/classify.py"]\npytest_add_cli_args_test_selection = ["tests"]\nalso_copy = ["expected_exports.json", "src/public_api.py", "src/__init__.py"]\n')
-    return [root / name for name in ["pyproject.toml", "src/__init__.py", "src/classify.py", "src/public_api.py", "expected_exports.json", "tests/test_quality.py", "tests/test_exports.py"]]
+    write(root / "pyproject.toml", '[tool.mutmut]\nsource_paths = ["classify.py"]\npytest_add_cli_args_test_selection = ["tests"]\nalso_copy = ["expected_exports.json", "public_api.py"]\n')
+    return [root / name for name in ["pyproject.toml", "classify.py", "public_api.py", "expected_exports.json", "tests/test_quality.py", "tests/test_exports.py"]]
 
 
 def make_rust(root: Path) -> list[Path]:
@@ -301,18 +300,18 @@ def python_probe(work: Path) -> None:
     pristine = digest_paths(inputs)
     execute([py, "-m", "coverage", "run", "--branch", "-m", "pytest", "-q", "tests/test_quality.py", "-k", "call_only"], work, "pass")
     execute([py, "-m", "coverage", "json", "-o", "coverage.json"], work, "pass")
-    execute([py, "-m", "coverage", "report", "--include=src/classify.py"], work, "pass")
+    execute([py, "-m", "coverage", "report", "--include=classify.py"], work, "pass")
     execute([py, "-m", "coverage", "run", "--branch", "-m", "pytest", "-q", "tests/test_quality.py", "-k", "assertion"], work, "pass")
-    execute([py, "-m", "coverage", "report", "--include=src/classify.py"], work, "pass")
+    execute([py, "-m", "coverage", "report", "--include=classify.py"], work, "pass")
     execute([py, "-m", "pytest", "-q", "tests/test_quality.py", "-k", "call_only"], work, "pass")
     execute([py, "-m", "pytest", "-q", "tests/test_quality.py", "-k", "assertion"], work, "pass")
-    original = (work / "src/classify.py").read_text()
-    (work / "src/classify.py").write_text(original.replace("n > 0", "n >= 0"))
+    original = (work / "classify.py").read_text()
+    (work / "classify.py").write_text(original.replace("n > 0", "n >= 0"))
     execute([py, "-m", "pytest", "-q", "tests/test_quality.py", "-k", "call_only"], work, "pass")
     execute([py, "-m", "pytest", "-q", "tests/test_quality.py", "-k", "assertion"], work, "fail")
-    (work / "src/classify.py").write_text(original)
+    (work / "classify.py").write_text(original)
     execute([py, "-m", "pytest", "-q", "tests/test_exports.py"], work, "pass")
-    api = work / "src/public_api.py"
+    api = work / "public_api.py"
     saved = api.read_text()
     api.write_text(saved.replace("def classify", "def _classify"))
     execute([py, "-m", "pytest", "-q", "tests/test_exports.py"], work, "fail")
