@@ -211,7 +211,7 @@ def test_public_exports_match_independent_manifest():
     for name in expected:
         assert hasattr(module, name), f"missing public export: {name}"
 """)
-    write(root / "pyproject.toml", '[tool.mutmut]\nsource_paths = ["src/classify.py"]\npytest_add_cli_args_test_selection = ["tests"]\nalso_copy = ["expected_exports.json"]\n')
+    write(root / "pyproject.toml", '[tool.mutmut]\nsource_paths = ["src/classify.py"]\npytest_add_cli_args_test_selection = ["tests"]\nalso_copy = ["expected_exports.json", "src/public_api.py", "src/__init__.py"]\n')
     return [root / name for name in ["pyproject.toml", "src/__init__.py", "src/classify.py", "src/public_api.py", "expected_exports.json", "tests/test_quality.py", "tests/test_exports.py"]]
 
 
