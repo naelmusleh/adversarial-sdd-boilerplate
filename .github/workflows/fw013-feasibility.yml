@@ -91,6 +91,7 @@ jobs:
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           mkdir -p "$RUNNER_TEMP/fw013-replay/web"
           cp -R . "$RUNNER_TEMP/fw013-replay/web/"
+          cp -R "$PROBE_ROOT/fixtures" "$RUNNER_TEMP/fw013-replay/fixtures"
           cd "$RUNNER_TEMP/fw013-replay/web"
           npm ci --no-audit --no-fund
           npm run typecheck
