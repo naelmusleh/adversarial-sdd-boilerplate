@@ -3,7 +3,7 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 4.33
+version: 4.34
 created: 2026-10-07
 updated: 2026-10-23
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-ADV-014, FRAMEWORK-ADV-015, FRAMEWORK-ADV-017, FRAMEWORK-ADV-018, FRAMEWORK-ADV-019, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, FRAMEWORK-EXERCISE-006, FRAMEWORK-EXERCISE-007, FRAMEWORK-FEASIBILITY-008, FRAMEWORK-ARCHITECTURE-001, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, WORKFLOW-AI-ENGINEERING-001, DECISION-LOG-001, DECISION-022, DECISION-023, DECISION-024, DECISION-025, DECISION-026, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, FRAMEWORK-FEASIBILITY-009
@@ -822,3 +822,6 @@ When FW-TASK-010 is complete, report only:
 
 
 - **FW-TASK-028 G-ARCH review round 2 / manual checkpoint (2026-10-23):** Reviewer `/root/infinite_gallery_reviewer` passed GARCH-01/02 and blocked GARCH-03 for FRAMEWORK-ARCHITECTURE-002 v0.3 at exact commit `94fadf4766b2ae4cc499239120de8f083e0cfc0b`; Verify Pipeline [40016142180](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40016142180) passed all three jobs on that SHA. Major finding FRAMEWORK-ARCHITECTURE-002/FINDING-003: `fixtures/cases.json` references semantic cases that do not exist as concrete inputs/expected outcomes, and there are no explicit missing-required-check or incomplete-result-rollup cases. G-ARCH is now blocked. Repository operating instructions require manual user gating before a third consecutive reviewer loop. G-IMPL remains unauthorized.
+
+
+- **FW-TASK-028 blocked-record verification (2026-10-23):** The finding and manual-gating disposition are recorded in FRAMEWORK-ARCHITECTURE-002 v0.5 and this backlog at commit `94310bd6698095ab504ba96786eeff4441d2d8a5` on `codex/v2-backlog-roadmap`. Verify Pipeline [40016488045](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40016488045) passed all three required jobs on that exact commit. G-ARCH remains BLOCKED at GARCH-03; no implementation is authorized. No further independent review loop will run until the owner completes the manual checkpoint.

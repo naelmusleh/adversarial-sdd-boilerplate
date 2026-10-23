@@ -3,7 +3,7 @@ id: FRAMEWORK-ARCHITECTURE-002
 type: framework-architecture
 title: FW-TASK-028 risk-scaled quality and traceability architecture
 status: draft
-version: 0.4
+version: 0.5
 created: 2026-10-23
 updated: 2026-10-23
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-009, FRAMEWORK-COVERAGE-001, FRAMEWORK-CX-001, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, DECISION-026, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
@@ -150,6 +150,7 @@ All units must revalidate against approved FRAMEWORK-GATE-CONTRACT-001 v1.0 and 
 - **CI correction:** Verify Pipeline [40015807647](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40015807647) failed on the v0.2 transfer commit because the architecture artifact was truncated before its front matter; the artifact validator stopped with “missing front matter opening delimiter.” The full architecture content and schemas/fixtures are restored in v0.3. No implementation code or framework check policy changed.
 - **Findings/disposition:** Both findings are addressed in this revision; full-scope independent rerun is pending.
 - **Round 2 result:** BLOCK at exact architecture commit `94fadf4766b2ae4cc499239120de8f083e0cfc0b`; Verify Pipeline [40016142180](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40016142180) passed all three jobs on that SHA. GARCH-01 and GARCH-02 passed; GARCH-03 blocked.
+- **Blocked disposition checkpoint:** Commit `94310bd6698095ab504ba96786eeff4441d2d8a5` on `codex/v2-backlog-roadmap` records FINDING-003 and the manual review halt; Verify Pipeline [40016488045](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40016488045) passed all three jobs on that exact SHA.
 - **FRAMEWORK-ARCHITECTURE-002/FINDING-003 — Major, semantic verification fixtures:** `fixtures/cases.json` references `semantic-negative-cases` without defining a fixture payload; its listed diagnostic IDs have no concrete inputs/expected observations. Missing source/profile binding, risk-floor downgrade, symlink escape, provider head mismatch, and exception-authority cases are therefore not reviewable. The suite also lacks explicit cases for missing required checks and incomplete metric/check rollups. **Disposition:** accepted; G-ARCH remains blocked pending a manual checkpoint before any further reviewer loop.
 - **Gate result:** Blocked. Round-1 and round-2 findings remain immutable historical evidence; no finding is waived.
 
