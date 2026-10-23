@@ -3,7 +3,7 @@ id: FRAMEWORK-FEASIBILITY-009
 type: feasibility-register
 title: FW-TASK-028 risk-quality and traceability feasibility
 status: draft
-version: 1.2
+version: 1.3
 created: 2026-10-23
 updated: 2026-10-23
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, DECISION-026, FRAMEWORK-EXERCISE-007
@@ -154,3 +154,10 @@ The corrected run reproduced the controlled original/mutant × call-only/asserti
 Coverage and supplementary mutation observations again matched the prior runs: web V8 reported call-only 100% statements/functions/lines and 50% branches, with assertion coverage at 100% for those measures; Stryker caught 7/7 generated mutants. Python Coverage.py reported 67% branch-aware call-only coverage and 100% with the assertion case; mutmut caught 6/6 generated mutants. Rust `cargo-llvm-cov` reported 100% lines/functions/regions and branch coverage remained unavailable on the pinned stable compiler; cargo-mutants caught 5/5 generated mutants. These generic mutation tools are supplementary and are not bound to the controlled named mutant. Python `requirements.lock` remained `927644f8da84ec340efb14fc15cfa41758e9968a4ec3c00e4e06b514f5e1ef17`; Rust `Cargo.lock` remained `4ff4c12b61b4e847b6fbdf31f8398541064b77568dbac1fcba1a571bf0e4b6a3`. The generated npm `package-lock.json` digest was `53a9086ec6532ee71a289bce0f74cea27a1d8c4e4920755c053334c78a1e05fc`, differing from both prior runs because the harness resolves it from the registry each time. The three emitted input-tree digests (`4aaaaa43d33fe38b43066969760da7e80d734209c9f40a952e1a032acae45533`, `e06c2418dc83c94b14f730a8f75c147e9d6401a5983b4af90c2fcfa89f1fdd0f`, and `eb40b92ba82b8bc122f5dd34cc03737ea2e33358f127615a60d923d3ae4aa51b`) include ephemeral absolute workspace paths and are per-run integrity evidence, not canonical cross-run digests.
 
 **Corrected-run disposition:** The corrected fixture closes the specifically identified local trace-schema and wrong-path exception findings. Provider-authenticated check/run identity, a positively verified authorized exception, threshold rationale, actual app-stack integration, and the broader task acceptance evidence remain unproven. Independent results review is in progress; G-FEAS remains pending and no implementation is authorized.
+
+
+### Criterion/path pairing negative replay (2026-10-23)
+
+A follow-up review identified one remaining fixture weakness: values could be swapped between paths while still covering the expected criterion set. The probe pins the expected mapping for this synthetic fixture (`src/policy.py` → `AC-1`; `src/ui/card.tsx` → `AC-5`) and rejects a swapped mapping. Generator SHA-256: `629c5876de65f829a3e73239c60ca27c95d9f085a1bdcd483e1edb16f294bc74`.
+
+The all-profile hosted run [39970815307](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39970815307) passed all three profile jobs on exact commit `f7ba2304b71913c960912870823d33c0e2755332`. Every profile emitted the expected `path-to-criterion mapping mismatch src/policy.py` diagnostic for the swapped pair. Verify Pipeline [39970805893](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39970805893) also passed on that exact commit. The evidence-record commit `249c420174bbb6489c4a3b5b8aabcf998091b90a` then passed Verify Pipeline [39973881443](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39973881443). These results validate only the synthetic fixture's fixed mapping; they do not establish app-specific mapping correctness or provider-backed evidence. All prior coverage, lockfile, and path-digest limitations remain as recorded above. Independent disposition is pending; no implementation is authorized.
