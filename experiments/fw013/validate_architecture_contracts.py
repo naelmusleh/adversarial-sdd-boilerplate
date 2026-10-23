@@ -109,97 +109,64 @@ def core_fixture() -> dict[str, Any]:
     }
 
 
-def selection_fixture(profile: dict[str, Any], core: dict[str, Any]) -> dict[str, Any]:
+def selection_fixture(profiles: dict[str, dict[str, Any]], core: dict[str, Any]) -> dict[str, Any]:
+    selected_profiles = {
+        profile_id: {
+            "profile_version": profile["profile_version"],
+            "manifest_sha256": canonical_digest(profile),
+        }
+        for profile_id, profile in profiles.items()
+    }
+    generated_files = {
+        path: {"sha256": "c" * 64, "owner": {"kind": "core"}}
+        for path in core["files"]
+    }
+    prerequisites: dict[str, dict[str, Any]] = {}
+    for profile_id, profile in profiles.items():
+        for path in profile["generated_files"]:
+            generated_files[path] = {
+                "sha256": hashlib.sha256(f"{profile_id}:{path}".encode("utf-8")).hexdigest(),
+                "owner": {"kind": "profile", "profile_id": profile_id},
+            }
+        for name, declaration in profile["prerequisites"].items():
+            key = f"{profile_id}/{name}"
+            if declaration["required"]:
+                prerequisites[key] = {"required": True, "state": "available", "observed_version": "1.0.0"}
+            else:
+                prerequisites[key] = {"required": False, "state": "not-checked", "reason": "Optional fixture prerequisite."}
     return {
         "schema_version": "1",
         "framework_revision": "a" * 40,
         "core_contract_version": "1.0.0",
         "core_manifest_sha256": canonical_digest(core),
-        "selected_profiles": {
-            "sample-next-ts": {
-                "profile_version": profile["profile_version"],
-                "manifest_sha256": canonical_digest(profile),
-            }
-        },
-        "generated_files": {
-            ".sdd/mission.md": {"sha256": "c" * 64, "owner": {"kind": "core"}},
-            "package.json": {
-                "sha256": "d" * 64,
-                "owner": {"kind": "profile", "profile_id": "sample-next-ts"},
-            },
-            "tsconfig.json": {
-                "sha256": "f" * 64,
-                "owner": {"kind": "profile", "profile_id": "sample-next-ts"},
-            },
-        },
-        "prerequisites": {
-            "sample-next-ts/node": {
-                "required": True,
-                "state": "available",
-                "observed_version": "22.23.3",
-            },
-            "sample-next-ts/browser": {
-                "required": False,
-                "state": "not-checked",
-                "reason": "Optional browser runtime is not part of profile initialization.",
-            },
-        },
-        "profile_checks": {
-            "sample-next-ts": {
-                "typecheck": {
-                    "status": "applicable",
-                    "required": True,
-                    "command": "npm run typecheck",
-                    "scope": "generated profile source",
-                },
-                "browser-run": {
-                    "status": "unsupported",
-                    "required": False,
-                    "reason": "No browser/device execution is part of this synthetic profile contract.",
-                },
-                "integration-run": {
-                    "status": "applicable",
-                    "required": False,
-                    "command": "npm run integration",
-                    "scope": "generated profile integration fixtures",
-                },
-            }
-        },
+        "selected_profiles": selected_profiles,
+        "generated_files": generated_files,
+        "prerequisites": prerequisites,
+        "profile_checks": {profile_id: copy.deepcopy(profile["checks"]) for profile_id, profile in profiles.items()},
     }
 
 
 def core_only_selection_fixture(core: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "schema_version": "1",
-        "framework_revision": "a" * 40,
-        "core_contract_version": core["core_contract_version"],
-        "core_manifest_sha256": canonical_digest(core),
-        "selected_profiles": {},
-        "generated_files": {
-            path: {"sha256": "c" * 64, "owner": {"kind": "core"}}
-            for path in core["files"]
-        },
-        "prerequisites": {},
-        "profile_checks": {},
-    }
+    return selection_fixture({}, core)
 
 
 def result_fixture(selection: dict[str, Any]) -> dict[str, Any]:
+    check_results: dict[str, dict[str, Any]] = {}
+    for profile_id, checks in selection["profile_checks"].items():
+        check_results[profile_id] = {}
+        for check_id, declaration in checks.items():
+            if declaration["status"] == "unsupported":
+                check_results[profile_id][check_id] = {"state": "unsupported", "reason": "Declared unsupported by the selected profile."}
+            elif declaration["required"]:
+                check_results[profile_id][check_id] = {"state": "passed", "command": declaration["command"], "exit_code": 0}
+            else:
+                check_results[profile_id][check_id] = {"state": "not-run", "reason": "Optional fixture check was not executed."}
     return {
         "schema_version": "1",
         "framework_revision": "a" * 40,
         "selection_manifest_sha256": canonical_digest(selection),
-        "selected_profiles": selection["selected_profiles"],
-        "check_results": {
-            "sample-next-ts": {
-                "typecheck": {"state": "passed", "command": "npm run typecheck", "exit_code": 0},
-                "browser-run": {
-                    "state": "unsupported",
-                    "reason": "The selected profile declares this check unsupported.",
-                },
-                "integration-run": {"state": "not-run", "reason": "This design-time fixture does not execute app integration."},
-            }
-        },
+        "selected_profiles": copy.deepcopy(selection["selected_profiles"]),
+        "check_results": check_results,
     }
 
 
@@ -232,10 +199,12 @@ def cross_record_problems(
             problems.append("selection manifest profile digest does not match the profile declaration")
     if result["selection_manifest_sha256"] != canonical_digest(selection):
         problems.append("check result is not bound to the exact selection manifest")
-    if set(selection["profile_checks"]) != set(selected):
+    selection_checks_by_profile = selection["profile_checks"]
+    if set(selection_checks_by_profile) != set(selected):
         problems.append("selection-manifest profile check declaration set differs from selected profiles")
     for profile_id, profile in profiles.items():
-        if selection["profile_checks"].get(profile_id) != profile["checks"]:
+        checks_for_profile = selection_checks_by_profile.get(profile_id)
+        if checks_for_profile != profile["checks"]:
             problems.append("selection-manifest check declarations differ from the frozen profile declaration")
 
     core_paths = {path for path, entry in selection["generated_files"].items() if entry["owner"]["kind"] == "core"}
@@ -334,7 +303,7 @@ def main() -> None:
 
     core = core_fixture()
     profile = profile_fixture()
-    selection = selection_fixture(profile, core)
+    selection = selection_fixture({profile["profile_id"]: profile}, core)
     result = result_fixture(selection)
     expect_valid(core_validator, core, "authoritative-core-file-inventory")
     expect_valid(profile_validator, profile, "profile-applicable-and-unsupported-checks")
@@ -362,13 +331,13 @@ def main() -> None:
     invalid_profile["checks"]["browser-run"]["command"] = "npm test"
     expect_invalid(profile_validator, invalid_profile, "unsupported-check-cannot-have-command")
 
-    invalid_selection = selection_fixture(profile, core)
+    invalid_selection = selection_fixture({profile["profile_id"]: profile}, core)
     invalid_selection["generated_files"]["../outside.txt"] = {"sha256": "f" * 64, "owner": {"kind": "core"}}
     expect_invalid(selection_validator, invalid_selection, "selection-path-traversal")
-    invalid_selection = selection_fixture(profile, core)
+    invalid_selection = selection_fixture({profile["profile_id"]: profile}, core)
     invalid_selection["prerequisites"]["sample-next-ts/node"] = {"required": True, "state": "available"}
     expect_invalid(selection_validator, invalid_selection, "available-prerequisite-missing-observed-version")
-    invalid_selection = selection_fixture(profile, core)
+    invalid_selection = selection_fixture({profile["profile_id"]: profile}, core)
     invalid_selection["profile_checks"]["sample-next-ts"]["browser-run"]["command"] = "npm test"
     expect_invalid(selection_validator, invalid_selection, "unsupported-profile-check-with-command")
 
@@ -415,9 +384,42 @@ def main() -> None:
         raise AssertionError("complete required profile evidence should aggregate to ready")
     print("PASS all required checks passed and required prerequisites available => ready")
 
+    second_profile = copy.deepcopy(profile)
+    second_profile.update({
+        "profile_id": "sample-fastapi",
+        "profile_version": "0.2.0",
+        "language": {"name": "Python", "version_range": "3.13.x"},
+        "runtime": {"name": "FastAPI", "version_range": "0.157.x"},
+        "prerequisites": {"python": {"required": True, "version_constraint": ">=3.13"}},
+        "source_layout": ["api/"],
+        "checks": {
+            "unit-tests": {
+                "status": "applicable", "required": True,
+                "command": "python -m pytest", "scope": "generated API contract fixtures",
+            }
+        },
+        "owned_dependencies": [{"name": "fastapi", "version_constraint": "0.157.x", "purpose": "synthetic service profile"}],
+        "generated_files": ["requirements.txt"],
+    })
+    multiple_profiles = {profile["profile_id"]: profile, second_profile["profile_id"]: second_profile}
+    multi_selection = selection_fixture(multiple_profiles, core)
+    multi_result = result_fixture(multi_selection)
+    expect_valid(selection_validator, multi_selection, "selection-manifest-two-profiles")
+    expect_valid(result_validator, multi_result, "check-result-two-profiles")
+    if cross_record_problems(multiple_profiles, core, multi_selection, multi_result):
+        raise AssertionError("valid multi-profile fixture rejected: " + "; ".join(cross_record_problems(multiple_profiles, core, multi_selection, multi_result)))
+    if selection_readiness(multiple_profiles, core, multi_selection, multi_result) != "ready":
+        raise AssertionError("valid multi-profile selection should aggregate to ready")
+    print("PASS multi-profile declarations and required checks aggregate independently to ready")
+    mismatched_multi_selection = copy.deepcopy(multi_selection)
+    mismatched_multi_selection["profile_checks"]["sample-fastapi"]["unit-tests"]["command"] = "python -m unittest"
+    if not cross_record_problems(multiple_profiles, core, mismatched_multi_selection, result_fixture(mismatched_multi_selection)):
+        raise AssertionError("mismatched second profile declaration was accepted")
+    print("PASS mismatch in one selected profile is rejected without conflating profile declarations")
+
     required_unsupported = profile_fixture()
     required_unsupported["checks"]["browser-run"]["required"] = True
-    unsupported_selection = selection_fixture(required_unsupported, core)
+    unsupported_selection = selection_fixture({required_unsupported["profile_id"]: required_unsupported}, core)
     unsupported_result = result_fixture(unsupported_selection)
     if selection_readiness({required_unsupported["profile_id"]: required_unsupported}, core, unsupported_selection, unsupported_result) != "blocked":
         raise AssertionError("required unsupported check was counted as ready")
@@ -426,7 +428,7 @@ def main() -> None:
     if selection_readiness(profiles, core, selection, incomplete_result) != "blocked":
         raise AssertionError("missing required check result was counted as ready")
     print("PASS missing required check result => blocked")
-    missing_prerequisite = selection_fixture(profile, core)
+    missing_prerequisite = selection_fixture({profile["profile_id"]: profile}, core)
     missing_prerequisite["prerequisites"]["sample-next-ts/node"] = {
         "required": True,
         "state": "missing",
