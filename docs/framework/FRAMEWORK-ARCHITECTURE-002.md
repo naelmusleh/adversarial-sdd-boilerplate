@@ -3,17 +3,17 @@ id: FRAMEWORK-ARCHITECTURE-002
 type: framework-architecture
 title: FW-TASK-028 risk-scaled quality and traceability architecture
 status: draft
-version: 0.6
+version: 0.7
 created: 2026-10-23
 updated: 2026-10-23
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-009, FRAMEWORK-COVERAGE-001, FRAMEWORK-CX-001, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, DECISION-026, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-009, FRAMEWORK-COVERAGE-001, FRAMEWORK-CX-001, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, FRAMEWORK-ADV-022, DECISION-026, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
 ---
 
 # FRAMEWORK-ARCHITECTURE-002 — FW-TASK-028 risk-scaled quality and traceability
 
 ## G-ARCH work record
 
-- **Gate:** G-ARCH — in progress; no pass is asserted.
+- **Gate:** G-ARCH — BLOCKED at GARCH-03; no pass is asserted.
 - **Task and requirements:** FW-TASK-028; FR-FW-029, FR-FW-030, FR-FW-031; seven acceptance criteria in FRAMEWORK-BACKLOG-001.
 - **Approved boundary:** DECISION-026 and the G-REQ record in FRAMEWORK-BACKLOG-001. Covers app-owned quality profiles, deterministic task/criterion/path/check traceability, and anti-gaming diagnostics. It does not change framework repository checks or thresholds. FW-TASK-024, signed receipts, sandboxing, agent budgets, draft gate-contract adoption, app implementation, and other v2 work are excluded.
 - **Upstream gates:** Bounded G-FEAS passed in FRAMEWORK-FEASIBILITY-009; G-COVERAGE passed in FRAMEWORK-COVERAGE-001; G-CX passed in FRAMEWORK-CX-001. These are planning evidence, not implemented capability.
@@ -153,10 +153,22 @@ All units must revalidate against approved FRAMEWORK-GATE-CONTRACT-001 v1.0 and 
 - **Blocked disposition checkpoint:** Commit `94310bd6698095ab504ba96786eeff4441d2d8a5` on `codex/v2-backlog-roadmap` records FINDING-003 and the manual review halt; Verify Pipeline [40016488045](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40016488045) passed all three jobs on that exact SHA.
 - **FRAMEWORK-ARCHITECTURE-002/FINDING-003 — Major, semantic verification fixtures:** `fixtures/cases.json` references `semantic-negative-cases` without defining a fixture payload; its listed diagnostic IDs have no concrete inputs/expected observations. Missing source/profile binding, risk-floor downgrade, symlink escape, provider head mismatch, and exception-authority cases are therefore not reviewable. The suite also lacks explicit cases for missing required checks and incomplete metric/check rollups. **Disposition:** accepted; G-ARCH remains blocked pending a manual checkpoint before any further reviewer loop.
 - **Gate result:** Blocked after round 2; round-1 and round-2 findings remain immutable historical evidence.
-- **Owner checkpoint:** Owner authorized one additional correction and independent review loop after reviewing FINDING-003. v0.6 supplies the concrete semantic case file and missing-check/rollup negatives. Round-3 full-scope review is pending.
+- **Owner checkpoint:** Owner authorized one additional correction and independent review loop after reviewing FINDING-003. v0.6 supplies the concrete semantic case file and missing-check/rollup negatives. Round-3 review is complete and recorded below.
+
+### Round 3 review — GARCH-03 blocked
+
+- **Reviewer/evaluator:** Independent reviewer `/root/infinite_gallery_reviewer`, read-only full-scope review.
+- **Reviewed revision:** `eed5f175d0726c631081d13235609b1fd9e77b37`.
+- **Verification:** Verify Pipeline [40040279114](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40040279114) passed all three checks on this exact commit.
+- **GARCH-01:** PASS. The architecture stays within the approved FW-TASK-028 scope and preserves owner decisions and explicit exclusions.
+- **GARCH-02:** PASS. Data boundaries and failure behavior address revision/profile binding, risk floors, symlink escape, check-head matching, and fail-closed exception authority.
+- **GARCH-03:** BLOCK. The semantic fixture now contains concrete deterministic mutations, closing the missing-payload portion of FINDING-003, but required-check identity remains ambiguous.
+- **FRAMEWORK-ARCHITECTURE-002/FINDING-004 — Major, required-check identity:** Manifest requirements use logical IDs `CI-UNIT` and `CI-STATIC`; result rows contain opaque IDs `12001` and `12002` with no corresponding logical key or check name. No cross-record identity mapping is defined. Removing one result row therefore tests a row-count shortfall, not omission of a particular required check; substitution of another check cannot be distinguished. Define a stable identity across manifest and provider result, then add omission and substitution cases with specific expected diagnostics.
+- **Additional fixture concern:** `quality-profile.missing-rationale.invalid.json` also appears to violate threshold shape, so its expected missing-rationale diagnostic may not be uniquely attributable. This was noted as a fixture-quality issue; the major blocker is FINDING-004.
+- **Loop limit:** The owner-authorized final correction/review loop is consumed. No further independent reviewer loop is authorized by that checkpoint. G-ARCH remains BLOCKED; G-IMPL remains unauthorized.
 
 ## Exclusions and next action
 
 This design does not choose numeric thresholds, select real app stacks/providers, implement validators/adapters, set repository protection, accept exceptions, or authorize FW-TASK-024 or other v2 work.
 
-**Next action:** Run the authorized full-scope G-ARCH review on v0.6 after exact-revision Verify Pipeline succeeds. G-IMPL remains unauthorized until G-ARCH passes and implementation is separately authorized.
+**Next action:** Owner disposition is required for FINDING-004 before another correction/review cycle. G-IMPL remains unauthorized until G-ARCH passes and implementation is separately authorized.
