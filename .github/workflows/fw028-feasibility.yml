@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/fw028-feasibility.yml
       - experiments/fw028/**
+  workflow_dispatch:
 
 permissions:
   contents: read
