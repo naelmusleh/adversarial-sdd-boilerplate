@@ -100,6 +100,10 @@ def trace_probe(root: Path) -> None:
     required_criteria = {"AC-1", "AC-5"}
     required_checks = {"unit", "trace"}
     repository_id = "synthetic/fw028-probe"
+    expected_path_to_criteria = {
+        "src/policy.py": {"AC-1"},
+        "src/ui/card.tsx": {"AC-5"},
+    }
     manifest = {
         "manifest_version": "1",
         "repository": repository_id,
@@ -150,6 +154,8 @@ def trace_probe(root: Path) -> None:
                 errors.append("invalid path-to-criterion mapping " + path)
             else:
                 mapped_criteria.update(assigned)
+                if assigned != expected_path_to_criteria.get(path):
+                    errors.append("path-to-criterion mapping mismatch " + path)
         for path in changed:
             if path not in mapping and path not in exception_paths:
                 errors.append("unmapped changed path " + path)
@@ -183,6 +189,9 @@ def trace_probe(root: Path) -> None:
     broken = json.loads(json.dumps(manifest))
     broken["path_to_criteria"]["src/ui/card.tsx"] = ["UNKNOWN"]
     cases.append((broken, "invalid path-to-criterion mapping src/ui/card.tsx"))
+    broken = json.loads(json.dumps(manifest))
+    broken["path_to_criteria"] = {"src/policy.py": ["AC-5"], "src/ui/card.tsx": ["AC-1"]}
+    cases.append((broken, "path-to-criterion mapping mismatch src/policy.py"))
     broken = json.loads(json.dumps(manifest))
     del broken["path_to_criteria"]["src/ui/card.tsx"]
     cases.append((broken, "unmapped changed path src/ui/card.tsx"))
