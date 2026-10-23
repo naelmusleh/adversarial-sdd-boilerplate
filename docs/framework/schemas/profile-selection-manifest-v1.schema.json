@@ -5,11 +5,12 @@
   "description": "Architecture contract for the initializer's reproducible output inventory and truthful prerequisite/check observations. Not yet emitted by the initializer.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "framework_revision", "core_contract_version", "selected_profiles", "generated_files", "prerequisites", "profile_checks"],
+  "required": ["schema_version", "framework_revision", "core_contract_version", "core_manifest_sha256", "selected_profiles", "generated_files", "prerequisites", "profile_checks"],
   "properties": {
     "schema_version": { "const": "1" },
     "framework_revision": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
     "core_contract_version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+    "core_manifest_sha256": { "$ref": "#/$defs/digest" },
     "selected_profiles": {
       "description": "Map key is profile ID, so a profile cannot be selected more than once.",
       "type": "object",

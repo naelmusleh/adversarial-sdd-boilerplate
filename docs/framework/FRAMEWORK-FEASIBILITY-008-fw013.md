@@ -78,6 +78,6 @@ Independent reviewer `/root/infinite_gallery_reviewer` reviewed register SHA-256
 
 ## Next actions
 
-1. Run Draft 2020-12 schema, cross-record binding, duplicate-key, and readiness fixtures from the design-time verifier on an isolated read-only runner.
-2. Freeze the exact corrected architecture/schema/fixture inputs and request independent GARCH-03 reassessment.
+1. Run Draft 2020-12 validation for the authoritative core inventory plus profile, selection, and result schemas; exercise profile-version binding, exact core/profile ownership inventories, duplicate-key rejection, and consistent core-only/selected readiness outcomes on an isolated read-only runner.
+2. Freeze the exact corrected architecture/schema/fixture inputs and request independent reassessment of GARCH-03.
 3. Remove the temporary architecture-check workflow after preserving its exact-run output; implementation and broad/permanent support claims remain blocked until G-ARCH and their own acceptance criteria pass.

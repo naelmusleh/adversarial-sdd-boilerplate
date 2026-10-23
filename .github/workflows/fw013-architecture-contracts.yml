@@ -5,7 +5,7 @@ on:
     branches: [codex/v2-backlog-roadmap]
     paths:
       - .github/workflows/fw013-architecture-contracts.yml
-      - docs/framework/schemas/profile-*-v1.schema.json
+      - docs/framework/schemas/*-v1.schema.json
       - experiments/fw013/validate_architecture_contracts.py
 
 permissions:

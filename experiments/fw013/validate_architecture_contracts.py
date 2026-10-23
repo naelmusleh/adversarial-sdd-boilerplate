@@ -14,6 +14,7 @@ from jsonschema import Draft202012Validator
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_DIR = ROOT / "docs" / "framework" / "schemas"
 SCHEMA_FILES = {
+    "core": "core-file-manifest-v1.schema.json",
     "profile": "profile-manifest-v1.schema.json",
     "selection": "profile-selection-manifest-v1.schema.json",
     "result": "profile-check-result-v1.schema.json",
@@ -100,11 +101,20 @@ def profile_fixture() -> dict[str, Any]:
     }
 
 
-def selection_fixture(profile: dict[str, Any]) -> dict[str, Any]:
+def core_fixture() -> dict[str, Any]:
+    return {
+        "schema_version": "1",
+        "core_contract_version": "1.0.0",
+        "files": {".sdd/mission.md": {"source_sha256": "e" * 64}},
+    }
+
+
+def selection_fixture(profile: dict[str, Any], core: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema_version": "1",
         "framework_revision": "a" * 40,
         "core_contract_version": "1.0.0",
+        "core_manifest_sha256": canonical_digest(core),
         "selected_profiles": {
             "sample-next-ts": {
                 "profile_version": profile["profile_version"],
@@ -154,6 +164,22 @@ def selection_fixture(profile: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def core_only_selection_fixture(core: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_version": "1",
+        "framework_revision": "a" * 40,
+        "core_contract_version": core["core_contract_version"],
+        "core_manifest_sha256": canonical_digest(core),
+        "selected_profiles": {},
+        "generated_files": {
+            path: {"sha256": "c" * 64, "owner": {"kind": "core"}}
+            for path in core["files"]
+        },
+        "prerequisites": {},
+        "profile_checks": {},
+    }
+
+
 def result_fixture(selection: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema_version": "1",
@@ -174,7 +200,7 @@ def result_fixture(selection: dict[str, Any]) -> dict[str, Any]:
 
 
 def cross_record_problems(
-    profile: dict[str, Any], selection: dict[str, Any], result: dict[str, Any]
+    profiles: dict[str, dict[str, Any]], core: dict[str, Any], selection: dict[str, Any], result: dict[str, Any]
 ) -> list[str]:
     problems: list[str] = []
     selected = selection["selected_profiles"]
@@ -185,31 +211,69 @@ def cross_record_problems(
         problems.append("check result profile set differs from the frozen selection manifest")
     if result["framework_revision"] != selection["framework_revision"]:
         problems.append("check result framework revision differs from the frozen selection manifest")
-    if profile["profile_id"] not in selected:
-        problems.append("profile declaration is absent from selected profiles")
-    if profile["profile_id"] in selected and selected[profile["profile_id"]]["manifest_sha256"] != canonical_digest(profile):
-        problems.append("selection manifest profile digest does not match the profile declaration")
+    if selection["core_contract_version"] != core["core_contract_version"]:
+        problems.append("selection core contract version differs from the authoritative core inventory")
+    if selection["core_manifest_sha256"] != canonical_digest(core):
+        problems.append("selection core inventory digest does not match the authoritative core manifest")
+    if set(selected) != set(profiles):
+        problems.append("selected profile IDs differ from the supplied profile declarations")
+    for profile_id, profile in profiles.items():
+        entry = selected.get(profile_id)
+        if entry is None:
+            problems.append("profile declaration is absent from selected profiles")
+            continue
+        if entry["profile_version"] != profile["profile_version"]:
+            problems.append("selection profile version differs from the selected profile declaration")
+        if entry["manifest_sha256"] != canonical_digest(profile):
+            problems.append("selection manifest profile digest does not match the profile declaration")
     if result["selection_manifest_sha256"] != canonical_digest(selection):
         problems.append("check result is not bound to the exact selection manifest")
-    declared = profile["checks"]
-    if set(selection["profile_checks"]) != set(selected) or selection["profile_checks"].get(profile["profile_id"]) != declared:
-        problems.append("selection-manifest check declarations differ from the frozen profile declaration")
-    for owner in selection["generated_files"].values():
-        if owner["owner"]["kind"] == "profile" and owner["owner"]["profile_id"] not in selected:
+    if set(selection["profile_checks"]) != set(selected):
+        problems.append("selection-manifest profile check declaration set differs from selected profiles")
+    for profile_id, profile in profiles.items():
+        if selection["profile_checks"].get(profile_id) != profile["checks"]:
+            problems.append("selection-manifest check declarations differ from the frozen profile declaration")
+
+    core_paths = {path for path, entry in selection["generated_files"].items() if entry["owner"]["kind"] == "core"}
+    if core_paths != set(core["files"]):
+        problems.append("generated core path inventory differs from the authoritative core file manifest")
+    for profile_id, profile in profiles.items():
+        expected_paths = set(profile["generated_files"])
+        actual_paths = {
+            path for path, entry in selection["generated_files"].items()
+            if entry["owner"]["kind"] == "profile" and entry["owner"]["profile_id"] == profile_id
+        }
+        if actual_paths != expected_paths:
+            problems.append("generated profile path inventory differs from its declared profile file inventory")
+    for path, entry in selection["generated_files"].items():
+        owner = entry["owner"]
+        if owner["kind"] == "profile" and owner["profile_id"] not in selected:
             problems.append("generated file is owned by a profile that was not selected")
     for key, observation in selection["prerequisites"].items():
         profile_id, prerequisite_name = key.split("/", 1)
         if profile_id not in selected:
             problems.append("prerequisite belongs to an unselected profile")
-        prereq = profile["prerequisites"].get(prerequisite_name)
+        profile = profiles.get(profile_id)
+        prereq = profile["prerequisites"].get(prerequisite_name) if profile else None
         if prereq is None:
             problems.append("prerequisite is absent from the selected profile declaration")
         elif observation["required"] != prereq["required"]:
             problems.append("prerequisite requiredness differs from its frozen profile declaration")
+    expected_prerequisites = {
+        f"{profile_id}/{name}"
+        for profile_id, profile in profiles.items()
+        for name in profile["prerequisites"]
+    }
+    if set(selection["prerequisites"]) != expected_prerequisites:
+        problems.append("selection prerequisite inventory differs from selected profile declarations")
+    if set(result["check_results"]) != set(selected):
+        problems.append("check-result profile inventory differs from selected profiles")
     for profile_id, checks in result["check_results"].items():
-        if profile_id not in selected:
-            problems.append("check result belongs to an unselected profile")
+        profile = profiles.get(profile_id)
+        if profile is None:
+            problems.append("check result belongs to an undeclared or unselected profile")
             continue
+        declared = profile["checks"]
         for check_id, outcome in checks.items():
             declaration = declared.get(check_id)
             if declaration is None:
@@ -219,10 +283,11 @@ def cross_record_problems(
                     problems.append("unsupported profile check is not reported as unsupported")
                 if declaration["status"] == "applicable" and outcome.get("state") == "unsupported":
                     problems.append("applicable profile check is misreported as unsupported")
-                if outcome.get("state") in {"passed", "failed"} and outcome.get("command") != declaration.get("command"):
+                if "command" in outcome and outcome.get("command") != declaration.get("command"):
                     problems.append("check command differs from the frozen profile declaration")
-    if set(result["check_results"].get(profile["profile_id"], {})) != set(declared):
-        problems.append("check result omits or adds a declared profile check")
+    for profile_id, profile in profiles.items():
+        if set(result["check_results"].get(profile_id, {})) != set(profile["checks"]):
+            problems.append("check result omits or adds a declared profile check")
     return problems
 
 
@@ -247,31 +312,44 @@ def profile_ready(profile: dict[str, Any], selection: dict[str, Any], result: di
     return True
 
 
-def selection_readiness(profiles: dict[str, dict[str, Any]], selection: dict[str, Any], result: dict[str, Any]) -> str:
+def selection_readiness(profiles: dict[str, dict[str, Any]], core: dict[str, Any], selection: dict[str, Any], result: dict[str, Any]) -> str:
     selected_ids = set(selection["selected_profiles"])
     if not selected_ids:
-        return "core-only"
-    if selected_ids != set(profiles) or result["selected_profiles"] != selection["selected_profiles"]:
-        return "blocked"
-    if any(cross_record_problems(profiles[profile_id], selection, result) for profile_id in selected_ids):
+        return "core-only" if not cross_record_problems({}, core, selection, result) else "blocked"
+    if any(cross_record_problems(profiles, core, selection, result)):
         return "blocked"
     return "ready" if all(profile_ready(profiles[profile_id], selection, result) for profile_id in selected_ids) else "blocked"
 
 
 def main() -> None:
+    core_validator = validator("core")
     profile_validator = validator("profile")
     selection_validator = validator("selection")
     result_validator = validator("result")
-    print("PASS all three schemas are valid Draft 2020-12 schemas")
+    print("PASS all four schemas are valid Draft 2020-12 schemas")
 
+    core = core_fixture()
     profile = profile_fixture()
-    selection = selection_fixture(profile)
+    selection = selection_fixture(profile, core)
     result = result_fixture(selection)
+    expect_valid(core_validator, core, "authoritative-core-file-inventory")
     expect_valid(profile_validator, profile, "profile-applicable-and-unsupported-checks")
     expect_valid(selection_validator, selection, "selection-manifest-profile-and-core-files")
-    core_only = {**selection, "selected_profiles": {}, "generated_files": {}, "prerequisites": {}, "profile_checks": {}}
+    core_only = core_only_selection_fixture(core)
+    core_only_result = {
+        "schema_version": "1",
+        "framework_revision": core_only["framework_revision"],
+        "selection_manifest_sha256": canonical_digest(core_only),
+        "selected_profiles": {},
+        "check_results": {},
+    }
     expect_valid(selection_validator, core_only, "selection-manifest-core-only")
     expect_valid(result_validator, result, "check-result-passed-and-unsupported")
+    expect_valid(result_validator, core_only_result, "check-result-core-only")
+
+    invalid_core = copy.deepcopy(core)
+    invalid_core["files"]["../outside.txt"] = {"source_sha256": "f" * 64}
+    expect_invalid(core_validator, invalid_core, "core-inventory-path-traversal")
 
     invalid_profile = profile_fixture()
     invalid_profile["checks"]["typecheck"].pop("command")
@@ -280,13 +358,13 @@ def main() -> None:
     invalid_profile["checks"]["browser-run"]["command"] = "npm test"
     expect_invalid(profile_validator, invalid_profile, "unsupported-check-cannot-have-command")
 
-    invalid_selection = selection_fixture(profile)
+    invalid_selection = selection_fixture(profile, core)
     invalid_selection["generated_files"]["../outside.txt"] = {"sha256": "f" * 64, "owner": {"kind": "core"}}
     expect_invalid(selection_validator, invalid_selection, "selection-path-traversal")
-    invalid_selection = selection_fixture(profile)
+    invalid_selection = selection_fixture(profile, core)
     invalid_selection["prerequisites"]["sample-next-ts/node"] = {"required": True, "state": "available"}
     expect_invalid(selection_validator, invalid_selection, "available-prerequisite-missing-observed-version")
-    invalid_selection = selection_fixture(profile)
+    invalid_selection = selection_fixture(profile, core)
     invalid_selection["profile_checks"]["sample-next-ts"]["browser-run"]["command"] = "npm test"
     expect_invalid(selection_validator, invalid_selection, "unsupported-profile-check-with-command")
 
@@ -303,44 +381,69 @@ def main() -> None:
     else:
         raise AssertionError("duplicate raw JSON keys were accepted")
 
-    problems = cross_record_problems(profile, selection, result)
+    profiles = {profile["profile_id"]: profile}
+    problems = cross_record_problems(profiles, core, selection, result)
     if problems:
         raise AssertionError("valid cross-record fixture rejected: " + "; ".join(problems))
     print("PASS cross-record selection, ownership, command, and profile identity bindings")
     tampered_selection = copy.deepcopy(selection)
     tampered_selection["selected_profiles"]["sample-next-ts"]["manifest_sha256"] = "f" * 64
     tampered_result = result_fixture(tampered_selection)
-    if not cross_record_problems(profile, tampered_selection, tampered_result):
+    if not cross_record_problems(profiles, core, tampered_selection, tampered_result):
         raise AssertionError("mismatched profile digest was accepted")
     print("PASS profile digest drift rejected by cross-record binding")
-    if selection_readiness({profile["profile_id"]: profile}, selection, result) != "ready":
+    wrong_version = copy.deepcopy(selection)
+    wrong_version["selected_profiles"][profile["profile_id"]]["profile_version"] = "9.9.9"
+    if not cross_record_problems(profiles, core, wrong_version, result_fixture(wrong_version)):
+        raise AssertionError("selected profile version drift was accepted")
+    print("PASS selected profile version must match the digested declaration")
+    wrong_profile_inventory = copy.deepcopy(selection)
+    wrong_profile_inventory["generated_files"]["package.json"]["owner"]["profile_id"] = "other-profile"
+    if not cross_record_problems(profiles, core, wrong_profile_inventory, result_fixture(wrong_profile_inventory)):
+        raise AssertionError("undeclared generated-file ownership was accepted")
+    print("PASS profile-generated path ownership must match its declared inventory")
+    wrong_core_inventory = copy.deepcopy(selection)
+    wrong_core_inventory["generated_files"].pop(".sdd/mission.md")
+    if not cross_record_problems(profiles, core, wrong_core_inventory, result_fixture(wrong_core_inventory)):
+        raise AssertionError("missing authoritative core path was accepted")
+    print("PASS generated core paths must match authoritative core inventory")
+    if selection_readiness(profiles, core, selection, result) != "ready":
         raise AssertionError("complete required profile evidence should aggregate to ready")
     print("PASS all required checks passed and required prerequisites available => ready")
 
     required_unsupported = profile_fixture()
     required_unsupported["checks"]["browser-run"]["required"] = True
-    unsupported_selection = selection_fixture(required_unsupported)
+    unsupported_selection = selection_fixture(required_unsupported, core)
     unsupported_result = result_fixture(unsupported_selection)
-    if selection_readiness({required_unsupported["profile_id"]: required_unsupported}, unsupported_selection, unsupported_result) != "blocked":
+    if selection_readiness({required_unsupported["profile_id"]: required_unsupported}, core, unsupported_selection, unsupported_result) != "blocked":
         raise AssertionError("required unsupported check was counted as ready")
     print("PASS required unsupported check => blocked")
     incomplete_result = {**result, "check_results": {"sample-next-ts": {"browser-run": result["check_results"]["sample-next-ts"]["browser-run"]}}}
-    if selection_readiness({profile["profile_id"]: profile}, selection, incomplete_result) != "blocked":
+    if selection_readiness(profiles, core, selection, incomplete_result) != "blocked":
         raise AssertionError("missing required check result was counted as ready")
     print("PASS missing required check result => blocked")
-    missing_prerequisite = selection_fixture(profile)
+    missing_prerequisite = selection_fixture(profile, core)
     missing_prerequisite["prerequisites"]["sample-next-ts/node"] = {
         "required": True,
         "state": "missing",
         "reason": "No required Node.js runtime is available.",
     }
     missing_prerequisite_result = {**result, "selection_manifest_sha256": canonical_digest(missing_prerequisite)}
-    if selection_readiness({profile["profile_id"]: profile}, missing_prerequisite, missing_prerequisite_result) != "blocked":
+    if selection_readiness(profiles, core, missing_prerequisite, missing_prerequisite_result) != "blocked":
         raise AssertionError("missing required prerequisite was counted as ready")
     print("PASS missing required prerequisite => blocked")
-    if selection_readiness({}, core_only, {**result, "selected_profiles": {}}) != "core-only":
+    if selection_readiness({}, core, core_only, core_only_result) != "core-only":
         raise AssertionError("empty profile selection was not reported as core-only")
     print("PASS empty profile selection => core-only; no profile support claim")
+    inconsistent_core_only_result = {**core_only_result, "selected_profiles": {"sample-next-ts": selection["selected_profiles"]["sample-next-ts"]}}
+    if selection_readiness({}, core, core_only, inconsistent_core_only_result) != "blocked":
+        raise AssertionError("core-only result with residual selected profile was accepted")
+    print("PASS inconsistent core-only result => blocked")
+    residual_profile_selection = copy.deepcopy(core_only)
+    residual_profile_selection["generated_files"]["package.json"] = selection["generated_files"]["package.json"]
+    if selection_readiness({}, core, residual_profile_selection, {**core_only_result, "selection_manifest_sha256": canonical_digest(residual_profile_selection)}) != "blocked":
+        raise AssertionError("core-only selection with profile-owned output was accepted")
+    print("PASS core-only selection with residual profile-owned file => blocked")
     print("Architecture contract fixtures completed; no initializer/profile support is claimed.")
 
 

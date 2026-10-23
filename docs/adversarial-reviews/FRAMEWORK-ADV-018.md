@@ -44,4 +44,26 @@ The reviewer concluded that no additional owner scope or product decision is nee
 
 ## Corrective work in progress
 
-The next review round will assess a single-keyed check declaration map, separate profile-selection and check-result schemas, an explicit readiness aggregation rule, strict duplicate-key parsing, and a pinned Draft 2020-12 semantic validator exercised against named positive/negative instances. This section is not evidence that those checks have run or passed.
+## Review round 2 — blocked on GARCH-03
+
+Reviewer: `/root/infinite_gallery_reviewer`, acting as the separately assigned read-only reviewer. The reviewer confirmed all nine supplied frozen input hashes matched and did not run the checker. Criterion result: GARCH-01 PASS, GARCH-02 PASS, GARCH-03 BLOCK.
+
+| Frozen input | SHA-256 |
+|---|---|
+| `docs/framework/FRAMEWORK-SPEC-001.md` | `e85d4b676bc90a530de91b454f1394d4d76484f29fbbd736eef564c68ec1a07a` |
+| `docs/framework/FRAMEWORK-BACKLOG-001.md` | `e193888b54c2506da8ea8da57a0e414b5077fe663c1f175326d7efeafa16ae0f` |
+| `docs/framework/FRAMEWORK-FEASIBILITY-008-fw013.md` | `cc4fe2631f4ffe5cd225741ce657499db63356d5ad0829cedce89551ad068be0` |
+| `docs/framework/FRAMEWORK-ARCHITECTURE-001-fw013.md` | `081ef1997b76cccfc83486d83186d8dcbb236c11d12323dbdd5eca865d990b79` |
+| `docs/framework/schemas/profile-manifest-v1.schema.json` | `9857f98234bcbc0fe996775635b3b71336a2e754df4ffefd09807154903868a3` |
+| `docs/framework/schemas/profile-selection-manifest-v1.schema.json` | `01735a71fbbf45d03d3e826b32acd027425b29bbcce6376efb8359552bb6afc4` |
+| `docs/framework/schemas/profile-check-result-v1.schema.json` | `6af5f1e55f3310a16a54dd0e2e119c40493fdaee7ee620fca79001e79aef8f86` |
+| `experiments/fw013/validate_architecture_contracts.py` | `6a828e7b5bb7d2e208f95a58fefc79bb6550342a8f892309d7740f9f7fc21414` |
+| `docs/adversarial-reviews/FRAMEWORK-ADV-018.md` | `4ff9dc58b0204f1dd24ccfe8b542eb8938d87470ada247ac4c71e10a53b6a397` |
+
+The original duplicate check-ID and missing output-schema findings are resolved. Three new major cross-record gaps remain:
+
+1. **Selected profile version was not compared to the digested profile declaration.** The checker must compare both the selected version and manifest digest and reject a mismatched version fixture.
+2. **Generated-file ownership reconciliation was incomplete.** The checker must validate the exact selected-profile path inventory against each profile declaration and core-owned paths against a separately versioned authoritative core-file inventory, including mismatch fixtures.
+3. **Core-only readiness bypassed consistency checks.** The checker must validate result/profile bindings and exact core inventory before returning core-only; negative fixtures must reject residual profile-owned outputs and mismatched result selections.
+
+No owner decision is needed for these bounded contract corrections. G-ARCH-03 remains blocked and implementation is not authorized by this review. The next frozen review will assess a versioned core-file inventory schema, the selection-to-core digest, selected profile version equality, exact generated path ownership sets, and core-only consistency fixtures under Draft 2020-12 validation. The prior hosted checker and Verify Pipeline results do not cover these new corrections.
