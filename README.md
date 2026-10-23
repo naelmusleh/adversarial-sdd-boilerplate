@@ -113,6 +113,8 @@ When initializing from a source archive, add `--framework-revision <40-character
 
 The initializer refuses a non-empty target. By default it creates the five canonical app SDD documents, an app README, app-specific `AGENTS.md`, `.gitignore`, the dependency-free artifact helper, a framework lock, G-REQ/G-ARCH handoff templates, a gate-record template, and an SDD Contract Validation workflow. It never overwrites existing work. Add `--include-lifecycle-records` only if the team wants the optional supporting record templates preseeded; otherwise create records when their gate requires them.
 
+The default initializer composes only the stack-neutral governance core. To include one or more explicit framework profile fixtures, repeat `--stack` with a declared ID, for example `--stack nextjs-typescript`. Profiles are separate, versioned examples; prerequisites are checked before writing, and their commands are recorded as `not-run` (or `unsupported`) rather than executed. They do not determine an application's approved stack. New lock-v5 apps pin the profile contracts and generated-file inventory; older lock versions retain their existing validation behavior.
+
 The generated validator checks a populated G-REQ/G-ARCH handoff against frozen artifact versions and file digests. It does not judge requirement quality or execute code checks. Each app still defines its stack-specific G-IMPL checks in its verification plan and CI. The SDD workflow must be configured as a required status check in repository settings before it can block merges; that configuration is not performed by the initializer.
 
 ### 4. Add the selected runtime and lifecycle files to the app repository

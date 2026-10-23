@@ -9,7 +9,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from scripts.artifacts import required_check_manifest
+from scripts.artifacts import required_check_manifest, schema_definition_problems, validate_schema_value
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -237,6 +237,22 @@ def write_arch_manifest(root: Path, revision: str) -> None:
 
 
 class ArtifactValidationTests(unittest.TestCase):
+    def test_schema_subset_enforces_anyof_not_and_property_names(self) -> None:
+        schema = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "propertyNames": {"pattern": "^profile-[a-z]+$"},
+            "properties": {"profile-ok": {"type": "string"}},
+            "additionalProperties": {"type": "string"},
+            "anyOf": [{"required": ["profile-ok"]}, {"required": ["profile-fallback"]}],
+            "not": {"required": ["profile-blocked"]},
+        }
+        self.assertEqual(schema_definition_problems(schema), [])
+        self.assertEqual(validate_schema_value({"profile-ok": "ready"}, schema, schema), [])
+        self.assertTrue(validate_schema_value({"invalid-key": "value"}, schema, schema))
+        self.assertTrue(validate_schema_value({"profile-blocked": "value"}, schema, schema))
+        self.assertTrue(validate_schema_value({"profile-other": 3}, schema, schema))
+
     def test_current_framework_repository_passes_its_manifest_and_requirement_tables(self) -> None:
         result = subprocess.run(
             [sys.executable, str(ARTIFACTS_SCRIPT), "validate"],

@@ -69,10 +69,19 @@ APP_LOCKED_FILES_V4 = APP_LOCKED_FILES_V3 + (
     APP_GATE_SCHEMA_V1_2.as_posix(), APP_GATE_TEMPLATE_V1_2.as_posix(),
     APP_TRUSTED_CI_SCHEMA.as_posix(), APP_TRUSTED_CI_TEMPLATE.as_posix(),
 )
+APP_LOCKED_FILES_V5 = APP_LOCKED_FILES_V4 + (
+    ".sdd/schemas/core-file-manifest-v1.schema.json",
+    ".sdd/schemas/profile-manifest-v1.schema.json",
+    ".sdd/schemas/profile-selection-manifest-v1.schema.json",
+    ".sdd/schemas/profile-check-result-v1.schema.json",
+    ".sdd/core-file-manifest-v1.json",
+    ".sdd/profile-selection-v1.json",
+    ".sdd/profile-check-result-v1.json",
+)
 APP_ASSUMPTION_SCHEMA = Path(".sdd/schemas/assumption-experiment-v1.schema.json")
 APP_ASSUMPTION_BUNDLE = Path(".sdd/assumption-experiments.json")
 ASSUMPTION_SCHEMA_SHA256 = "7c27d0c0cc66e6e365f7afb5e95c8e565e9ecad521c0e8de6e15d4a5d1e7fd33"
-APP_LOCK_VERSIONS = {1, 2, 3, 4}
+APP_LOCK_VERSIONS = {1, 2, 3, 4, 5}
 HANDOFF_CONTRACT_VERSION = 1
 MAX_JSON_BYTES = 1_048_576
 APP_REQUIREMENT_TABLES = (
@@ -128,7 +137,7 @@ JSON_SCHEMA_SUPPORTED_KEYWORDS = {
     "required", "properties", "additionalProperties", "const", "enum",
     "pattern", "minLength", "maxLength", "minimum", "minItems", "maxItems",
     "uniqueItems", "items", "contains", "minContains", "maxContains",
-    "allOf", "oneOf", "if", "then", "else", "format", "minProperties",
+    "allOf", "anyOf", "oneOf", "if", "then", "else", "not", "propertyNames", "format", "minProperties",
 }
 
 
@@ -164,8 +173,14 @@ def markdown_files(root: Path = ROOT) -> list[Path]:
         if not base.is_dir():
             continue
         files.update(p for p in base.rglob("*.md") if p.is_file())
-    # Templates are scaffolding, never live framework or app artifacts.
-    files = {p for p in files if not (root / "docs" / "templates" in p.parents)}
+    # Templates and profile-owned starter files are scaffolding, never live
+    # framework or app artifacts. Their README files intentionally lack SDD
+    # artifact front matter.
+    files = {
+        p for p in files
+        if not (root / "docs" / "templates" in p.parents)
+        and not (root / "framework" / "profiles" in p.parents)
+    }
     return sorted(files)
 
 
@@ -409,11 +424,11 @@ def _schema_children(schema: object) -> list[object]:
         value = schema.get(keyword)
         if isinstance(value, dict):
             children.extend(value.values())
-    for keyword in ("items", "contains", "additionalProperties", "if", "then", "else"):
+    for keyword in ("items", "contains", "additionalProperties", "if", "then", "else", "not", "propertyNames"):
         value = schema.get(keyword)
         if isinstance(value, (dict, bool)):
             children.append(value)
-    for keyword in ("allOf", "oneOf"):
+    for keyword in ("allOf", "anyOf", "oneOf"):
         value = schema.get(keyword)
         if isinstance(value, list):
             children.extend(value)
@@ -447,13 +462,16 @@ def schema_definition_problems(schema: object, pointer: str = "#") -> list[str]:
             problems.append(f"{pointer}/format: unsupported format; supported formats are date and date-time")
     if "required" in schema and (not isinstance(schema["required"], list) or not all(isinstance(item, str) for item in schema["required"])):
         problems.append(f"{pointer}/required: must be an array of strings")
+    for key in ("not", "propertyNames"):
+        if key in schema and not isinstance(schema[key], (dict, bool)):
+            problems.append(f"{pointer}/{key}: must be a schema object or boolean")
     for key in ("properties", "$defs"):
         if key in schema and (not isinstance(schema[key], dict) or not all(isinstance(name, str) for name in schema[key])):
             problems.append(f"{pointer}/{key}: must be an object keyed by strings")
     for key in ("items", "contains", "additionalProperties", "if", "then", "else"):
         if key in schema and not isinstance(schema[key], (dict, bool)):
             problems.append(f"{pointer}/{key}: must be a schema object or boolean")
-    for key in ("allOf", "oneOf"):
+    for key in ("allOf", "anyOf", "oneOf"):
         if key in schema and (not isinstance(schema[key], list) or not schema[key]):
             problems.append(f"{pointer}/{key}: must be a non-empty array of schemas")
     if "enum" in schema and (not isinstance(schema["enum"], list) or not schema["enum"]):
@@ -541,6 +559,12 @@ def validate_schema_value(
             problems.append(f"{instance_path}: value is not one of the allowed values")
 
     if isinstance(value, dict):
+        name_schema = schema.get("propertyNames")
+        if isinstance(name_schema, (dict, bool)):
+            for key in value:
+                key_problems = validate_schema_value(key, name_schema, root_schema, f"{instance_path}.<key>", next_depth)
+                if key_problems:
+                    problems.append(f"{instance_path}: property name {key!r} is invalid")
         required = schema.get("required", [])
         for key in required:
             if key not in value:
@@ -607,6 +631,10 @@ def validate_schema_value(
 
     for child in schema.get("allOf", []):
         problems.extend(validate_schema_value(value, child, root_schema, instance_path, next_depth))
+    if "anyOf" in schema:
+        valid_branches = sum(not validate_schema_value(value, branch, root_schema, instance_path, next_depth) for branch in schema["anyOf"])
+        if valid_branches < 1:
+            problems.append(f"{instance_path}: value must match at least one schema alternative")
     if "oneOf" in schema:
         valid_branches = sum(not validate_schema_value(value, branch, root_schema, instance_path, next_depth) for branch in schema["oneOf"])
         if valid_branches != 1:
@@ -616,6 +644,8 @@ def validate_schema_value(
         branch = schema.get("then") if if_valid else schema.get("else")
         if branch is not None:
             problems.extend(validate_schema_value(value, branch, root_schema, instance_path, next_depth))
+    if "not" in schema and not validate_schema_value(value, schema["not"], root_schema, instance_path, next_depth):
+        problems.append(f"{instance_path}: value matches a schema it must not match")
     return problems
 
 
@@ -625,6 +655,189 @@ def _app_contract_id_and_version(lock: dict[str, object], lock_version: int) -> 
     contract_id = lock.get("gate_contract_id")
     contract_version = lock.get("gate_contract_version")
     return (contract_id, contract_version) if isinstance(contract_id, str) and isinstance(contract_version, str) else (None, None)
+
+
+def _canonical_json_digest(value: object) -> str | None:
+    try:
+        payload = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+    except (TypeError, ValueError):
+        return None
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _read_contract_json(root: Path, relative: str) -> tuple[dict[str, object] | None, list[str]]:
+    path, error = safe_file(root, relative)
+    if error or path is None:
+        return None, [f"{relative}: {error or 'could not resolve file'}"]
+    value, parse_error = load_json_object(path)
+    if parse_error or value is None:
+        return None, [f"{relative}: invalid JSON object: {parse_error or 'invalid object'}"]
+    return value, []
+
+
+def validate_profile_composition(root: Path, framework_revision: str) -> list[str]:
+    """Validate FW-013 snapshot contracts without treating them as gate evidence."""
+    schema_paths = {
+        "core": ".sdd/schemas/core-file-manifest-v1.schema.json",
+        "profile": ".sdd/schemas/profile-manifest-v1.schema.json",
+        "selection": ".sdd/schemas/profile-selection-manifest-v1.schema.json",
+        "result": ".sdd/schemas/profile-check-result-v1.schema.json",
+    }
+    schemas: dict[str, dict[str, object]] = {}
+    problems: list[str] = []
+    for key, relative in schema_paths.items():
+        schema, schema_problems = _read_contract_json(root, relative)
+        problems.extend(schema_problems)
+        if schema is None:
+            continue
+        if schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
+            problems.append(f"{relative}: unsupported JSON Schema dialect")
+            continue
+        problems.extend(f"{relative}: {issue}" for issue in schema_definition_problems(schema))
+        schemas[key] = schema
+
+    core, core_errors = _read_contract_json(root, ".sdd/core-file-manifest-v1.json")
+    selection, selection_errors = _read_contract_json(root, ".sdd/profile-selection-v1.json")
+    result, result_errors = _read_contract_json(root, ".sdd/profile-check-result-v1.json")
+    problems.extend(core_errors + selection_errors + result_errors)
+    if core is None or selection is None or result is None or len(schemas) != 4:
+        return problems
+    for label, value, schema_name in (
+        ("core manifest", core, "core"),
+        ("selection manifest", selection, "selection"),
+        ("check result", result, "result"),
+    ):
+        schema = schemas[schema_name]
+        problems.extend(
+            f".sdd/{label.replace(' ', '-')}: {issue}"
+            for issue in validate_schema_value(value, schema, schema)
+        )
+
+    profiles = selection.get("selected_profiles")
+    generated = selection.get("generated_files")
+    prerequisites = selection.get("prerequisites")
+    profile_checks = selection.get("profile_checks")
+    core_files = core.get("files")
+    if not all(isinstance(value, dict) for value in (profiles, generated, prerequisites, profile_checks, core_files)):
+        return problems + [".sdd/profile-selection-v1.json: profile inventory fields must be objects"]
+    assert isinstance(profiles, dict) and isinstance(generated, dict) and isinstance(prerequisites, dict)
+    assert isinstance(profile_checks, dict) and isinstance(core_files, dict)
+    if selection.get("framework_revision") != framework_revision or result.get("framework_revision") != framework_revision:
+        problems.append("FW-013 manifests must bind to the immutable framework revision in the app lock")
+    if selection.get("core_contract_version") != core.get("core_contract_version"):
+        problems.append("profile selection core contract version differs from the core file manifest")
+    if selection.get("core_manifest_sha256") != _canonical_json_digest(core):
+        problems.append("profile selection digest does not match the authoritative core file manifest")
+    if result.get("selection_manifest_sha256") != _canonical_json_digest(selection):
+        problems.append("profile check result is not bound to the exact selection manifest")
+    if result.get("selected_profiles") != profiles:
+        problems.append("profile check result selection differs from the frozen profile selection")
+
+    core_owned = {path for path, record in generated.items() if isinstance(record, dict) and isinstance(record.get("owner"), dict) and record["owner"].get("kind") == "core"}
+    if core_owned != set(core_files):
+        problems.append("generated core ownership does not equal the authoritative core file inventory")
+    for path, record in generated.items():
+        if not isinstance(path, str):
+            problems.append("generated file inventory contains a non-string path")
+            continue
+        _, path_error = safe_file(root, path)
+        if path_error:
+            problems.append(f"profile generated path {path!r}: {path_error}")
+        if not isinstance(record, dict):
+            continue
+        owner = record.get("owner")
+        if not isinstance(owner, dict):
+            continue
+        kind, profile_id = owner.get("kind"), owner.get("profile_id")
+        if kind == "profile" and profile_id not in profiles:
+            problems.append(f"generated file {path!r} is owned by an unselected profile")
+
+    declared_profile_manifests: dict[str, dict[str, object]] = {}
+    for profile_id, selected in profiles.items():
+        if not isinstance(profile_id, str) or not isinstance(selected, dict):
+            problems.append("selected profile entries must be keyed objects")
+            continue
+        relative = f".sdd/profiles/{profile_id}.json"
+        profile, profile_errors = _read_contract_json(root, relative)
+        problems.extend(profile_errors)
+        if profile is None:
+            continue
+        schema = schemas["profile"]
+        problems.extend(f"{relative}: {issue}" for issue in validate_schema_value(profile, schema, schema))
+        declared_profile_manifests[profile_id] = profile
+        if profile.get("profile_id") != profile_id:
+            problems.append(f"{relative}: profile_id differs from its selection key")
+        if selected.get("profile_version") != profile.get("profile_version"):
+            problems.append(f"{relative}: profile version differs from its selection snapshot")
+        if selected.get("manifest_sha256") != _canonical_json_digest(profile):
+            problems.append(f"{relative}: profile manifest digest differs from its selection snapshot")
+        if relative not in generated or not isinstance(generated[relative], dict) or generated[relative].get("owner") != {"kind": "profile", "profile_id": profile_id}:
+            problems.append(f"{relative}: copied profile manifest is missing from its generated-file ownership inventory")
+        declared_paths = profile.get("generated_files")
+        expected_paths = (
+            set(declared_paths)
+            if isinstance(declared_paths, list) and all(isinstance(path, str) for path in declared_paths)
+            else set()
+        )
+        actual_paths = {
+            path for path, record in generated.items()
+            if isinstance(record, dict) and isinstance(record.get("owner"), dict)
+            and record["owner"].get("kind") == "profile" and record["owner"].get("profile_id") == profile_id
+        }
+        if actual_paths != expected_paths:
+            problems.append(f"{relative}: owned generated paths differ from the profile declaration")
+        if profile_checks.get(profile_id) != profile.get("checks"):
+            problems.append(f"{relative}: selected check declarations differ from the profile manifest")
+        for check_id, declaration in profile.get("checks", {}).items() if isinstance(profile.get("checks"), dict) else []:
+            if isinstance(declaration, dict) and declaration.get("status") == "unsupported" and declaration.get("required") is True:
+                problems.append(f"{relative}: required check {check_id!r} is declared unsupported")
+
+    expected_prerequisites: dict[str, object] = {}
+    for profile_id, profile in declared_profile_manifests.items():
+        declarations = profile.get("prerequisites")
+        if isinstance(declarations, dict):
+            expected_prerequisites.update({f"{profile_id}/{name}": declaration for name, declaration in declarations.items()})
+    if set(prerequisites) != set(expected_prerequisites):
+        problems.append("observed prerequisite inventory differs from the selected profiles")
+    for key, declaration in expected_prerequisites.items():
+        observed = prerequisites.get(key)
+        if not isinstance(observed, dict) or observed.get("required") != declaration.get("required"):
+            problems.append(f"prerequisite observation {key!r} differs from its selected profile declaration")
+        elif declaration.get("required") is True and observed.get("state") != "available":
+            problems.append(f"required prerequisite {key!r} was not observed available at initialization")
+
+    result_checks = result.get("check_results")
+    if not isinstance(result_checks, dict) or set(result_checks) != set(profiles):
+        problems.append("profile check result inventory differs from selected profiles")
+    else:
+        for profile_id, profile in declared_profile_manifests.items():
+            declared_checks = profile.get("checks", {})
+            observed_checks = result_checks.get(profile_id)
+            if not isinstance(declared_checks, dict) or not isinstance(observed_checks, dict) or set(observed_checks) != set(declared_checks):
+                problems.append(f"profile {profile_id!r} check results differ from its declared check inventory")
+                continue
+            for check_id, declaration in declared_checks.items():
+                observed = observed_checks.get(check_id)
+                if not isinstance(declaration, dict) or not isinstance(observed, dict):
+                    continue
+                if declaration.get("status") == "unsupported" and observed.get("state") != "unsupported":
+                    problems.append(f"profile {profile_id!r} unsupported check {check_id!r} is not reported as unsupported")
+                if declaration.get("status") == "applicable" and observed.get("state") == "unsupported":
+                    problems.append(f"profile {profile_id!r} applicable check {check_id!r} is reported as unsupported")
+                expected_state = "unsupported" if declaration.get("status") == "unsupported" else "not-run"
+                expected_reason = (
+                    declaration.get("reason")
+                    if expected_state == "unsupported"
+                    else "Initialization does not execute profile checks."
+                )
+                if observed.get("state") != expected_state or observed.get("reason") != expected_reason:
+                    problems.append(
+                        f"profile {profile_id!r} check {check_id!r} must preserve its initializer-only "
+                        f"state {expected_state!r}; initialization cannot claim command execution"
+                    )
+                if "command" in observed or "exit_code" in observed:
+                    problems.append(f"profile {profile_id!r} check {check_id!r} initializer record cannot assert command execution")
+    return problems
 
 
 def _gate_schema_for_app(root: Path, contract_version: str) -> tuple[dict[str, object] | None, list[str]]:
@@ -1376,7 +1589,7 @@ def validate_gate_run_records(
                     if len(checks_by_id) != len(checks):
                         problems.append(f"{relative}: passing G-IMPL must use unique required check IDs")
                     app_lock, _ = load_json_object(root / APP_FRAMEWORK_LOCK)
-                    if app_lock and app_lock.get("lock_version") in {3, 4}:
+                    if app_lock and app_lock.get("lock_version") in {3, 4, 5}:
                         manifest, manifest_problems = required_check_manifest(root)
                         problems.extend(manifest_problems)
                         if manifest is not None:
@@ -1405,7 +1618,7 @@ def validate_gate_run_records(
                                     for mapping in mappings
                                 ):
                                     problems.append(f"{relative}: G-IMPL criterion mappings must identify required manual check '{check_id}' in manual_method")
-                            if app_lock.get("lock_version") == 4:
+                            if app_lock.get("lock_version") in {4, 5}:
                                 expected_check_ids = {item.get("check_id") for item in applicable}
                                 if set(checks_by_id) != expected_check_ids:
                                     problems.append(f"{relative}: lock-v4 G-IMPL required_checks must exactly match the manifest-required checks for selected task '{selected_task}'")
@@ -1694,7 +1907,7 @@ def trusted_ci_policy(root: Path) -> tuple[dict[str, object] | None, list[str]]:
                     or not protected_ref.startswith("refs/heads/") or not valid_git_ref):
                 problems.append(f"{APP_TRUSTED_CI.as_posix()}: protected_ref is not a valid fully qualified branch ref")
     lock, lock_error = load_json_object(root / APP_FRAMEWORK_LOCK)
-    if lock_error is None and isinstance(lock, dict) and lock.get("lock_version") == 4:
+    if lock_error is None and isinstance(lock, dict) and lock.get("lock_version") in {4, 5}:
         if lock.get("framework_repository") != CANONICAL_FRAMEWORK_URL:
             problems.append(
                 f"{APP_FRAMEWORK_LOCK.as_posix()}: lock-v4 trusted CI requires the canonical framework repository "
@@ -1929,7 +2142,7 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: unsupported framework or artifact contract version")
         if lock_version in {2, 3} and (lock.get("gate_contract_id") != "FRAMEWORK-GATE-CONTRACT-001" or lock.get("gate_contract_version") != "1.0"):
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: unsupported gate contract identity or version")
-        if lock_version == 4 and (lock.get("gate_contract_id") != "FRAMEWORK-GATE-CONTRACT-001" or lock.get("gate_contract_version") != "1.2"):
+        if lock_version in {4, 5} and (lock.get("gate_contract_id") != "FRAMEWORK-GATE-CONTRACT-001" or lock.get("gate_contract_version") != "1.2"):
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: lock version {lock_version} requires FRAMEWORK-GATE-CONTRACT-001 v1.2")
         if not isinstance(revision_value, str) or not FRAMEWORK_REVISION_RE.fullmatch(revision_value):
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: framework_revision must be a 40-character lowercase commit SHA")
@@ -1938,7 +2151,7 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
         repository = lock.get("framework_repository")
         if not isinstance(repository, str) or not repository.startswith("https://github.com/"):
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: framework_repository must be an HTTPS GitHub repository URL")
-        if lock_version == 4 and repository != CANONICAL_FRAMEWORK_URL:
+        if lock_version in {4, 5} and repository != CANONICAL_FRAMEWORK_URL:
             problems.append(
                 f"{APP_FRAMEWORK_LOCK.as_posix()}: lock-v{lock_version} trusted CI requires the canonical framework repository "
                 f"{CANONICAL_FRAMEWORK_URL}"
@@ -1946,7 +2159,7 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
         locked_files = lock.get("locked_files")
         expected_locked_files = (
             APP_LOCKED_FILES_V1 if lock_version == 1 else APP_LOCKED_FILES_V2 if lock_version == 2
-            else APP_LOCKED_FILES_V3 if lock_version == 3 else APP_LOCKED_FILES_V4
+            else APP_LOCKED_FILES_V3 if lock_version == 3 else APP_LOCKED_FILES_V4 if lock_version == 4 else APP_LOCKED_FILES_V5
         )
         if not isinstance(locked_files, dict) or set(locked_files) != set(expected_locked_files):
             problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: locked_files must cover exactly the files for framework lock version {lock_version}")
@@ -1960,12 +2173,14 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
                     problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()} ({relative}): locked digest is malformed")
                 elif file_sha256(path) != expected_digest:
                     problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()} ({relative}): file digest differs from the initialized framework snapshot")
-        if lock_version in {3, 4}:
+        if lock_version in {3, 4, 5}:
             _, manifest_problems = required_check_manifest(root)
             problems.extend(manifest_problems)
-        if lock_version == 4:
+        if lock_version in {4, 5}:
             _, trusted_policy_problems = trusted_ci_policy(root)
             problems.extend(trusted_policy_problems)
+        if lock_version == 5:
+            problems.extend(validate_profile_composition(root, revision))
 
     review_directory = root / APP_REVIEW_RUNS
     if review_directory.exists() or review_directory.is_symlink():
@@ -2031,7 +2246,7 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
         problems.append(f"{APP_FRAMEWORK_LOCK.as_posix()}: required because a handoff manifest is present")
     if (has_gate_runs or review_directory.exists()) and lock_path.exists():
         lock, _ = load_json_object(lock_path)
-        if not lock or lock.get("lock_version") not in {2, 3, 4}:
+        if not lock or lock.get("lock_version") not in {2, 3, 4, 5}:
             problems.append(f"{APP_GATE_RUNS.as_posix()}: version-2, version-3, or version-4 framework lock and explicit gate-contract migration are required")
         else:
             lock, _ = load_json_object(lock_path)
@@ -2050,7 +2265,7 @@ def application_governance_problems(root: Path, gate_records: list[tuple[Path, d
         problems.append(f"{APP_GATE_RUNS.as_posix()}: version-2, version-3, or version-4 framework lock and explicit gate-contract migration are required")
     elif lock_path.exists():
         lock, _ = load_json_object(lock_path)
-        if lock and lock.get("lock_version") in {2, 3, 4}:
+        if lock and lock.get("lock_version") in {2, 3, 4, 5}:
             contract_version = str(lock.get("gate_contract_version"))
             schema, schema_problems = _gate_schema_for_app(root, contract_version)
             problems.extend(schema_problems)

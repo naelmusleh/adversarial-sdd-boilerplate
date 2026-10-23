@@ -1,0 +1,26 @@
+{
+  "schema_version": "1",
+  "profile_id": "fastapi-python",
+  "profile_version": "1.0.0",
+  "language": {"name": "Python", "version_range": ">=3.10"},
+  "runtime": {"name": "CPython", "version_range": ">=3.10"},
+  "prerequisites": {"python3": {"required": true, "version_constraint": ">=3.10.0"}},
+  "source_layout": ["profiles/fastapi-python/src", "profiles/fastapi-python/tests"],
+  "checks": {
+    "compile": {"status": "applicable", "required": true, "command": "python3 -m compileall -q profiles/fastapi-python", "scope": "synthetic profile source"},
+    "contract-tests": {"status": "applicable", "required": true, "command": "python3 -m pytest profiles/fastapi-python/tests -v", "scope": "GalleryItemV1 compatibility fixtures only"},
+    "persistent-storage": {"status": "unsupported", "required": false, "reason": "The framework fixture defines metadata compatibility only and has no persistence adapter."}
+  },
+  "owned_dependencies": [
+    {"name": "fastapi", "version_constraint": "0.157.0", "purpose": "synthetic API profile"},
+    {"name": "pytest", "version_constraint": "9.1.1", "purpose": "synthetic contract fixture tests"},
+    {"name": "httpx", "version_constraint": "0.28.1", "purpose": "synthetic API test client"}
+  ],
+  "generated_files": [
+    ".sdd/profiles/fastapi-python.json",
+    "profiles/fastapi-python/README.md",
+    "profiles/fastapi-python/requirements.txt",
+    "profiles/fastapi-python/src/main.py",
+    "profiles/fastapi-python/tests/test_contract.py"
+  ]
+}

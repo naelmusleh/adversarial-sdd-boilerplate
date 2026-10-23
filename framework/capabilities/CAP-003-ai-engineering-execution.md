@@ -25,6 +25,8 @@ CAP-003 defines a reusable agent workflow for implementing exactly one explicitl
 
 This capability is an execution contract, not an orchestration service. It does not itself provide repository access, credentials, or automated approval.
 
+The framework's initializer can optionally compose separately versioned stack profile fixtures into a new app repository. The governance workflow remains stack-neutral; profile checks apply only when an owner explicitly selects a profile. Generated profile checks are not executed by initialization, and a selected profile is not evidence that the product owner chose that application stack.
+
 ## Inputs
 
 Before implementation begins, the agent must be able to identify and read:

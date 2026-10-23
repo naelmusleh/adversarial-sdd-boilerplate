@@ -1,0 +1,76 @@
+name: FW-013 Profile Smoke (Temporary)
+
+on:
+  push:
+    branches: [codex/v2-backlog-roadmap]
+
+permissions:
+  contents: read
+
+jobs:
+  compose-and-check-synthetic-profiles:
+    name: Compose and check all three synthetic profiles
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout v7.0.1
+      - name: Check out exact framework revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      # actions/setup-python v7.0.0
+      - name: Set up Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.13"
+
+      # actions/setup-node v7.1.0
+      - name: Set up Node.js 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "22"
+
+      - name: Initialize an isolated synthetic app with all profiles
+        env:
+          TARGET: ${{ runner.temp }}/fw013-profile-app
+        run: >-
+          python3 scripts/init_app_project.py
+          --name "FW-013 synthetic profile smoke"
+          --prefix FWPROFILE
+          --target "$TARGET"
+          --framework-revision "$GITHUB_SHA"
+          --stack nextjs-typescript
+          --stack fastapi-python
+          --stack rust-axum
+
+      - name: Validate generated app governance and exact profile inventory
+        run: python3 "${{ runner.temp }}/fw013-profile-app/scripts/artifacts.py" validate
+
+      - name: Run generated TypeScript profile checks
+        env:
+          TARGET: ${{ runner.temp }}/fw013-profile-app
+        run: |
+          npm install --prefix "$TARGET/profiles/nextjs-typescript" --ignore-scripts --no-audit --no-fund
+          npm run --prefix "$TARGET/profiles/nextjs-typescript" typecheck
+          npm run --prefix "$TARGET/profiles/nextjs-typescript" test
+
+      - name: Run generated Python profile checks
+        env:
+          TARGET: ${{ runner.temp }}/fw013-profile-app
+          VENV: ${{ runner.temp }}/fw013-profile-venv
+        run: |
+          python3 -m venv "$VENV"
+          "$VENV/bin/python" -m pip install --disable-pip-version-check -r "$TARGET/profiles/fastapi-python/requirements.txt"
+          "$VENV/bin/python" -m compileall -q "$TARGET/profiles/fastapi-python"
+          "$VENV/bin/python" -m pytest "$TARGET/profiles/fastapi-python/tests" -v
+
+      - name: Install exact Rust toolchain
+        run: rustup toolchain install 1.97.0 --profile minimal
+
+      - name: Run generated Rust profile checks
+        env:
+          TARGET: ${{ runner.temp }}/fw013-profile-app
+        run: |
+          rustup run 1.97.0 rustc --version
+          rustup run 1.97.0 cargo check --manifest-path "$TARGET/profiles/rust-axum/Cargo.toml"
+          rustup run 1.97.0 cargo test --manifest-path "$TARGET/profiles/rust-axum/Cargo.toml"

@@ -7,11 +7,20 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
+import uuid
 from pathlib import Path
 from urllib.parse import urlparse
+
+try:
+    from .profile_composer import compose_profiles, safe_relative_path
+except ImportError:
+    from profile_composer import compose_profiles, safe_relative_path
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = ROOT / "docs" / "templates" / "app-project"
@@ -42,6 +51,16 @@ APP_LOCKED_FILES_V4 = APP_LOCKED_FILES_V3 + (
     ".sdd/schemas/trusted-ci-v1.schema.json",
     ".sdd/trusted-ci.json.template",
 )
+PROFILE_CONTRACT_FILES = (
+    ".sdd/schemas/core-file-manifest-v1.schema.json",
+    ".sdd/schemas/profile-manifest-v1.schema.json",
+    ".sdd/schemas/profile-selection-manifest-v1.schema.json",
+    ".sdd/schemas/profile-check-result-v1.schema.json",
+    ".sdd/core-file-manifest-v1.json",
+    ".sdd/profile-selection-v1.json",
+    ".sdd/profile-check-result-v1.json",
+)
+APP_LOCKED_FILES_V5 = APP_LOCKED_FILES_V4 + PROFILE_CONTRACT_FILES
 GATE_CONTRACT_ID = "FRAMEWORK-GATE-CONTRACT-001"
 GATE_CONTRACT_VERSION = "1.2"
 FRAMEWORK_SOURCE_PATHS = (
@@ -51,6 +70,8 @@ FRAMEWORK_SOURCE_PATHS = (
     ".sdd",
     "docs/templates/app-project",
     "docs/framework/schemas",
+    "scripts/profile_composer.py",
+    "framework/profiles",
 )
 
 # The default is the smallest complete app starter: the five canonical SDD files.
@@ -341,6 +362,13 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Preseed decision, review, architecture, delivery, and operations records",
     )
+    parser.add_argument(
+        "--stack",
+        action="append",
+        default=[],
+        metavar="PROFILE_ID",
+        help="Explicit application profile to compose; repeat for independent profiles. Default: governance core only.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Print the planned file list without writing files")
     return parser.parse_args()
 
@@ -375,14 +403,24 @@ def main() -> int:
     framework_repository = f"{repo_parts[0]}/{repo_name}"
     if framework_url != "https://github.com/naelmusleh/adversarial-sdd-boilerplate":
         print(
-            "Framework lock v4 trusted CI is enrolled only for "
+            "Framework lock v4/v5 trusted CI is enrolled only for "
             "https://github.com/naelmusleh/adversarial-sdd-boilerplate. "
             "A framework fork requires a separately reviewed trust-root enrollment.",
             file=sys.stderr,
         )
         return 2
 
-    target = args.target.expanduser().absolute()
+    requested_target = args.target.expanduser().absolute()
+    requested_parent = requested_target.parent
+    try:
+        resolved_parent = requested_parent.resolve(strict=False)
+    except OSError as exc:
+        print(f"Could not canonicalize target parent: {exc}", file=sys.stderr)
+        return 2
+    if not requested_target.name:
+        print("Target must name a new project directory.", file=sys.stderr)
+        return 2
+    target = resolved_parent / requested_target.name
     if target.is_symlink():
         print(f"Refusing to initialize a symlink target: {target}", file=sys.stderr)
         return 2
@@ -465,6 +503,15 @@ def main() -> int:
     outputs[".sdd/schemas/required-checks-v1.schema.json"] = (
         (ROOT / "docs" / "framework" / "schemas" / "required-checks-v1.schema.json").read_text(encoding="utf-8")
     )
+    for schema_name in (
+        "core-file-manifest-v1.schema.json",
+        "profile-manifest-v1.schema.json",
+        "profile-selection-manifest-v1.schema.json",
+        "profile-check-result-v1.schema.json",
+    ):
+        outputs[f".sdd/schemas/{schema_name}"] = (
+            (ROOT / "docs" / "framework" / "schemas" / schema_name).read_text(encoding="utf-8")
+        )
     required_check_template = (TEMPLATES / "required-checks.json.template").read_text(encoding="utf-8")
     outputs[".sdd/required-checks.json.template"] = required_check_template
     outputs[".sdd/required-checks.json"] = required_check_template
@@ -473,8 +520,46 @@ def main() -> int:
         .replace("<FRAMEWORK_REVISION>", framework_revision)
         .replace("<FRAMEWORK_REPOSITORY>", framework_repository)
     )
+    core_sources: dict[str, Path] = {}
+    for source, destination in selected_files.items():
+        core_sources[destination.replace("<APP>", prefix)] = TEMPLATES / source
+    for relative in outputs:
+        if relative in core_sources:
+            continue
+        if relative == "scripts/artifacts.py":
+            core_sources[relative] = artifact_helper
+        elif relative == "scripts/ci_checks.py":
+            core_sources[relative] = ROOT / "scripts" / "ci_checks.py"
+        elif relative == "docs/templates/app-project/gate-record.md.template":
+            core_sources[relative] = TEMPLATES / "gate-record.md.template"
+        elif relative == ".sdd/required-checks.json" or relative == ".sdd/required-checks.json.template":
+            core_sources[relative] = TEMPLATES / "required-checks.json.template"
+        elif relative == ".github/workflows/sdd-contract-validation.yml":
+            core_sources[relative] = TEMPLATES / "sdd-contract-validation.yml.template"
+        elif relative.startswith(".sdd/schemas/"):
+            core_sources[relative] = ROOT / "docs" / "framework" / "schemas" / Path(relative).name
+        elif relative in {".sdd/G-REQ-HANDOFF.json.template", ".sdd/G-ARCH-CONTRACT.json.template"}:
+            core_sources[relative] = ROOT / relative
+        elif relative.endswith(".json.template") and relative.startswith(".sdd/"):
+            core_sources[relative] = ROOT / relative
+        else:
+            # Generated README, instructions, gitignore, and lock content are sourced
+            # from this versioned initializer implementation.
+            core_sources[relative] = ROOT / "scripts" / "init_app_project.py"
+    base_core_outputs = dict(outputs)
+    try:
+        profile_outputs, core_manifest, selection_manifest, check_result = compose_profiles(
+            args.stack, base_core_outputs, core_sources, framework_revision
+        )
+    except (OSError, ValueError) as exc:
+        print(f"Profile composition stopped: {exc}", file=sys.stderr)
+        return 2
+    outputs.update(profile_outputs)
+    outputs[".sdd/core-file-manifest-v1.json"] = json.dumps(core_manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    outputs[".sdd/profile-selection-v1.json"] = json.dumps(selection_manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    outputs[".sdd/profile-check-result-v1.json"] = json.dumps(check_result, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     lock = {
-        "lock_version": 4,
+        "lock_version": 5,
         "framework_repository": framework_url,
         "framework_revision": framework_revision,
         "artifact_contract_id": "ARTIFACT-CONTRACT-001",
@@ -483,7 +568,7 @@ def main() -> int:
         "gate_contract_version": GATE_CONTRACT_VERSION,
         "locked_files": {
             relative: sha256_text(outputs[relative])
-            for relative in APP_LOCKED_FILES_V4
+            for relative in APP_LOCKED_FILES_V5
         },
     }
     outputs[".sdd/framework.lock.json"] = json.dumps(lock, indent=2, sort_keys=True) + "\n"
@@ -500,21 +585,64 @@ def main() -> int:
         return 0
 
     try:
-        target.mkdir(parents=True, exist_ok=True)
-        for relative, content in outputs.items():
-            destination = target / relative
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            # Exclusive creation closes the race between the initial empty-target
-            # check and writing. If another process creates a file meanwhile,
-            # stop rather than replacing that file.
-            with destination.open("x", encoding="utf-8") as output_file:
-                output_file.write(content)
-    except OSError as exc:
+        _write_outputs_transactionally(target, outputs)
+    except (OSError, ValueError) as exc:
         print(f"Initialization stopped: {exc}", file=sys.stderr)
         return 1
     print(f"Initialized {name} ({prefix}) at {target}")
     print(f"Created {len(outputs)} files. Review mission.md and README.md before proceeding.")
+    if args.stack:
+        print("Selected profiles were composed. Their declared checks are recorded as not-run; initialization did not execute profile code.")
+    else:
+        print("No application profile selected; this is a governance-core-only initialization.")
     return 0
+
+
+def _write_outputs_transactionally(target: Path, outputs: dict[str, str]) -> None:
+    parent = target.parent
+    parent.mkdir(parents=True, exist_ok=True)
+    for relative in outputs:
+        if not safe_relative_path(relative):
+            raise ValueError(f"Generated output path is unsafe: {relative!r}")
+    initial = None
+    if target.is_symlink():
+        raise ValueError(f"Refusing to replace a symlink target: {target}")
+    if target.exists():
+        if not target.is_dir() or any(target.iterdir()):
+            raise ValueError(f"Refusing to overwrite a non-empty or non-directory target: {target}")
+        initial = target.stat()
+
+    staging = Path(tempfile.mkdtemp(prefix=f".{target.name}.sdd-init-", dir=parent))
+    backup: Path | None = None
+    try:
+        for relative, content in outputs.items():
+            destination = staging / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with destination.open("x", encoding="utf-8", newline="\n") as output_file:
+                output_file.write(content)
+        if initial is None:
+            if target.exists() or target.is_symlink():
+                raise FileExistsError(f"Target appeared during initialization: {target}")
+            os.replace(staging, target)
+            return
+        current = target.stat()
+        if (current.st_dev, current.st_ino) != (initial.st_dev, initial.st_ino) or any(target.iterdir()):
+            raise FileExistsError(f"Empty target changed during initialization: {target}")
+        backup = parent / f".{target.name}.sdd-init-backup-{uuid.uuid4().hex}"
+        os.replace(target, backup)
+        try:
+            os.replace(staging, target)
+        except OSError:
+            os.replace(backup, target)
+            backup = None
+            raise
+        backup.rmdir()
+        backup = None
+    finally:
+        if staging.exists():
+            shutil.rmtree(staging)
+        if backup is not None and backup.exists() and not target.exists():
+            os.replace(backup, target)
 
 
 if __name__ == "__main__":
