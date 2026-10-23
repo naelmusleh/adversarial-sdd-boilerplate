@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://adversarial-sdd.example/schemas/profile-check-result-v1.schema.json",
+  "title": "Adversarial SDD profile check result v1",
+  "description": "Architecture contract for profile command observations. This record is not a gate result and is not yet emitted by the framework.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "framework_revision", "selection_manifest_sha256", "selected_profiles", "check_results"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "framework_revision": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "selection_manifest_sha256": { "$ref": "#/$defs/digest" },
+    "selected_profiles": {
+      "description": "Map key is profile ID, unique within this result record.",
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+      "additionalProperties": { "$ref": "#/$defs/selectedProfile" }
+    },
+    "check_results": {
+      "description": "Nested map keys are profile ID then check ID; each identity has at most one result in this record.",
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": { "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+        "additionalProperties": { "$ref": "#/$defs/checkResult" }
+      }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "selectedProfile": {
+      "type": "object", "additionalProperties": false,
+      "required": ["profile_version", "manifest_sha256"],
+      "properties": {
+        "profile_version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+        "manifest_sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "checkResult": {
+      "type": "object", "additionalProperties": false, "required": ["state"],
+      "properties": {
+        "state": { "enum": ["passed", "failed", "not-run", "not-configured", "unsupported"] },
+        "command": { "type": "string", "minLength": 1 },
+        "exit_code": { "type": "integer" },
+        "reason": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        { "if": { "properties": { "state": { "const": "passed" } }, "required": ["state"] }, "then": { "required": ["command", "exit_code"], "properties": { "exit_code": { "const": 0 } }, "not": { "required": ["reason"] } } },
+        { "if": { "properties": { "state": { "const": "failed" } }, "required": ["state"] }, "then": { "required": ["command", "exit_code"], "properties": { "exit_code": { "not": { "const": 0 } } }, "not": { "required": ["reason"] } } },
+        { "if": { "properties": { "state": { "enum": ["not-run", "not-configured", "unsupported"] } }, "required": ["state"] }, "then": { "required": ["reason"], "not": { "required": ["exit_code"] } } }
+      ]
+    }
+  }
+}
