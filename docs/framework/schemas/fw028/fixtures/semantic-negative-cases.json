@@ -106,7 +106,9 @@
           "check_id": "12001",
           "run_id": "13001",
           "conclusion": "success",
-          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "required_check_id": "CI-UNIT",
+          "check_name": "Unit Tests"
         },
         {
           "provider": "github-actions",
@@ -114,7 +116,9 @@
           "check_id": "12002",
           "run_id": "13002",
           "conclusion": "success",
-          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "required_check_id": "CI-STATIC",
+          "check_name": "Static Analysis"
         }
       ],
       "evidence_ref": "run://fixture/valid",
@@ -234,7 +238,7 @@
     },
     {
       "id": "FW028-SEM-07",
-      "purpose": "Required Static Analysis check is absent from provider results",
+      "purpose": "Required Static Analysis check is absent from provider results and cannot satisfy its named manifest identity",
       "input": {
         "remove": [
           "/result/provider_checks/1"
@@ -256,6 +260,19 @@
       "expected": {
         "outcome": "reject",
         "diagnostic_id": "RESULT-REQUIRED-METRIC-MISSING"
+      }
+    },
+    {
+      "id": "FW028-SEM-09",
+      "purpose": "Provider reports Unit Tests where the manifest requires Static Analysis, attempting to substitute a different check",
+      "input": {
+        "replace": {
+          "/result/provider_checks/1/check_name": "Unit Tests"
+        }
+      },
+      "expected": {
+        "outcome": "reject",
+        "diagnostic_id": "RESULT-REQUIRED-CHECK-SUBSTITUTED"
       }
     }
   ]

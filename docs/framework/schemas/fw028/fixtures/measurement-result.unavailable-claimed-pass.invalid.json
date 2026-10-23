@@ -4,10 +4,38 @@
   "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "profile_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   "manifest_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-  "adapter": {"id": "python", "version": "1", "evaluator_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+  "adapter": {
+    "id": "python",
+    "version": "1",
+    "evaluator_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
   "overall_state": "pass",
-  "metrics": [{"metric_id": "branch-coverage", "required": true, "state": "unavailable", "unavailable_reason": "Unsupported in this synthetic adapter.", "scope": {"included": ["src/**"], "excluded": []}}],
-  "provider_checks": [{"provider": "github-actions", "repository": "https://github.com/example/sample", "check_id": "12001", "run_id": "13001", "conclusion": "success", "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}],
+  "metrics": [
+    {
+      "metric_id": "branch-coverage",
+      "required": true,
+      "state": "unavailable",
+      "unavailable_reason": "Unsupported in this synthetic adapter.",
+      "scope": {
+        "included": [
+          "src/**"
+        ],
+        "excluded": []
+      }
+    }
+  ],
+  "provider_checks": [
+    {
+      "provider": "github-actions",
+      "repository": "https://github.com/example/sample",
+      "check_id": "12001",
+      "run_id": "13001",
+      "conclusion": "success",
+      "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "required_check_id": "CI-UNIT",
+      "check_name": "Unit Tests"
+    }
+  ],
   "evidence_ref": "run://fixture/invalid",
   "observed_at": "2026-10-23T00:00:00Z"
 }

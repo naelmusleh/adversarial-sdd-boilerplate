@@ -3,10 +3,46 @@
   "profile_id": "sample",
   "profile_version": "1.0.0",
   "owner_ref": "decision:APP-DECISION-001",
-  "adapter": {"id": "python", "version": "1"},
-  "risk_dimensions": ["behavior-criticality"],
-  "metric_rules": [{"rule_id": "QUAL-COVERAGE", "metric_id": "line-coverage", "risk_tier": "high", "required": true, "availability": "supported", "threshold": 75, "scope": {"include": ["src/**"], "exclude": []}}],
-  "path_rules": [{"pattern": "src/auth/**", "classification": "authorization"}],
-  "escalation_floors": [],
+  "adapter": {
+    "id": "python",
+    "version": "1"
+  },
+  "risk_dimensions": [
+    "behavior-criticality"
+  ],
+  "metric_rules": [
+    {
+      "rule_id": "QUAL-COVERAGE",
+      "metric_id": "line-coverage",
+      "risk_tier": "high",
+      "required": true,
+      "availability": "supported",
+      "threshold": {
+        "comparator": "min",
+        "value": 75,
+        "unit": "percent"
+      },
+      "scope": {
+        "include": [
+          "src/**"
+        ],
+        "exclude": []
+      }
+    }
+  ],
+  "path_rules": [
+    {
+      "pattern": "src/auth/**",
+      "classification": "authorization",
+      "reason": "Sensitive path fixture."
+    }
+  ],
+  "escalation_floors": [
+    {
+      "match_kind": "path-pattern",
+      "match": "src/auth/**",
+      "minimum_tier": "critical"
+    }
+  ],
   "threshold_change_policy": "reviewed-profile-revision-only"
 }
