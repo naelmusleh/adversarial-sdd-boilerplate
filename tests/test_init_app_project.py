@@ -189,6 +189,7 @@ class InitAppProjectTests(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(validation.returncode, 0, validation.stderr)
+
             self.assertIn("Validated 5 artifact(s).", validation.stdout)
 
             required_manifest_path = target / ".sdd/required-checks.json"
@@ -341,6 +342,16 @@ class InitAppProjectTests(unittest.TestCase):
                 cwd=target, capture_output=True, text=True, check=False,
             )
             self.assertEqual(validation.returncode, 0, validation.stderr)
+
+            drifted = target / "profiles/nextjs-typescript/src/GalleryItemV1.ts"
+            drifted.write_text(drifted.read_text(encoding="utf-8") + "\n// post-initialization drift\n", encoding="utf-8")
+            drift_validation = subprocess.run(
+                [sys.executable, str(target / "scripts" / "artifacts.py"), "validate"],
+                cwd=target, capture_output=True, text=True, check=False,
+            )
+            self.assertNotEqual(drift_validation.returncode, 0)
+            self.assertIn("profile generated file", drift_validation.stderr)
+            self.assertIn("bytes differ from the frozen inventory digest", drift_validation.stderr)
 
     def test_initializer_check_record_cannot_be_changed_to_claim_profile_checks_passed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

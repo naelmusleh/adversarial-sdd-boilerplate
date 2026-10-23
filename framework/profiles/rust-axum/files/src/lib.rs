@@ -24,5 +24,11 @@ impl GalleryItemV1 {
 }
 
 pub fn parse_gallery_item(input: &str) -> Result<GalleryItemV1, serde_json::Error> {
-    serde_json::from_str(input)
+    let item: GalleryItemV1 = serde_json::from_str(input)?;
+    if !item.is_valid() {
+        return Err(<serde_json::Error as serde::de::Error>::custom(
+            "payload does not satisfy the GalleryItemV1 contract",
+        ));
+    }
+    Ok(item)
 }

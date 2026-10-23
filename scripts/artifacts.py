@@ -740,7 +740,7 @@ def validate_profile_composition(root: Path, framework_revision: str) -> list[st
         if not isinstance(path, str):
             problems.append("generated file inventory contains a non-string path")
             continue
-        _, path_error = safe_file(root, path)
+        generated_path, path_error = safe_file(root, path)
         if path_error:
             problems.append(f"profile generated path {path!r}: {path_error}")
         if not isinstance(record, dict):
@@ -749,6 +749,14 @@ def validate_profile_composition(root: Path, framework_revision: str) -> list[st
         if not isinstance(owner, dict):
             continue
         kind, profile_id = owner.get("kind"), owner.get("profile_id")
+        expected_digest = record.get("sha256")
+        if kind == "profile" and generated_path is not None:
+            try:
+                actual_digest = hashlib.sha256(generated_path.read_bytes()).hexdigest()
+                if expected_digest != actual_digest:
+                    problems.append(f"profile generated file {path!r} bytes differ from the frozen inventory digest")
+            except OSError as exc:
+                problems.append(f"profile generated file {path!r} could not be read for digest verification: {exc}")
         if kind == "profile" and profile_id not in profiles:
             problems.append(f"generated file {path!r} is owned by an unselected profile")
 
