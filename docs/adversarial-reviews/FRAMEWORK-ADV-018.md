@@ -90,3 +90,24 @@ Reviewer: `/root/infinite_gallery_reviewer`, read-only. All ten supplied frozen 
 The hosted contract job [39892392326](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39892392326) and Verify Pipeline [39892392312](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39892392312) both passed on the exact reviewed commit `a20d1021b8c8ca67d0acfbdd0ae6ef57f8d8f67b`. The round-3 finding remains open until the multi-profile fixtures are run successfully and a fresh independent review accepts them.
 
 On inspection of the frozen checker source, the comparison at the cited lines already used a profile-keyed lookup (`selection["profile_checks"].get(profile_id)`); however, no multi-profile fixture exercised that path. The finding is therefore treated as an unproven behavior/evidence gap, not silently dismissed. The correction checkpoint makes the per-profile lookup explicit and adds a valid two-profile aggregation fixture plus a negative mismatch fixture for the second profile. Hosted execution and fresh independent review remain required.
+
+
+## Review round 4 — G-ARCH passed
+
+Reviewer: `/root/infinite_gallery_reviewer`, read-only. The reviewer confirmed that all ten frozen inputs matched the values below and made no edits or tests. GARCH-01, GARCH-02, and GARCH-03 **PASS**. The round-3 evidence gap is closed: a valid two-profile selection aggregates each profile independently, and a second-profile check-declaration mismatch is rejected without conflating the profiles.
+
+| Frozen input | SHA-256 |
+|---|---|
+| `docs/framework/FRAMEWORK-SPEC-001.md` | `e85d4b676bc90a530de91b454f1394d4d76484f29fbbd736eef564c68ec1a07a` |
+| `docs/framework/FRAMEWORK-BACKLOG-001.md` | `a45d88e0e0c94d5ee5620f47bcda98c679bc65db1d276ecd6abea183e27c2f10` |
+| `docs/framework/FRAMEWORK-FEASIBILITY-008-fw013.md` | `c8ef168b765f1055286e99fae8a0f9117f2a0402348403067676c799711bc5f9` |
+| `docs/framework/FRAMEWORK-ARCHITECTURE-001-fw013.md` | `081707d74c8601fb9aa3120da05a01a0d9adbe9810d4d54ccb4ce75f5feeb965` |
+| `docs/framework/schemas/core-file-manifest-v1.schema.json` | `bd6112370043048c71b53df9fb1da457df4facca4618b3ece4df35efa2cdb9ef` |
+| `docs/framework/schemas/profile-manifest-v1.schema.json` | `9857f98234bcbc0fe996775635b3b71336a2e754df4ffefd09807154903868a3` |
+| `docs/framework/schemas/profile-selection-manifest-v1.schema.json` | `b13713cfc667ee64f4f467c46f2298f63decab2eb0e416e04cdbfdec9155e5ae` |
+| `docs/framework/schemas/profile-check-result-v1.schema.json` | `6af5f1e55f3310a16a54dd0e2e119c40493fdaee7ee620fca79001e79aef8f86` |
+| `experiments/fw013/validate_architecture_contracts.py` | `d6a53dbeb5caac3da22813f170ad434680171cc29b00994f2454fa6ff9d1ba53` |
+| `docs/adversarial-reviews/FRAMEWORK-ADV-018.md` | `2806f4b93f46bcf216376d564933b4d8a85850034d65f347658e74e0d6136e88` |
+
+The temporary contract workflow [39892640479](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39892640479) passed on exact source commit `b2b5cf8df28cd0e6b89207123f642e672506bddf`. Verify Pipeline [39892640528](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/39892640528) passed all three required jobs on the same commit. This disposition passes G-ARCH only; G-IMPL verification remains required. It authorizes implementation only within DECISION-023 and does not establish profile support, Infinite Gallery technology choices, or application behavior.
+
