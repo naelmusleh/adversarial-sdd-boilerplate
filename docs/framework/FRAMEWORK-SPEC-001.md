@@ -6,7 +6,7 @@ status: draft
 version: 0.17
 created: 2026-10-07
 updated: 2026-10-22
-related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-007, DECISION-024
+related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-007, DECISION-024, DECISION-025
 ---
 
 # FRAMEWORK-SPEC-001 — Adversarial SDD Framework v1 scope and behavior
@@ -25,7 +25,7 @@ The v1 outcome is that a project can start with a product idea, create and maint
 
 ## Approved bounded v2 increment
 
-On 2026-10-21, the owner approved the bounded FW-TASK-026 scope and requirements FR-FW-019 through FR-FW-021, and the bounded FW-TASK-027 scope and requirements FR-FW-022 through FR-FW-024. On 2026-10-22, the owner approved the FW-TASK-013 scope and requirements FR-FW-025 through FR-FW-027 (DECISION-023), then authorized the separate bounded FW-TASK-032 task to define and review a small multi-platform sample contract (DECISION-024). FR-FW-028 records the traceability and acceptance conditions for that task. FW-TASK-032 must produce an independently reviewed draft and obtain owner acceptance of its exact revision before that artifact is used to unblock FW-TASK-013. The synthetic native lanes and stack assignments are framework fixtures only, not Infinite Gallery product decisions. These approvals do not authorize FW-TASK-028, FW-TASK-024, other proposed v2 tasks, or adoption of a draft gate-contract version.
+On 2026-10-21, the owner approved the bounded FW-TASK-026 scope and requirements FR-FW-019 through FR-FW-021, and the bounded FW-TASK-027 scope and requirements FR-FW-022 through FR-FW-024. On 2026-10-22, the owner approved the FW-TASK-013 scope and requirements FR-FW-025 through FR-FW-027 (DECISION-023), then authorized the separate bounded FW-TASK-032 task to define and review a small multi-platform sample contract (DECISION-024). FR-FW-028 records the traceability and acceptance conditions for that task. The owner accepted FRAMEWORK-EXERCISE-007 v0.2's exact digest for use as FW-TASK-013's prerequisite in DECISION-025. Its synthetic native lanes and stack assignments remain framework fixtures only, not Infinite Gallery product decisions. These approvals do not authorize FW-TASK-028, FW-TASK-024, other proposed v2 tasks, or adoption of a draft gate-contract version.
 
 ## Current baseline
 
