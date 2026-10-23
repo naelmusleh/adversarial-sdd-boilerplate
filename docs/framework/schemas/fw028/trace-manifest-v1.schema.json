@@ -4,21 +4,177 @@
   "title": "FW-028 exact revision trace manifest v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "repository", "source_sha", "task_id", "criterion_ids", "changed_paths", "path_criteria", "profile", "required_checks", "exceptions"],
+  "required": [
+    "schema_version",
+    "repository",
+    "source_sha",
+    "task_id",
+    "criterion_ids",
+    "changed_paths",
+    "path_criteria",
+    "profile",
+    "required_checks",
+    "exceptions",
+    "declared_risk_tier"
+  ],
   "properties": {
-    "schema_version": {"const": "1"},
-    "repository": {"type": "string", "format": "uri", "minLength": 1},
-    "source_sha": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
-    "task_id": {"type": "string", "pattern": "^[A-Z]+-TASK-[0-9]{3}$"},
-    "criterion_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
-    "changed_paths": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/path"}},
-    "path_criteria": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["path", "criterion_ids"], "properties": {"path": {"$ref": "#/$defs/path"}, "criterion_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}}}},
-    "profile": {"type": "object", "additionalProperties": false, "required": ["profile_id", "profile_version", "sha256"], "properties": {"profile_id": {"type": "string", "minLength": 1}, "profile_version": {"type": "string", "minLength": 1}, "sha256": {"$ref": "#/$defs/digest"}}},
-    "required_checks": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["check_id", "provider", "name"], "properties": {"check_id": {"type": "string", "pattern": "^[A-Z0-9-]{3,64}$"}, "provider": {"type": "string", "minLength": 1}, "name": {"type": "string", "minLength": 1}}}},
-    "exceptions": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["path", "criterion_id", "reason", "authority_ref"], "properties": {"path": {"$ref": "#/$defs/path"}, "criterion_id": {"type": "string", "minLength": 1}, "reason": {"type": "string", "minLength": 1}, "authority_ref": {"type": "string", "minLength": 1}}}}
+    "schema_version": {
+      "const": "1"
+    },
+    "repository": {
+      "type": "string",
+      "format": "uri",
+      "minLength": 1
+    },
+    "source_sha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "task_id": {
+      "type": "string",
+      "pattern": "^[A-Z]+-TASK-[0-9]{3}$"
+    },
+    "criterion_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "changed_paths": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/path"
+      }
+    },
+    "path_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "criterion_ids"
+        ],
+        "properties": {
+          "path": {
+            "$ref": "#/$defs/path"
+          },
+          "criterion_ids": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_id",
+        "profile_version",
+        "sha256"
+      ],
+      "properties": {
+        "profile_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profile_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "required_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "check_id",
+          "provider",
+          "name"
+        ],
+        "properties": {
+          "check_id": {
+            "type": "string",
+            "pattern": "^[A-Z0-9-]{3,64}$"
+          },
+          "provider": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "exceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "criterion_id",
+          "reason",
+          "authority_ref"
+        ],
+        "properties": {
+          "path": {
+            "$ref": "#/$defs/path"
+          },
+          "criterion_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "authority_ref": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "declared_risk_tier": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    }
   },
   "$defs": {
-    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-    "path": {"type": "string", "minLength": 1, "not": {"pattern": "(^/|(^|/)\\.\\.(/|$)|\\\\|^[A-Za-z]:)"}}
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "pattern": "(^/|(^|/)\\.\\.(/|$)|\\\\|^[A-Za-z]:)"
+      }
+    }
   }
 }

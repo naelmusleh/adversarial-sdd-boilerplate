@@ -3,7 +3,7 @@ id: FRAMEWORK-ARCHITECTURE-002
 type: framework-architecture
 title: FW-TASK-028 risk-scaled quality and traceability architecture
 status: draft
-version: 0.5
+version: 0.6
 created: 2026-10-23
 updated: 2026-10-23
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-009, FRAMEWORK-COVERAGE-001, FRAMEWORK-CX-001, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, DECISION-026, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
@@ -56,7 +56,7 @@ Invariants: thresholds are typed and justified by linked app policy/decision; ex
 
 ### Trace manifest
 
-Schema: `docs/framework/schemas/fw028/trace-manifest-v1.schema.json`. It types repository/source identity, task and criterion IDs, canonical paths, criterion/path links, required checks, profile digest, and exception references. Fixtures: `docs/framework/schemas/fw028/fixtures/trace-manifest.valid.json` and `docs/framework/schemas/fw028/fixtures/trace-manifest.missing-path-link.invalid.json`.
+Schema: `docs/framework/schemas/fw028/trace-manifest-v1.schema.json`. It types repository/source identity, task and criterion IDs, the declared risk tier, canonical paths, criterion/path links, required checks, profile digest, and exception references. Fixtures: `docs/framework/schemas/fw028/fixtures/trace-manifest.valid.json` and `docs/framework/schemas/fw028/fixtures/trace-manifest.missing-path-link.invalid.json`.
 
 Invariants: repository/source/profile revisions match the evaluated checkout; every in-scope changed path and required criterion is mapped; each pair is checked for correctness rather than accepting only complete sets; traversal, ambiguous normalization, aliases and symlink escape are rejected; generated paths are explicit. Exceptions require exact paths/criteria, reason and independently verifiable authority; until that authority contract is approved, every positive exception is rejected. Check names or local outcome strings are insufficient.
 
@@ -64,7 +64,7 @@ Invariants: repository/source/profile revisions match the evaluated checkout; ev
 
 Schema: `docs/framework/schemas/fw028/measurement-result-v1.schema.json`. It types repository/source and policy bindings, adapter/tool invocation, metrics, unavailable reasons, provider check-run evidence, overall state, evidence reference, and timestamp. Fixtures: `docs/framework/schemas/fw028/fixtures/measurement-result.valid.json` and `docs/framework/schemas/fw028/fixtures/measurement-result.unavailable-claimed-pass.invalid.json`.
 
-Invariants: missing, failed, skipped, pending, stale, unsupported or unauthenticated evidence never becomes PASS; percentages from different tools/stacks are not compared as equivalent; a green aggregate cannot hide missing checks or weak-assertion findings. `docs/framework/schemas/fw028/fixtures/cases.json` records expected schema and semantic outcomes. The semantic validator must reject missing path/criterion pairs, profile digest mismatch, risk-floor downgrade, or a required unavailable metric paired with overall pass; JSON Schema alone cannot establish these cross-record facts.
+Invariants: missing, failed, skipped, pending, stale, unsupported or unauthenticated evidence never becomes PASS; percentages from different tools/stacks are not compared as equivalent; a green aggregate cannot hide missing checks or weak-assertion findings. `docs/framework/schemas/fw028/fixtures/cases.json` indexes expected outcomes. `semantic-negative-cases.json` contains a complete passing base input and eight concrete, deterministic mutation cases with exact expected diagnostic IDs, including source/profile mismatch, risk-floor downgrade, symlink escape, provider head mismatch, unavailable exception authority, missing required check, and incomplete metric rollup. The semantic validator must reject missing path/criterion pairs, profile digest mismatch, risk-floor downgrade, or a required unavailable metric paired with overall pass; JSON Schema alone cannot establish these cross-record facts.
 
 ## Data, security, privacy, and operations
 
@@ -152,10 +152,11 @@ All units must revalidate against approved FRAMEWORK-GATE-CONTRACT-001 v1.0 and 
 - **Round 2 result:** BLOCK at exact architecture commit `94fadf4766b2ae4cc499239120de8f083e0cfc0b`; Verify Pipeline [40016142180](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40016142180) passed all three jobs on that SHA. GARCH-01 and GARCH-02 passed; GARCH-03 blocked.
 - **Blocked disposition checkpoint:** Commit `94310bd6698095ab504ba96786eeff4441d2d8a5` on `codex/v2-backlog-roadmap` records FINDING-003 and the manual review halt; Verify Pipeline [40016488045](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40016488045) passed all three jobs on that exact SHA.
 - **FRAMEWORK-ARCHITECTURE-002/FINDING-003 — Major, semantic verification fixtures:** `fixtures/cases.json` references `semantic-negative-cases` without defining a fixture payload; its listed diagnostic IDs have no concrete inputs/expected observations. Missing source/profile binding, risk-floor downgrade, symlink escape, provider head mismatch, and exception-authority cases are therefore not reviewable. The suite also lacks explicit cases for missing required checks and incomplete metric/check rollups. **Disposition:** accepted; G-ARCH remains blocked pending a manual checkpoint before any further reviewer loop.
-- **Gate result:** Blocked. Round-1 and round-2 findings remain immutable historical evidence; no finding is waived.
+- **Gate result:** Blocked after round 2; round-1 and round-2 findings remain immutable historical evidence.
+- **Owner checkpoint:** Owner authorized one additional correction and independent review loop after reviewing FINDING-003. v0.6 supplies the concrete semantic case file and missing-check/rollup negatives. Round-3 full-scope review is pending.
 
 ## Exclusions and next action
 
 This design does not choose numeric thresholds, select real app stacks/providers, implement validators/adapters, set repository protection, accept exceptions, or authorize FW-TASK-024 or other v2 work.
 
-**Next action:** Manual user gating is required before another correction/review loop under the repository operating contract. The specific unresolved work is to add concrete semantic fixture inputs and expected diagnostics for the listed cross-record attacks, missing required checks, and incomplete result rollups. G-IMPL remains unauthorized.
+**Next action:** Run the authorized full-scope G-ARCH review on v0.6 after exact-revision Verify Pipeline succeeds. G-IMPL remains unauthorized until G-ARCH passes and implementation is separately authorized.

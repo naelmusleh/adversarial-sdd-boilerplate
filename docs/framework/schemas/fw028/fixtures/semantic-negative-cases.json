@@ -1,0 +1,262 @@
+{
+  "schema_version": "1",
+  "base_input": {
+    "checkout": {
+      "repository": "https://github.com/example/sample",
+      "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "symlinks": {}
+    },
+    "profile": {
+      "profile_id": "sample",
+      "profile_version": "1.0.0",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "escalation_floors": [
+        {
+          "match_kind": "path-pattern",
+          "match": "src/auth/**",
+          "minimum_tier": "critical"
+        }
+      ],
+      "required_metric_ids": [
+        "line-coverage",
+        "branch-coverage"
+      ]
+    },
+    "manifest": {
+      "schema_version": "1",
+      "repository": "https://github.com/example/sample",
+      "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "task_id": "APP-TASK-001",
+      "criterion_ids": [
+        "AC-1"
+      ],
+      "declared_risk_tier": "medium",
+      "changed_paths": [
+        "src/domain/rule.py"
+      ],
+      "path_criteria": [
+        {
+          "path": "src/domain/rule.py",
+          "criterion_ids": [
+            "AC-1"
+          ]
+        }
+      ],
+      "profile": {
+        "profile_id": "sample",
+        "profile_version": "1.0.0",
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "required_checks": [
+        {
+          "check_id": "CI-UNIT",
+          "provider": "github-actions",
+          "name": "Unit Tests"
+        },
+        {
+          "check_id": "CI-STATIC",
+          "provider": "github-actions",
+          "name": "Static Analysis"
+        }
+      ],
+      "exceptions": []
+    },
+    "result": {
+      "schema_version": "1",
+      "repository": "https://github.com/example/sample",
+      "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "profile_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "manifest_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "adapter": {
+        "id": "python",
+        "version": "1",
+        "evaluator_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "overall_state": "pass",
+      "metrics": [
+        {
+          "metric_id": "line-coverage",
+          "required": true,
+          "state": "pass",
+          "value": 90,
+          "scope": {
+            "included": [
+              "src/domain/rule.py"
+            ],
+            "excluded": []
+          }
+        },
+        {
+          "metric_id": "branch-coverage",
+          "required": true,
+          "state": "pass",
+          "value": 80,
+          "scope": {
+            "included": [
+              "src/domain/rule.py"
+            ],
+            "excluded": []
+          }
+        }
+      ],
+      "provider_checks": [
+        {
+          "provider": "github-actions",
+          "repository": "https://github.com/example/sample",
+          "check_id": "12001",
+          "run_id": "13001",
+          "conclusion": "success",
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "provider": "github-actions",
+          "repository": "https://github.com/example/sample",
+          "check_id": "12002",
+          "run_id": "13002",
+          "conclusion": "success",
+          "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "evidence_ref": "run://fixture/valid",
+      "observed_at": "2026-10-23T00:00:00Z"
+    }
+  },
+  "case_operation_format": "Apply each case's RFC 6902-style replace/remove operation to a deep copy of base_input; JSON Pointer paths address the named top-level record.",
+  "cases": [
+    {
+      "id": "FW028-SEM-01",
+      "purpose": "Trace source differs from checked-out commit",
+      "input": {
+        "replace": {
+          "/manifest/source_sha": "dddddddddddddddddddddddddddddddddddddddd"
+        }
+      },
+      "expected": {
+        "outcome": "reject",
+        "diagnostic_id": "TRACE-SOURCE-SHA-MISMATCH"
+      }
+    },
+    {
+      "id": "FW028-SEM-02",
+      "purpose": "Manifest profile digest differs from accepted profile bytes",
+      "input": {
+        "replace": {
+          "/manifest/profile/sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        }
+      },
+      "expected": {
+        "outcome": "reject",
+        "diagnostic_id": "TRACE-PROFILE-DIGEST-MISMATCH"
+      }
+    },
+    {
+      "id": "FW028-SEM-03",
+      "purpose": "Sensitive authorization path is labeled low risk below a critical policy floor",
+      "input": {
+        "replace": {
+          "/manifest/changed_paths": [
+            "src/auth/guard.py"
+          ],
+          "/manifest/path_criteria": [
+            {
+              "path": "src/auth/guard.py",
+              "criterion_ids": [
+                "AC-1"
+              ]
+            }
+          ],
+          "/manifest/declared_risk_tier": "low"
+        }
+      },
+      "expected": {
+        "outcome": "reject",
+        "diagnostic_id": "RISK-FLOOR-DOWNGRADE"
+      }
+    },
+    {
+      "id": "FW028-SEM-04",
+      "purpose": "Changed path resolves through a symlink outside the repository root",
+      "input": {
+        "replace": {
+          "/manifest/changed_paths": [
+            "src/link/current.py"
+          ],
+          "/manifest/path_criteria": [
+            {
+              "path": "src/link/current.py",
+              "criterion_ids": [
+                "AC-1"
+              ]
+            }
+          ],
+          "/checkout/symlinks": {
+            "src/link/current.py": "../../outside/secret.py"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "reject",
+        "diagnostic_id": "PATH-SYMLINK-ESCAPE"
+      }
+    },
+    {
+      "id": "FW028-SEM-05",
+      "purpose": "Provider check result is for a different head commit",
+      "input": {
+        "replace": {
+          "/result/provider_checks/1/head_sha": "dddddddddddddddddddddddddddddddddddddddd"
+        }
+      },
+      "expected": {
+        "outcome": "reject",
+        "diagnostic_id": "CHECK-HEAD-SHA-MISMATCH"
+      }
+    },
+    {
+      "id": "FW028-SEM-06",
+      "purpose": "Contributor supplies a free-text identity for an exception while no authorization contract exists",
+      "input": {
+        "replace": {
+          "/manifest/exceptions": [
+            {
+              "path": "src/domain/rule.py",
+              "criterion_id": "AC-1",
+              "reason": "skip mapping",
+              "authority_ref": "user:nael"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "reject",
+        "diagnostic_id": "EXCEPTION-AUTHORITY-UNAVAILABLE"
+      }
+    },
+    {
+      "id": "FW028-SEM-07",
+      "purpose": "Required Static Analysis check is absent from provider results",
+      "input": {
+        "remove": [
+          "/result/provider_checks/1"
+        ]
+      },
+      "expected": {
+        "outcome": "reject",
+        "diagnostic_id": "RESULT-REQUIRED-CHECK-MISSING"
+      }
+    },
+    {
+      "id": "FW028-SEM-08",
+      "purpose": "Required branch coverage metric is absent but the aggregate claims pass",
+      "input": {
+        "remove": [
+          "/result/metrics/1"
+        ]
+      },
+      "expected": {
+        "outcome": "reject",
+        "diagnostic_id": "RESULT-REQUIRED-METRIC-MISSING"
+      }
+    }
+  ]
+}
