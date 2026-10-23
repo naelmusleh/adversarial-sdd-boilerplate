@@ -3,7 +3,7 @@ id: FRAMEWORK-COVERAGE-001
 type: framework-coverage
 title: FW-TASK-028 journey and surface coverage
 status: draft
-version: 0.1
+version: 0.2
 created: 2026-10-23
 updated: 2026-10-23
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-009, DECISION-026, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
@@ -94,3 +94,10 @@ All seven G-COVERAGE categories are applicable to this policy and evidence workf
 - **Next action:** Independent review of this exact artifact revision and its scope interpretation. If passed, prepare G-CX interaction-contract evidence for this nonvisual framework capability. If blocked on owner scope, stop and request that decision before G-CX.
 - **Permitted next work:** Coverage review/remediation, then bounded G-CX design evidence if G-COVERAGE passes.
 - **Prohibited next work:** Implementation, selecting app numeric thresholds, accepting exceptions, deploying, or starting excluded v2 tasks.
+
+
+## Independent G-COVERAGE disposition (2026-10-23)
+
+**G-COVERAGE: PASS** for this exact artifact at commit `6e03862030c9fa9471b9326216d31639a2c6d12b`. Independent reviewer `/root/infinite_gallery_reviewer` passed GCOV-01, GCOV-02, and GCOV-03. The reviewer confirmed that the local-first framework surface interpretation follows the mission and approved DECISION-026: repository/CLI, hosted CI/checks, and pull-request review are in scope; the three synthetic stack lanes are measurement adapters; no separate owner decision is needed for this bounded coverage artifact. Verify Pipeline [40013507495](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40013507495) passed all three jobs on the exact reviewed commit.
+
+This PASS clears only journey and surface coverage for FW-TASK-028. It does not authorize implementation, threshold selection, or positive exception support. The next permitted gate is G-CX.
