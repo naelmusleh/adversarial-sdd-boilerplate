@@ -3,7 +3,7 @@ id: FRAMEWORK-CX-001
 type: framework-interaction-contract
 title: FW-TASK-028 nonvisual quality and traceability interactions
 status: draft
-version: 0.2
+version: 0.3
 created: 2026-10-23
 updated: 2026-10-23
 related-artifacts: FRAMEWORK-COVERAGE-001, FRAMEWORK-FEASIBILITY-009, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-026, GATE-CATALOG-001
@@ -13,7 +13,7 @@ related-artifacts: FRAMEWORK-COVERAGE-001, FRAMEWORK-FEASIBILITY-009, FRAMEWORK-
 
 ## G-CX work record
 
-- **Gate:** G-CX — in progress; no pass is asserted.
+- **Gate:** G-CX — passed within the approved FW-TASK-028 scope, based on the exact artifact revision, full-scope independent review, and Verify Pipeline evidence recorded below.
 - **Task and requirements:** FW-TASK-028; FR-FW-029, FR-FW-030, FR-FW-031.
 - **Frozen journey/surface scope:** FRAMEWORK-COVERAGE-001 v0.2, independently passed at commit `7300427d0e18b0b6367321cb52e9992eaf8af7ba`; G-COVERAGE Verify Pipeline run [40013869197](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40013869197) passed on that revision.
 - **Design target:** A nonvisual, repository-based governance workflow. The interaction artifact is a CLI/CI/review trace, not a rendered UI or clickable prototype. No production command is claimed to exist.
@@ -168,18 +168,19 @@ The reviewer can request changes or leave the result blocked. There is no pass-t
 
 ## Tool-neutral critique record
 
-- **Reviewer/evaluator:** Independent reviewer assignment pending.
+- **Reviewer/evaluator:** Independent reviewer `/root/infinite_gallery_reviewer`; full-scope manual tool-neutral rerun.
 - **Method:** Manual tool-neutral review of the complete interaction contract and all four covered journeys; no visual prototype exists or is claimed.
 - **Scope to inspect:** Traces A–D; all seven failure categories; all three interaction surfaces; six synthetic profile and product-boundary statements in FRAMEWORK-COVERAGE-001; accessibility of textual status and evidence navigation; clarity of recovery actions and owner-decision boundaries.
 - **Evidence location:** This artifact at its exact committed revision; G-COVERAGE evidence in FRAMEWORK-COVERAGE-001; product requirements FR-FW-029–031 and DECISION-026.
 - **Runtime/device limits:** No command/UI execution, screen-reader, responsive/mobile, or production CI behavior is verified by these text traces. Those are later implementation checks only if approved.
 - **Initial independent critique:** Reviewer `/root/infinite_gallery_reviewer`, manual tool-neutral review, exact artifact commit `8693634ead0fbf975a4ea53c4b6cdd83b13cd598`; Verify Pipeline [40014174253](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40014174253) passed on that SHA.
-- **FRAMEWORK-CX-001/FINDING-001 — Major, Trace C overall state:** Initial vocabulary omitted STALE and IN_PROGRESS although the contract required those states to remain distinct. **Disposition:** accepted and corrected in v0.2 by adding both states, separating evidence freshness, defining shared cross-surface labels, and specifying rollup precedence. Full-scope independent rerun is pending; the gate remains blocked until that rerun passes.
+- **FRAMEWORK-CX-001/FINDING-001 — Major, Trace C overall state:** Initial vocabulary omitted STALE and IN_PROGRESS although the contract required those states to remain distinct. **Disposition:** accepted and corrected in v0.2 by adding both states, separating evidence freshness, defining shared cross-surface labels, and specifying rollup precedence. Full-scope independent rerun passed at exact remediation commit `838bb83f43c99c568001ec8c715727f5eee0f211`; Verify Pipeline [40014550952](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40014550952) passed all three required jobs on that exact SHA.
 - **Findings/disposition:** No other findings have been dispositioned; the reviewer explicitly found no owner decision needed for the frozen surface scope.
-- **Gate result:** In progress.
+- **Final independent rerun:** Reviewer `/root/infinite_gallery_reviewer` assessed FRAMEWORK-CX-001 v0.2 at exact commit `838bb83f43c99c568001ec8c715727f5eee0f211`; GCX-01, GCX-02, and GCX-03 all passed. Reviewer confirmed Traces A–D, state definitions and precedence, cross-surface consistency, recovery actions, and authority boundaries; no remaining finding or owner decision blocks this scope. Screen-reader, runtime, and device accessibility remain unverified and are not claimed.
+- **Gate result:** Passed within the approved nonvisual framework capability scope. This does not authorize implementation or threshold selection.
 
 ## Exclusions and next action
 
 This interaction contract does not choose thresholds or configuration fields, implement commands, integrate production profile validators, introduce an authorized-exception workflow, or claim correctness/security from a coverage number. Provider-check binding was shown in bounded G-FEAS only; production integration remains unproven.
 
-**Next action:** Independent reviewer reruns the complete affected scope (Traces A–D, state table, and cross-surface contract) against GCX-01–03 after FINDING-001 remediation. G-CX can pass only after review and exact-revision Verify Pipeline succeed. G-ARCH is the next permitted lifecycle stage if G-CX passes; G-IMPL remains unauthorized pending architecture and its other required evidence.
+**Next action:** G-ARCH architecture planning is recorded in FRAMEWORK-ARCHITECTURE-002 v0.1 for independent review. G-IMPL remains unauthorized pending an independently passed G-ARCH and the remaining task evidence.

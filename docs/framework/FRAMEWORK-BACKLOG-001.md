@@ -3,7 +3,7 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 4.29
+version: 4.30
 created: 2026-10-07
 updated: 2026-10-23
 related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-ADV-014, FRAMEWORK-ADV-015, FRAMEWORK-ADV-017, FRAMEWORK-ADV-018, FRAMEWORK-ADV-019, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, FRAMEWORK-EXERCISE-006, FRAMEWORK-EXERCISE-007, FRAMEWORK-FEASIBILITY-008, FRAMEWORK-ARCHITECTURE-001, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, WORKFLOW-AI-ENGINEERING-001, DECISION-LOG-001, DECISION-022, DECISION-023, DECISION-024, DECISION-025, DECISION-026, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, FRAMEWORK-FEASIBILITY-009
@@ -810,3 +810,6 @@ When FW-TASK-010 is complete, report only:
 
 
 - **FW-TASK-028 G-CX review round 1 (2026-10-23):** Reviewer `/root/infinite_gallery_reviewer` passed GCX-01/02 and blocked GCX-03 at exact commit `8693634ead0fbf975a4ea53c4b6cdd83b13cd598`. Major finding FRAMEWORK-CX-001/FINDING-001: Trace C's overall-state list omitted STALE and IN_PROGRESS, conflicting with the distinct-state contract. FRAMEWORK-CX-001 v0.2 adds both states, freshness field, shared cross-surface labels, and explicit rollup precedence. Full-scope independent rerun and Verify Pipeline on the fix commit are required; G-CX remains blocked pending that evidence.
+
+
+- **FW-TASK-028 G-CX disposition / G-ARCH work record (2026-10-23):** Independent reviewer `/root/infinite_gallery_reviewer` passed GCX-01–03 on corrected FRAMEWORK-CX-001 v0.2 at exact commit `838bb83f43c99c568001ec8c715727f5eee0f211`; Verify Pipeline [40014550952](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40014550952) passed all three jobs on that exact SHA. Finding FRAMEWORK-CX-001/FINDING-001 is resolved in v0.2; G-CX passes for the approved nonvisual local-repository/CLI, hosted CI/check, and pull-request-review scope. Active gate advances to G-ARCH. Architecture planning is recorded in [FRAMEWORK-ARCHITECTURE-002](FRAMEWORK-ARCHITECTURE-002.md) v0.1 and is pending exact-revision independent review and Verify Pipeline. The design retains app-owned threshold decisions, provider adapter limitations, and fail-closed exceptions; no numeric thresholds are selected, no implementation or threshold change is authorized, FW-TASK-024 and other excluded tasks remain out of scope.
