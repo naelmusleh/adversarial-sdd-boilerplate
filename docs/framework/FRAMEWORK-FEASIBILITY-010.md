@@ -3,7 +3,7 @@ id: FRAMEWORK-FEASIBILITY-010
 type: feasibility-register
 title: FW-TASK-029 signed evidence receipt feasibility
 status: draft
-version: 0.5
+version: 0.6
 created: 2026-10-24
 updated: 2026-10-24
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-024, DECISION-027, DECISION-019, FRAMEWORK-CI-RELEASE-POLICY-001
@@ -60,4 +60,4 @@ G-FEAS may pass only if at least one candidate can produce and independently ver
 
 ## Status
 
-Plan v0.5 prepared 2026-10-24 after G-REQ PASS and updated to bind every positive check to one exact Verify Pipeline run/attempt, ref, event, workflow path, and immutable GitHub Actions app ID following independent review feedback. The frozen expected policy names the three required checks; only negative mutations use synthetic values. No signing probe has run. Independent review of the exact plan and rendered temporary workflow remains required before execution.
+Plan v0.6 records the independent G-FEAS plan review **PASS** at exact source commit `3456e5d9f86a070534a901c12858865a1bb2c72d` by `/root/infinite_gallery_reviewer`. The reviewer confirmed the one-run/attempt, ref, event, workflow path, source SHA, and app ID binding is adequate, and the plan-level workflow design is reviewable. The GitHub connector returned no combined statuses for that commit, so hosted Verify Pipeline evidence is unverified. No signing probe has run. A separate independent review of the rendered temporary workflow, permissions diff, and immutable action pins is still required before execution.
