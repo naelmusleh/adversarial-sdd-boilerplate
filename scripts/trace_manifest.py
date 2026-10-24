@@ -293,7 +293,7 @@ def validate_trace_manifest(
         if type(required) is not bool:
             _diag(diagnostics, "TRACE-CHECK-POLICY-INVALID", f"{prefix}.required", "required must be a boolean")
         task_ids = check.get("task_ids")
-        if not _unique_text_list(task_ids):
+        if not _unique_text_list(task_ids) or not task_ids:
             _diag(diagnostics, "TRACE-CHECK-POLICY-INVALID", f"{prefix}.task_ids", "task_ids must be a non-empty array of unique IDs")
             task_ids = []
         check_id = check.get("check_id")

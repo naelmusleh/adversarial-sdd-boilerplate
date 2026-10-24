@@ -187,23 +187,25 @@ class TraceManifestTests(unittest.TestCase):
         self.assertIn("TRACE-PATH-NONCANONICAL", self.codes(outcome))
 
     def test_malformed_required_policy_scope_cannot_be_omitted_from_trace(self) -> None:
-        policy = copy.deepcopy(self.policy)
-        policy[0]["task_ids"] = "APP-TASK-001"
-        manifest = copy.deepcopy(self.manifest)
-        manifest["required_checks"] = []
-        result = copy.deepcopy(self.result)
-        result["provider_checks"] = []
-        raw = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()
-        result["manifest_sha256"] = hashlib.sha256(raw).hexdigest()
-        with tempfile.TemporaryDirectory() as directory:
-            outcome = validate_trace_manifest(
-                raw, expected_repository=REPOSITORY, expected_source_sha=SHA,
-                expected_task_id="APP-TASK-001", expected_criterion_ids=["AC-1"],
-                observed_changed_paths=["src/domain/rule.py"], profile_raw=self.profile_raw,
-                required_check_policy=policy, measurement_result=result, checkout_root=directory,
-            )
-        self.assertEqual(outcome["state"], "blocked")
-        self.assertIn("TRACE-CHECK-POLICY-INVALID", self.codes(outcome))
+        for malformed_task_ids in ("APP-TASK-001", []):
+            with self.subTest(task_ids=malformed_task_ids):
+                policy = copy.deepcopy(self.policy)
+                policy[0]["task_ids"] = malformed_task_ids
+                manifest = copy.deepcopy(self.manifest)
+                manifest["required_checks"] = []
+                result = copy.deepcopy(self.result)
+                result["provider_checks"] = []
+                raw = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()
+                result["manifest_sha256"] = hashlib.sha256(raw).hexdigest()
+                with tempfile.TemporaryDirectory() as directory:
+                    outcome = validate_trace_manifest(
+                        raw, expected_repository=REPOSITORY, expected_source_sha=SHA,
+                        expected_task_id="APP-TASK-001", expected_criterion_ids=["AC-1"],
+                        observed_changed_paths=["src/domain/rule.py"], profile_raw=self.profile_raw,
+                        required_check_policy=policy, measurement_result=result, checkout_root=directory,
+                    )
+                self.assertEqual(outcome["state"], "blocked")
+                self.assertIn("TRACE-CHECK-POLICY-INVALID", self.codes(outcome))
 
     def test_manifest_required_check_set_must_match_policy(self) -> None:
         manifest = copy.deepcopy(self.manifest)
