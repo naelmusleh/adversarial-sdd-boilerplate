@@ -7,8 +7,10 @@
   "required": [
     "policy_version",
     "repository",
+    "source",
     "gate_contract",
     "workflow",
+    "provider_run",
     "required_check_manifest_sha256",
     "required_checks",
     "issuer",
@@ -25,6 +27,15 @@
         "owner": { "type": "string", "minLength": 1, "maxLength": 255 },
         "name": { "type": "string", "minLength": 1, "maxLength": 255 },
         "id": { "type": "string", "pattern": "^[0-9]{1,32}$" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha", "ref"],
+      "properties": {
+        "sha": { "type": "string", "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$" },
+        "ref": { "type": "string", "minLength": 1, "maxLength": 1024 }
       }
     },
     "gate_contract": {
@@ -47,10 +58,23 @@
         "identity": { "type": "string", "minLength": 1, "maxLength": 2048 }
       }
     },
+    "provider_run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "run_id", "attempt", "event", "ref"],
+      "properties": {
+        "provider": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "run_id": { "type": "string", "pattern": "^[0-9]{1,32}$" },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "event": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ref": { "type": "string", "minLength": 1, "maxLength": 1024 }
+      }
+    },
     "required_check_manifest_sha256": { "$ref": "#/$defs/sha256" },
     "required_checks": {
       "type": "array",
       "minItems": 1,
+      "maxItems": 100,
       "items": {
         "type": "object",
         "additionalProperties": false,
