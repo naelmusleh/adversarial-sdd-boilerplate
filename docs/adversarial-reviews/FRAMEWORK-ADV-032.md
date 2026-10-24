@@ -2,7 +2,7 @@
 id: FRAMEWORK-ADV-032
 type: adversarial-review
 title: FW-TASK-029 G-ARCH review rounds 1 through 4
-status: passed
+status: approved
 version: 1.3
 created: 2026-10-24
 updated: 2026-10-24
