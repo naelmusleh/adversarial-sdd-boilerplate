@@ -279,7 +279,11 @@ def _schema_diagnostics(value: dict[str, Any], kind: str) -> list[dict[str, str]
     if issues:
         return issues
     assert schema is not None
-    return _validate_schema(value, schema, schema, kind)
+    try:
+        return _validate_schema(value, schema, schema, kind)
+    except RecursionError:
+        label = "receipt" if kind == "receipt" else "policy"
+        return [_diag(f"{label}.schema_invalid", "$", "document nesting exceeds validator limits")]
 
 
 def validate_receipt(raw: bytes | str) -> dict[str, Any]:
@@ -306,8 +310,8 @@ def validate_policy(raw: bytes | str) -> dict[str, Any]:
     return _result("contract_valid" if not issues else "failed", issues)
 
 
-def _same(left: Any, right: Any) -> bool:
-    return left == right
+def _object(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
 
 
 def _identity_diagnostics(
@@ -318,60 +322,64 @@ def _identity_diagnostics(
     provider_check_ids: Mapping[str, str] | None,
 ) -> list[dict[str, str]]:
     issues: list[dict[str, str]] = []
-    for field in ("host", "owner", "name", "id"):
-        if receipt.get("repository", {}).get(field) != policy.get("repository", {}).get(field):
-            issues.append(_diag("receipt.repository_mismatch", f"$.repository.{field}", "receipt repository differs from pinned policy"))
-    for field in ("sha",):
-        if receipt.get("source", {}).get(field) != policy.get("source", {}).get(field):
-            issues.append(_diag("receipt.source_mismatch", f"$.source.{field}", "receipt source revision differs from pinned policy"))
-    if receipt.get("source", {}).get("ref") != policy.get("source", {}).get("ref"):
+    receipt = _object(receipt)
+    policy = _object(policy)
+    groups = (
+        ("repository", ("host", "owner", "name", "id"), "receipt.repository_mismatch", "receipt repository differs from pinned policy"),
+        ("source", ("sha",), "receipt.source_mismatch", "receipt source revision differs from pinned policy"),
+        ("gate_contract", ("id", "version", "sha256"), "receipt.contract_mismatch", "receipt gate contract differs from pinned policy"),
+        ("workflow", ("path", "revision_sha", "identity"), "receipt.workflow_mismatch", "receipt workflow differs from pinned policy"),
+        ("provider_run", ("provider", "run_id", "attempt", "event", "ref"), "receipt.run_mismatch", "receipt provider run differs from pinned policy"),
+    )
+    for group, fields, code, message in groups:
+        left, right = _object(receipt.get(group)), _object(policy.get(group))
+        for field in fields:
+            if field in left and field in right and left[field] != right[field]:
+                issues.append(_diag(code, f"$.{group}.{field}", message))
+    receipt_source, policy_source = _object(receipt.get("source")), _object(policy.get("source"))
+    if "ref" in receipt_source and "ref" in policy_source and receipt_source["ref"] != policy_source["ref"]:
         issues.append(_diag("receipt.source_ref_mismatch", "$.source.ref", "receipt source ref differs from pinned policy"))
-    for field in ("id", "version", "sha256"):
-        if receipt.get("gate_contract", {}).get(field) != policy.get("gate_contract", {}).get(field):
-            issues.append(_diag("receipt.contract_mismatch", f"$.gate_contract.{field}", "receipt gate contract differs from pinned policy"))
-    for field in ("path", "revision_sha", "identity"):
-        if receipt.get("workflow", {}).get(field) != policy.get("workflow", {}).get(field):
-            issues.append(_diag("receipt.workflow_mismatch", f"$.workflow.{field}", "receipt workflow differs from pinned policy"))
-    for field in ("provider", "run_id", "attempt", "event", "ref"):
-        if receipt.get("provider_run", {}).get(field) != policy.get("provider_run", {}).get(field):
-            issues.append(_diag("receipt.run_mismatch", f"$.provider_run.{field}", "receipt provider run differs from pinned policy"))
-    if receipt.get("required_check_manifest_sha256") != policy.get("required_check_manifest_sha256"):
+    if "required_check_manifest_sha256" in receipt and "required_check_manifest_sha256" in policy and receipt["required_check_manifest_sha256"] != policy["required_check_manifest_sha256"]:
         issues.append(_diag("receipt.manifest_mismatch", "$.required_check_manifest_sha256", "receipt check-manifest digest differs from pinned policy"))
+    receipt_issuer, policy_issuer = _object(receipt.get("issuer")), _object(policy.get("issuer"))
     for field in ("provider", "identity"):
-        if receipt.get("issuer", {}).get(field) != policy.get("issuer", {}).get(field):
+        if field in receipt_issuer and field in policy_issuer and receipt_issuer[field] != policy_issuer[field]:
             issues.append(_diag("issuer.identity_untrusted", f"$.issuer.{field}", "receipt issuer claim differs from pinned policy"))
 
     actual_checks = receipt.get("checks", [])
     required_checks = policy.get("required_checks", [])
     if isinstance(actual_checks, list) and isinstance(required_checks, list):
-        actual_ids = [item.get("logical_id") for item in actual_checks if isinstance(item, dict)]
-        required_ids = [item.get("logical_id") for item in required_checks if isinstance(item, dict)]
-        if (
-            len(actual_ids) != len(actual_checks)
-            or len(required_ids) != len(required_checks)
-            or len(actual_ids) != len(set(actual_ids))
-            or len(required_ids) != len(set(required_ids))
-            or set(actual_ids) != set(required_ids)
-        ):
-            issues.append(_diag("receipt.check_set_mismatch", "$.checks", "receipt logical check set is not exactly the pinned required set"))
-        else:
-            required_by_id = {item["logical_id"]: item for item in required_checks}
-            for index, check in enumerate(actual_checks):
-                check_path = f"$.checks[{index}]"
-                logical_id = check["logical_id"]
-                if check.get("name") != required_by_id[logical_id].get("name"):
-                    issues.append(_diag("receipt.check_identity_mismatch", f"{check_path}.name", "provider check name differs from the pinned logical check"))
-                if check.get("conclusion") != "success":
-                    issues.append(_diag("receipt.check_failed", f"{check_path}.conclusion", "required check did not conclude successfully"))
-                if check.get("head_sha") != receipt.get("source", {}).get("sha"):
-                    issues.append(_diag("receipt.check_source_mismatch", f"{check_path}.head_sha", "required check head SHA differs from receipt source SHA"))
-                if provider_check_ids is not None:
-                    expected_id = provider_check_ids.get(logical_id)
-                    if expected_id is None or check.get("provider_check_id") != expected_id:
-                        issues.append(_diag("receipt.check_identity_mismatch", f"{check_path}.provider_check_id", "provider check ID differs from the supplied normalized provider observation"))
+        actual_valid = all(isinstance(item, dict) and isinstance(item.get("logical_id"), str) for item in actual_checks)
+        required_valid = all(isinstance(item, dict) and isinstance(item.get("logical_id"), str) for item in required_checks)
+        if actual_valid and required_valid:
+            actual_ids = [item["logical_id"] for item in actual_checks]
+            required_ids = [item["logical_id"] for item in required_checks]
+            if (
+                len(actual_ids) != len(set(actual_ids))
+                or len(required_ids) != len(set(required_ids))
+                or set(actual_ids) != set(required_ids)
+            ):
+                issues.append(_diag("receipt.check_set_mismatch", "$.checks", "receipt logical check set is not exactly the pinned required set"))
+            else:
+                required_by_id = {item["logical_id"]: item for item in required_checks}
+                receipt_source_sha = _object(receipt.get("source")).get("sha")
+                for index, check in enumerate(actual_checks):
+                    check_path = f"$.checks[{index}]"
+                    logical_id = check["logical_id"]
+                    if check.get("name") != required_by_id[logical_id].get("name"):
+                        issues.append(_diag("receipt.check_identity_mismatch", f"{check_path}.name", "provider check name differs from the pinned logical check"))
+                    if "conclusion" in check and check.get("conclusion") != "success":
+                        issues.append(_diag("receipt.check_failed", f"{check_path}.conclusion", "required check did not conclude successfully"))
+                    if "head_sha" in check and receipt_source_sha is not None and check.get("head_sha") != receipt_source_sha:
+                        issues.append(_diag("receipt.check_source_mismatch", f"{check_path}.head_sha", "required check head SHA differs from receipt source SHA"))
+                    if provider_check_ids is not None:
+                        expected_id = provider_check_ids.get(logical_id)
+                        if expected_id is None or check.get("provider_check_id") != expected_id:
+                            issues.append(_diag("receipt.check_identity_mismatch", f"{check_path}.provider_check_id", "provider check ID differs from the supplied normalized provider observation"))
 
-    if evidence_bytes is not None:
-        for index, item in enumerate(receipt.get("evidence", [])):
+    evidence_items = receipt.get("evidence", [])
+    if evidence_bytes is not None and isinstance(evidence_items, list):
+        for index, item in enumerate(evidence_items):
             if not isinstance(item, dict):
                 continue
             evidence_id = item.get("evidence_id")
@@ -419,11 +427,11 @@ def validate_receipt_policy(
     if not hmac.compare_digest(actual_policy_sha256, expected_policy_sha256):
         return _result("failed", [_diag("policy.digest_mismatch", "$", "policy bytes differ from separately pinned digest")])
 
+    if "verification_mode" in policy and policy["verification_mode"] != "read-only-repeatable":
+        return _result("failed", [_diag("policy.replay_mode_unsupported", "$.verification_mode", "v1 supports only read-only-repeatable verification")])
     policy_shape_issues = _schema_diagnostics(policy, "policy")
     if policy_shape_issues:
         return _result("failed", policy_shape_issues)
-    if policy.get("verification_mode") != "read-only-repeatable":
-        return _result("failed", [_diag("policy.replay_mode_unsupported", "$.verification_mode", "v1 supports only read-only-repeatable verification")])
     if trust_root_bytes is None:
         return _result("blocked", [_diag("trust_root.missing", "$", "caller-supplied trust-root bytes are required")])
     if not isinstance(trust_root_bytes, bytes):
@@ -433,6 +441,11 @@ def validate_receipt_policy(
     if not isinstance(expected_root_sha256, str) or not hmac.compare_digest(actual_root_sha256, expected_root_sha256):
         return _result("failed", [_diag("trust_root.digest_mismatch", "$.issuer.trust_root_sha256", "trust-root bytes differ from policy-bound digest")])
 
+    if evidence_bytes is not None:
+        if not isinstance(evidence_bytes, Mapping) or any(not isinstance(item, bytes) for item in evidence_bytes.values()):
+            return _result("blocked", [_diag("evidence.input_invalid", "$", "evidence inputs must map IDs to bytes")])
+    if provider_check_ids is not None and not isinstance(provider_check_ids, Mapping):
+        return _result("blocked", [_diag("provider.checks_unavailable", "$", "provider check IDs must be a normalized mapping")])
     issues = _identity_diagnostics(
         receipt, policy,
         evidence_bytes=evidence_bytes,
