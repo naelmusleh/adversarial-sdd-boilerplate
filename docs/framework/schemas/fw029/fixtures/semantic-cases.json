@@ -157,6 +157,24 @@
       "mutation": "receipt contains more than 100 checks or evidence references, or policy more than 100 required checks",
       "expected_status": "failed",
       "expected_diagnostic": "contract.array_limit_exceeded"
+    },
+    {
+      "id": "FW029-SEM-27",
+      "mutation": "an unsigned local receipt is edited to claim trusted status without a valid signature",
+      "expected_status": "failed",
+      "expected_diagnostic": "signature.missing"
+    },
+    {
+      "id": "FW029-SEM-28",
+      "mutation": "receipt check set adds an unconfigured check while retaining every required check",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.check_set_mismatch"
+    },
+    {
+      "id": "FW029-SEM-29",
+      "mutation": "top-level receipt source ref differs from the policy-pinned source ref",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.source_ref_mismatch"
     }
   ]
 }
