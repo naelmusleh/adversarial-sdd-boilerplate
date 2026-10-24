@@ -28,15 +28,13 @@ jobs:
           GH_REF: ${{ github.ref }}
           GH_REF_NAME: ${{ github.ref_name }}
           GH_EVENT: ${{ github.event_name }}
-          GH_RUN_ID: ${{ github.run_id }}
-          GH_RUN_ATTEMPT: ${{ github.run_attempt }}
-          GH_WORKFLOW_REF: ${{ github.workflow_ref }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import hashlib
           import json
           import os
+          import re
           import subprocess
           from pathlib import Path
 
@@ -83,6 +81,8 @@ jobs:
           workflow_path, sep, workflow_ref = run_path.partition("@")
           if not sep or workflow_path != ".github/workflows/verify-pipeline.yml":
               raise SystemExit("provider workflow identity mismatch")
+          if workflow_ref != ref:
+              raise SystemExit("Verify Pipeline definition ref differs from the approved source ref")
 
           jobs_response = api(
               f"repos/{repo}/actions/runs/{run['id']}/attempts/{run['run_attempt']}/jobs?per_page=100"
@@ -134,12 +134,26 @@ jobs:
               })
 
           repository = api(f"repos/{repo}")
+          contract_path = Path("docs/framework/FRAMEWORK-GATE-CONTRACT-001.md")
+          contract_bytes = contract_path.read_bytes()
+          front_matter = contract_bytes.split(b"---", 2)[1].decode("utf-8")
+          version_match = re.search(r"^version:\s*([0-9]+\.[0-9]+)\s*$", front_matter, re.MULTILINE)
+          if not version_match or version_match.group(1) != "1.2":
+              raise SystemExit("gate contract is missing or not the expected version 1.2")
+          contract_digest = hashlib.sha256(contract_bytes).hexdigest()
           policy = {
               "schema": "sdd-required-checks/v1",
               "profile": "governance-receipt-probe",
               "expected_ref": "refs/heads/codex/v2-backlog-roadmap",
               "expected_event": "push",
               "workflow_path": ".github/workflows/verify-pipeline.yml",
+              "workflow_ref": ref,
+              "gate_contract": {
+                  "id": "FRAMEWORK-GATE-CONTRACT-001",
+                  "version": version_match.group(1),
+                  "revision": sha,
+                  "sha256": contract_digest,
+              },
               "expected_app_id": 15368,
               "expected_app_slug": "github-actions",
               "required_check_names": sorted(expected),
@@ -151,6 +165,12 @@ jobs:
               "schema": "sdd-ci-evidence-receipt/v1",
               "repository": {"full_name": repo, "id": repository["id"]},
               "source": {"sha": sha, "ref": ref, "event": run["event"]},
+              "gate_contract": {
+                  "id": "FRAMEWORK-GATE-CONTRACT-001",
+                  "version": version_match.group(1),
+                  "revision": sha,
+                  "sha256": contract_digest,
+              },
               "workflow": {
                   "path": workflow_path,
                   "ref": workflow_ref,
