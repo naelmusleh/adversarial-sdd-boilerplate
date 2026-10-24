@@ -2,8 +2,8 @@
 id: FRAMEWORK-ADV-032
 type: adversarial-review
 title: FW-TASK-029 G-ARCH review rounds 1 through 4
-status: blocked
-version: 1.2
+status: passed
+version: 1.3
 created: 2026-10-24
 updated: 2026-10-24
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ARCHITECTURE-003, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-COVERAGE-002, FRAMEWORK-CX-002, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-031, DECISION-027, DECISION-028
@@ -62,10 +62,13 @@ The reviewer parsed all seven JSON documents and performed a limited structural/
 - The reviewer stated the correction itself requires no owner decision. The owner-authorized final review cycle is consumed, so a further correction and independent rerun requires a new owner checkpoint.
 - **Exact-revision CI:** Verify Pipeline [40135758687](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40135758687) passed Metadata & Artifact Audit, TypeScript Static Code Analysis, and Initializer Regression Gate on the exact reviewed source commit. The optional FW-029 Synthetic Evidence Probe job was skipped.
 
-## Round 4 — pending (new owner-authorized bounded cycle)
+## Round 4 — PASS (new owner-authorized bounded cycle)
 
-The owner authorized correction and full-scope independent re-review limited to ARCH029-06. The architecture now adds FW029-SEM-30 for a provider mismatch and FW029-SEM-31 for a run-ID mismatch; both fail with `receipt.run_mismatch` and map to FR-FW-032. No other policy or implementation scope changed. Exact-revision Verify Pipeline and independent GARCH-01–03 review are pending. This is the only additional review loop currently authorized.
+The owner authorized correction and full-scope independent re-review limited to ARCH029-06. Reviewer `/root/fw029_independent_review` passed GARCH-01–03 at exact source commit `8326b77b10486e4140e9785cd44fcf31b78829e9`. FW029-SEM-30 tests receipt provider identity mismatch and FW029-SEM-31 tests receipt run-ID mismatch against the policy-pinned values; both expect `failed` with `receipt.run_mismatch` and map to FR-FW-032. ARCH029-06 is resolved; no new material findings or owner decision are needed for G-ARCH.
+
+- **Reviewed blobs:** architecture `c62d3a35fbf1931131afba9ab57e00d9921e0a10`; semantic cases `9aa3eb42471e597f3539cc35dbbb6c8ae277ed7b`; receipt schema `76951d262a32bd1b9b385be3ecb6575277420f0f`; policy schema `535c1b4b1c097b147eec20cae22e27d5c310c20d`.
+- **Exact-revision CI:** Verify Pipeline [40137156642](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40137156642) completed successfully on the exact reviewed source. Metadata & Artifact Audit, Initializer Regression Gate, and TypeScript Static Code Analysis all passed. The optional FW-029 Synthetic Evidence Probe was skipped.
 
 ## Gate status
 
-**G-ARCH remains pending** until exact-revision Verify Pipeline and independent GARCH-01–03 review complete. ARCH029-04/05 were resolved in the prior cycle; ARCH029-06 is addressed in the correction artifacts, pending reviewer verification. ADR-05 size-ceiling acceptance/revision remains required before G-IMPL. No implementation, provider adoption, production trust decisions, app adoption or release is authorized.
+**G-ARCH PASS** within the approved FW-TASK-029 / FR-FW-032–034 scope. ADR-05's proposed size ceilings still require owner acceptance or revision before G-IMPL. This review does not authorize implementation, provider adoption, production trust decisions, app adoption, or release.
