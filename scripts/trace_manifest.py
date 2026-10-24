@@ -285,28 +285,39 @@ def validate_trace_manifest(
         policy_entries = []
         _diag(diagnostics, "TRACE-CHECK-POLICY-INVALID", "required_check_policy", "must be an array")
     for index, check in enumerate(policy_entries):
+        prefix = f"required_check_policy[{index}]"
         if not isinstance(check, Mapping):
-            _diag(diagnostics, "TRACE-CHECK-POLICY-INVALID", f"required_check_policy[{index}]", "check policy entry must be an object")
+            _diag(diagnostics, "TRACE-CHECK-POLICY-INVALID", prefix, "check policy entry must be an object")
             continue
-        task_ids = check.get("task_ids", [])
-        if check.get("required") is True and isinstance(task_ids, list) and expected_task_id in task_ids:
-            check_id = check.get("check_id")
-            if not isinstance(check_id, str) or not check_id:
-                _diag(diagnostics, "TRACE-CHECK-POLICY-INVALID", f"required_check_policy[{index}].check_id", "required check needs a stable ID")
-                continue
+        required = check.get("required")
+        if type(required) is not bool:
+            _diag(diagnostics, "TRACE-CHECK-POLICY-INVALID", f"{prefix}.required", "required must be a boolean")
+        task_ids = check.get("task_ids")
+        if not _unique_text_list(task_ids):
+            _diag(diagnostics, "TRACE-CHECK-POLICY-INVALID", f"{prefix}.task_ids", "task_ids must be a non-empty array of unique IDs")
+            task_ids = []
+        check_id = check.get("check_id")
+        if not isinstance(check_id, str) or not re.fullmatch(r"[A-Z0-9][A-Z0-9._-]{1,63}", check_id):
+            _diag(diagnostics, "TRACE-CHECK-POLICY-INVALID", f"{prefix}.check_id", "check_id must be a stable check identifier")
+            continue
+        if check.get("execution") not in {"ci", "manual"}:
+            _diag(diagnostics, "TRACE-CHECK-POLICY-INVALID", f"{prefix}.execution", "execution must be ci or manual")
+        if not isinstance(check.get("provider"), str) or not check.get("provider"):
+            _diag(diagnostics, "TRACE-CHECK-POLICY-INVALID", f"{prefix}.provider", "provider must be a non-empty string")
+        if not isinstance(check.get("name"), str) or not check.get("name"):
+            _diag(diagnostics, "TRACE-CHECK-POLICY-INVALID", f"{prefix}.name", "name must be a non-empty string")
+        linked_criteria = check.get("acceptance_criteria")
+        if not _unique_text_list(linked_criteria):
+            _diag(diagnostics, "TRACE-CHECK-CRITERIA-INVALID", f"{prefix}.acceptance_criteria", "acceptance_criteria must be a non-empty array of unique IDs")
+            linked_criteria = []
+        applies_to_task = expected_task_id in task_ids
+        if applies_to_task and any(item not in expected_criteria for item in linked_criteria):
+            _diag(diagnostics, "TRACE-CHECK-CRITERIA-INVALID", f"{prefix}.acceptance_criteria", "required check references unknown task criteria")
+        if required is True and applies_to_task:
             if check_id in policy_by_id:
-                _diag(diagnostics, "TRACE-CHECK-POLICY-DUPLICATE", f"required_check_policy[{index}].check_id", "required check IDs must be unique")
+                _diag(diagnostics, "TRACE-CHECK-POLICY-DUPLICATE", f"{prefix}.check_id", "required check IDs must be unique")
             else:
                 policy_by_id[check_id] = check
-            if check.get("execution") not in {"ci", "manual"}:
-                _diag(diagnostics, "TRACE-CHECK-POLICY-INVALID", f"required_check_policy[{index}].execution", "execution must be ci or manual")
-            if not isinstance(check.get("provider"), str) or not check.get("provider"):
-                _diag(diagnostics, "TRACE-CHECK-POLICY-INVALID", f"required_check_policy[{index}].provider", "provider must be a non-empty string")
-            if not isinstance(check.get("name"), str) or not check.get("name"):
-                _diag(diagnostics, "TRACE-CHECK-POLICY-INVALID", f"required_check_policy[{index}].name", "name must be a non-empty string")
-            linked_criteria = check.get("acceptance_criteria", [])
-            if not _unique_text_list(linked_criteria) or any(item not in expected_criteria for item in linked_criteria):
-                _diag(diagnostics, "TRACE-CHECK-CRITERIA-INVALID", f"required_check_policy[{index}].acceptance_criteria", "required check references unknown task criteria")
 
     manifest_checks = manifest.get("required_checks")
     if not isinstance(manifest_checks, list):
