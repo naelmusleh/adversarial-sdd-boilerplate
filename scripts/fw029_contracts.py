@@ -175,13 +175,14 @@ def _format_valid(value: str, fmt: str) -> bool:
         # accepts Python-specific forms such as a space instead of "T".
         if not re.fullmatch(
             r"\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])"
-            r"T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d"
-            r"(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)",
+            r"[Tt](?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d"
+            r"(?:\.\d+)?(?:[Zz]|[+-](?:[01]\d|2[0-3]):[0-5]\d)",
             value,
         ):
             return False
         try:
-            parsed = datetime.fromisoformat(value[:-1] + "+00:00" if value.endswith("Z") else value)
+            normalized = value[:-1] + "+00:00" if value[-1:] in {"Z", "z"} else value
+            parsed = datetime.fromisoformat(normalized.replace("t", "T"))
             return parsed.tzinfo is not None and parsed.utcoffset() is not None
         except (ValueError, OverflowError):
             return False
