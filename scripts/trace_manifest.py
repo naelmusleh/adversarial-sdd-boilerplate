@@ -199,7 +199,8 @@ def validate_trace_manifest(
         root = root_path.resolve(strict=True)
         if not root.is_dir():
             raise ValueError("checkout root must be a directory")
-        for path in set(paths) | set(observed):
+        path_candidates = {path for path in paths + observed if isinstance(path, str)}
+        for path in path_candidates:
             if _canonical_path(path):
                 _check_symlink_components(path, root, diagnostics)
     except (OSError, ValueError, TypeError) as exc:
@@ -209,7 +210,7 @@ def validate_trace_manifest(
     if not isinstance(pairs, list) or not pairs:
         _diag(diagnostics, "TRACE-PATH-CRITERIA-INVALID", "$.path_criteria", "must contain path/criterion mappings")
         pairs = []
-    known_paths = set(paths)
+    known_paths = {path for path in paths if isinstance(path, str)}
     known_criteria = set(criteria)
     mapped_paths: set[str] = set()
     mapped_criteria: set[str] = set()

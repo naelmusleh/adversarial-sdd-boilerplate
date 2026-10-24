@@ -178,18 +178,27 @@ class TraceManifestTests(unittest.TestCase):
         result["provider_checks"] = [{"required_check_id": []}]
         self.assertIn("TRACE-PROVIDER-CHECK-UNKNOWN", self.codes(self.evaluate(result=result)))
 
+    def test_unhashable_path_values_fail_without_crashing(self) -> None:
+        manifest = copy.deepcopy(self.manifest)
+        manifest["changed_paths"] = [["nested", "value"]]
+        manifest["path_criteria"] = [{"path": ["nested"], "criterion_ids": ["AC-1"]}]
+        outcome = self.evaluate(manifest=manifest, paths=[["nested", "value"]])
+        self.assertEqual(outcome["state"], "blocked")
+        self.assertIn("TRACE-PATH-NONCANONICAL", self.codes(outcome))
+
     def test_manifest_required_check_set_must_match_policy(self) -> None:
         manifest = copy.deepcopy(self.manifest)
         manifest["required_checks"] = []
         self.assertIn("TRACE-CHECK-POLICY-MISMATCH", self.codes(self.evaluate(manifest=manifest)))
 
     def test_duplicate_and_unknown_provider_checks_fail(self) -> None:
-        result = copy.deepcopy(self.result)
-        result["provider_checks"].append(copy.deepcopy(result["provider_checks"][0]))
-        result["provider_checks"][1]["required_check_id"] = "CI-UNKNOWN"
-        codes = self.codes(self.evaluate(result=result))
-        self.assertIn("TRACE-PROVIDER-CHECK-UNKNOWN", codes)
-        self.assertIn("TRACE-CHECK-RESULT-CARDINALITY", codes)
+        duplicate = copy.deepcopy(self.result)
+        duplicate["provider_checks"].append(copy.deepcopy(duplicate["provider_checks"][0]))
+        self.assertIn("TRACE-CHECK-RESULT-CARDINALITY", self.codes(self.evaluate(result=duplicate)))
+
+        unknown = copy.deepcopy(self.result)
+        unknown["provider_checks"][0]["required_check_id"] = "CI-UNKNOWN"
+        self.assertIn("TRACE-PROVIDER-CHECK-UNKNOWN", self.codes(self.evaluate(result=unknown)))
 
 
 if __name__ == "__main__":
