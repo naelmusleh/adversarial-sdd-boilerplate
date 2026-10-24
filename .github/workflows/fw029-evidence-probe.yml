@@ -261,6 +261,6 @@ jobs:
           name: fw029-receipt-and-bundle-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/fw029-receipt/receipt.json
-            ${{ runner.temp }}/fw029-attestation-bundle/sha256-*.jsonl
+            ${{ runner.temp }}/fw029-attestation-bundle/sha256*.jsonl
           if-no-files-found: error
           retention-days: 1
