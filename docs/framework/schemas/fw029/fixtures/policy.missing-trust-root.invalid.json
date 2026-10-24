@@ -6,6 +6,10 @@
     "name": "sample-repo",
     "id": "123456789"
   },
+  "source": {
+    "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "ref": "refs/heads/sample"
+  },
   "gate_contract": {
     "id": "FRAMEWORK-GATE-CONTRACT-001",
     "version": "1.0",
@@ -15,6 +19,13 @@
     "path": ".github/workflows/verify-pipeline.yml",
     "revision_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "identity": "sample-owner/sample-repo/.github/workflows/verify-pipeline.yml@refs/heads/sample"
+  },
+  "provider_run": {
+    "provider": "example-ci",
+    "run_id": "1234567890",
+    "attempt": 1,
+    "event": "push",
+    "ref": "refs/heads/sample"
   },
   "required_check_manifest_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
   "required_checks": [
