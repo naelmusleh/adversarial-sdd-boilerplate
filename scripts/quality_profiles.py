@@ -148,7 +148,7 @@ def validate_profile(profile: Any) -> list[Diagnostic]:
             rule, path=path,
             required={"rule_id", "metric_id", "risk_tier", "required", "availability", "scope", "rationale"},
             allowed={"rule_id", "metric_id", "risk_tier", "required", "availability", "threshold", "scope", "rationale", "unavailable_reason"},
-            rule_id="PROFILE-METRICS", out=out,
+            rule_id=(rule.get("rule_id") if isinstance(rule, dict) and isinstance(rule.get("rule_id"), str) and rule.get("rule_id") else "PROFILE-METRICS"), out=out,
         ):
             continue
         rule_id = rule.get("rule_id")
@@ -292,6 +292,7 @@ def _safe_changed_path(path: Any) -> bool:
     parsed = PurePosixPath(path)
     return (
         not parsed.is_absolute()
+        and path != "."
         and parsed.as_posix() == path
         and all(part not in {"", ".", ".."} for part in parsed.parts)
         and not re.match(r"^[A-Za-z]:", path)

@@ -36,6 +36,16 @@ class FrameworkQualityProfileTests(unittest.TestCase):
         self.assertEqual(match[0]["rule_id"], "QUAL-COVERAGE")
         self.assertEqual(match[0]["path"], "$.metric_rules[0].rationale")
 
+    def test_root_path_is_rejected_as_changed_path(self) -> None:
+        result = evaluate_profile(
+            self.profile,
+            changed_paths=["."],
+            declared_task_risk_tier="low",
+            measurements={"line-coverage": 90},
+        )
+        self.assertEqual(result["state"], "blocked")
+        self.assertIn("TASK-PATH-INVALID", [item["code"] for item in result["diagnostics"]])
+
     def test_sensitive_path_risk_floor_cannot_be_lowered_by_task_label(self) -> None:
         result = evaluate_profile(
             self.profile,
