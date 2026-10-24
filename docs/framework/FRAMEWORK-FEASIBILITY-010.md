@@ -3,7 +3,7 @@ id: FRAMEWORK-FEASIBILITY-010
 type: feasibility-register
 title: FW-TASK-029 signed evidence receipt feasibility
 status: draft
-version: 0.1
+version: 0.2
 created: 2026-10-24
 updated: 2026-10-24
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-024, DECISION-027, DECISION-019, FRAMEWORK-CI-RELEASE-POLICY-001
@@ -42,7 +42,7 @@ Sigstore Cosign also supports keyless blob signing with a bundle containing the 
 ## Frozen probe method and safety
 
 1. Independently review this plan and temporary-workflow design before execution.
-2. Pin every external action by immutable commit SHA. Use a toy receipt with no app/user data and a synthetic required-check manifest. The workflow may read exact hosted check records only with temporary read permission and must not execute code from an untrusted pull request.
+2. Pin every external action by immutable commit SHA. For the initial GitHub-hosted candidate probe, use `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1` and `actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6`; these are probe pins only, not provider selection or adoption. Add no other third-party actions unless their exact immutable SHAs are recorded in this plan before execution. Record the hosted runner image and `gh` version observed during the run. Use a toy receipt with no app/user data and a synthetic required-check manifest. The workflow may read exact hosted check records only with temporary read permission and must not execute code from an untrusted pull request.
 3. Keep `contents: read` for checkout; grant `checks: read` only if needed to query required checks. The signing job alone may receive `id-token: write`, `attestations: write`, and `artifact-metadata: write`. Do not request repository administration, deployment, package, or secret access.
 4. Capture only bounded outputs: exact source/action/workflow SHA, provider run/check identities, receipt and bundle digests, trust-root source/date/digest, verifier command/result, diagnostic codes, permissions, duration, and known retention/rotation limits. Never upload environment dumps, ID tokens, secrets, source trees, or full logs.
 5. Verify with locally supplied receipt, bundle, root and policy inputs outside the signing workflow. Test tampered inputs. Describe this as offline verification capability only; do not claim the host had network access denied.
