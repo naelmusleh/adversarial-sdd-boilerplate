@@ -81,10 +81,10 @@ jobs:
               raise SystemExit("provider run attempt is missing or invalid")
           if run.get("head_sha") != sha or run.get("head_branch") != ref_name:
               raise SystemExit("provider run source SHA or ref mismatch")
-          run_path = run.get("path", "")
-          workflow_path, sep, workflow_ref = run_path.partition("@")
-          if not sep or workflow_path != ".github/workflows/verify-pipeline.yml":
+          workflow_path = run.get("path", "")
+          if workflow_path != ".github/workflows/verify-pipeline.yml":
               raise SystemExit("provider workflow identity mismatch")
+          workflow_ref = f"refs/heads/{run['head_branch']}"
           if workflow_ref != ref:
               raise SystemExit("Verify Pipeline definition ref differs from the approved source ref")
 
