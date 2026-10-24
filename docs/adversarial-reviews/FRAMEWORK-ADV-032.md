@@ -1,15 +1,15 @@
 ---
 id: FRAMEWORK-ADV-032
 type: adversarial-review
-title: FW-TASK-029 G-ARCH review rounds 1 through 3
+title: FW-TASK-029 G-ARCH review rounds 1 through 4
 status: blocked
-version: 1.1
+version: 1.2
 created: 2026-10-24
 updated: 2026-10-24
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ARCHITECTURE-003, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-COVERAGE-002, FRAMEWORK-CX-002, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-031, DECISION-027, DECISION-028
 ---
 
-# FRAMEWORK-ADV-032 — FW-TASK-029 G-ARCH review rounds 1 through 3
+# FRAMEWORK-ADV-032 — FW-TASK-029 G-ARCH review rounds 1 through 4
 
 ## Review scope and independence
 
@@ -62,6 +62,10 @@ The reviewer parsed all seven JSON documents and performed a limited structural/
 - The reviewer stated the correction itself requires no owner decision. The owner-authorized final review cycle is consumed, so a further correction and independent rerun requires a new owner checkpoint.
 - **Exact-revision CI:** Verify Pipeline [40135758687](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40135758687) passed Metadata & Artifact Audit, TypeScript Static Code Analysis, and Initializer Regression Gate on the exact reviewed source commit. The optional FW-029 Synthetic Evidence Probe job was skipped.
 
+## Round 4 — pending (new owner-authorized bounded cycle)
+
+The owner authorized correction and full-scope independent re-review limited to ARCH029-06. The architecture now adds FW029-SEM-30 for a provider mismatch and FW029-SEM-31 for a run-ID mismatch; both fail with `receipt.run_mismatch` and map to FR-FW-032. No other policy or implementation scope changed. Exact-revision Verify Pipeline and independent GARCH-01–03 review are pending. This is the only additional review loop currently authorized.
+
 ## Gate status
 
-**G-ARCH is BLOCKED at GARCH-03 by ARCH029-06.** ARCH029-04/05 are resolved. No further review/fix loop is authorized by the consumed final checkpoint. Owner action required: authorize a new bounded correction and independent review addressing only the missing provider/run-ID mismatch case, or defer FW-TASK-029. ADR-05 size-ceiling acceptance/revision remains required before implementation. G-IMPL, provider adoption, production trust decisions, app adoption and release remain unauthorized.
+**G-ARCH remains pending** until exact-revision Verify Pipeline and independent GARCH-01–03 review complete. ARCH029-04/05 were resolved in the prior cycle; ARCH029-06 is addressed in the correction artifacts, pending reviewer verification. ADR-05 size-ceiling acceptance/revision remains required before G-IMPL. No implementation, provider adoption, production trust decisions, app adoption or release is authorized.
