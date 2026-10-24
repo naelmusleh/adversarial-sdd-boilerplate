@@ -241,10 +241,17 @@ jobs:
           gh attestation download "$RECEIPT_PATH" --repo "$GH_REPOSITORY" >/dev/null
           python3 - <<'PY'
           import os
+          import re
           from pathlib import Path
 
-          bundles = list(Path(os.environ["BUNDLE_DIR"]).glob("sha256-*.jsonl"))
-          if len(bundles) != 1 or bundles[0].is_symlink() or bundles[0].stat().st_size > 4_194_304:
+          bundles = list(Path(os.environ["BUNDLE_DIR"]).glob("sha256*.jsonl"))
+          if (
+              len(bundles) != 1
+              or not re.fullmatch(r"sha256[:-][0-9a-f]{64}\.jsonl", bundles[0].name)
+              or bundles[0].is_symlink()
+              or not bundles[0].is_file()
+              or not 0 < bundles[0].stat().st_size <= 4_194_304
+          ):
               raise SystemExit("expected one bounded attestation bundle")
           PY
 
