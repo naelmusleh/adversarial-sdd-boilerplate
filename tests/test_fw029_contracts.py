@@ -100,9 +100,18 @@ class Fw029ContractsTests(unittest.TestCase):
         receipt = copy.deepcopy(self.receipt)
         receipt["unreviewed_claim"] = True
         self.assertIn("receipt.schema_invalid", self.codes(validate_receipt(encode(receipt))))
-        receipt = copy.deepcopy(self.receipt)
-        receipt["issued_at"] = "not-a-date"
-        self.assertIn("receipt.schema_invalid", self.codes(validate_receipt(encode(receipt))))
+        for value in (
+            "not-a-date",
+            "2026-10-24 18:00:00Z",
+            "2026-10-24t18:00:00Z",
+            "2026-10-24T18:00Z",
+            "2026-10-24T18:00:00+0000",
+            "2026-02-30T18:00:00Z",
+        ):
+            with self.subTest(issued_at=value):
+                receipt = copy.deepcopy(self.receipt)
+                receipt["issued_at"] = value
+                self.assertIn("receipt.schema_invalid", self.codes(validate_receipt(encode(receipt))))
 
     def test_canonical_serialization_is_sorted_compact_utf8(self) -> None:
         self.assertEqual(
@@ -117,6 +126,17 @@ class Fw029ContractsTests(unittest.TestCase):
             canonical_json_bytes({"not_finite": float("nan")})
 
     def test_receipt_and_policy_byte_limits_are_checked_before_parsing(self) -> None:
+        receipt_raw = RECEIPT_PATH.read_bytes()
+        policy_raw = POLICY_PATH.read_bytes()
+        receipt_at_limit = validate_receipt(
+            receipt_raw + b" " * (MAX_BYTES["receipt"] - len(receipt_raw))
+        )
+        policy_at_limit = validate_policy(
+            policy_raw + b" " * (MAX_BYTES["policy"] - len(policy_raw))
+        )
+        self.assertEqual(receipt_at_limit["state"], "contract_valid")
+        self.assertEqual(policy_at_limit["state"], "contract_valid")
+
         receipt = validate_receipt(b" " * (MAX_BYTES["receipt"] + 1))
         policy = validate_policy(b" " * (MAX_BYTES["policy"] + 1))
         self.assertIn("receipt.size_limit_exceeded", self.codes(receipt))
@@ -125,6 +145,17 @@ class Fw029ContractsTests(unittest.TestCase):
         self.assert_case(policy, "FW029-SEM-25")
 
     def test_array_limits_are_checked_before_schema_validation(self) -> None:
+        receipt_at_limit = copy.deepcopy(self.receipt)
+        receipt_at_limit["checks"] = [copy.deepcopy(self.receipt["checks"][0]) for _ in range(100)]
+        receipt_at_limit["evidence"] = [copy.deepcopy(self.receipt["evidence"][0]) for _ in range(100)]
+        self.assertEqual(validate_receipt(encode(receipt_at_limit))["state"], "contract_valid")
+
+        policy_at_limit = copy.deepcopy(self.policy)
+        policy_at_limit["required_checks"] = [
+            copy.deepcopy(self.policy["required_checks"][0]) for _ in range(100)
+        ]
+        self.assertEqual(validate_policy(encode(policy_at_limit))["state"], "contract_valid")
+
         receipt = copy.deepcopy(self.receipt)
         receipt["checks"] = receipt["checks"] * 101
         self.assert_case(self.evaluate(receipt=receipt), "FW029-SEM-26")
