@@ -3,7 +3,7 @@ id: FRAMEWORK-CX-002
 type: framework-cx
 title: FW-TASK-029 receipt verification interaction contract
 status: draft
-version: 0.2
+version: 0.3
 created: 2026-10-24
 updated: 2026-10-24
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-COVERAGE-002, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-029, DECISION-027, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
@@ -73,4 +73,11 @@ The first full-scope independent critique returned **NEEDS-CHANGES** at source c
 - **CX029-01 — P2 status taxonomy ambiguity — resolved in this revision.** The earlier traces could classify the same mismatch as either blocked or failed. The state rollup now defines deterministic precedence: stale prior results; unavailable evidence/tool; preflight-missing input as blocked; verifier rejection as failed; in-progress; then bounded passed. CX-A and CX-C align to that boundary.
 - **CX029-02 — P2 retention uncertainty framed as a block — resolved in this revision.** The trace now states the observed one-day artifact retention and unknown hosted-attestation retention/deletion. Uncertainty alone does not block this bounded feasibility use; block only if a specific intended use requires a retention/deletion guarantee the evidence cannot establish.
 
-Both corrections require a full affected-scope independent rerun and exact-revision Verify Pipeline. G-CX remains in progress until both are recorded. No owner decision is required for these bounded corrections.
+The full affected-scope rerun was performed on v0.2. It resolved CX029-02 and clarified local-verifier handling for CX029-01, but found a new cross-trace status inconsistency, CX029-03. The exact result is recorded in [FRAMEWORK-ADV-030](../adversarial-reviews/FRAMEWORK-ADV-030.md). G-CX remains blocked until the owner authorizes another correction/review cycle under the repository's two-loop guard.
+
+
+## G-CX review round 2 — owner checkpoint required
+
+On FRAMEWORK-CX-002 v0.2 at exact commit `c229554f130243bd4ea445811ae541bd707e6b8d` (blob `fa6fc6ca7ddfbd850f068e730822a0657ce114c3`), the independent reviewer resolved CX029-02 and confirmed the local-verification part of CX029-01, but returned NEEDS-CHANGES for full-scope GCX-03 due to new finding CX029-03. CX-A classifies missing inputs as `blocked` while the rollup classifies unavailable evidence as `unavailable`; CX-B uses combined `failed`/`blocked` labels without a deterministic mapping; CX-D classifies stale source/policy and missing provider evidence as `blocked` instead of `stale`/`unavailable`. The reviewer requires a single state mapping per failure class across every trace, or explicit separation of interaction-layer status from reviewer disposition.
+
+This was the second consecutive review/fix cycle. Per the repository operating guard, G-CX is **BLOCKED** pending an explicit owner checkpoint before any third correction/review cycle. This v0.3 record does not implement the CX029-03 correction and has not been independently reviewed.
