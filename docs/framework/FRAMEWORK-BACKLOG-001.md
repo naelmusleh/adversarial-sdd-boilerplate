@@ -3,10 +3,10 @@ id: FRAMEWORK-BACKLOG-001
 type: framework-backlog
 title: Remaining work to complete Adversarial SDD Framework v1
 status: draft
-version: 4.43
+version: 4.44
 created: 2026-10-07
 updated: 2026-10-24
-related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-ADV-014, FRAMEWORK-ADV-015, FRAMEWORK-ADV-017, FRAMEWORK-ADV-018, FRAMEWORK-ADV-019, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, FRAMEWORK-EXERCISE-006, FRAMEWORK-EXERCISE-007, FRAMEWORK-FEASIBILITY-008, FRAMEWORK-ARCHITECTURE-001, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, WORKFLOW-AI-ENGINEERING-001, DECISION-LOG-001, DECISION-022, DECISION-023, DECISION-024, DECISION-025, DECISION-026, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, FRAMEWORK-ADV-022, FRAMEWORK-ADV-023, FRAMEWORK-FEASIBILITY-009
+related-artifacts: MISSION-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, ARTIFACT-CONTRACT-001, CAP-000, CAP-004, CAP-005, FRAMEWORK-ADV-007, FRAMEWORK-ADV-008, FRAMEWORK-ADV-009, FRAMEWORK-ADV-014, FRAMEWORK-ADV-015, FRAMEWORK-ADV-017, FRAMEWORK-ADV-018, FRAMEWORK-ADV-019, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001, FRAMEWORK-EXERCISE-003, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, FRAMEWORK-EXERCISE-006, FRAMEWORK-EXERCISE-007, FRAMEWORK-FEASIBILITY-008, FRAMEWORK-ARCHITECTURE-001, WORKFLOW-DISCOVERY-001, WORKFLOW-FEASIBILITY-001, WORKFLOW-AI-ENGINEERING-001, DECISION-LOG-001, DECISION-022, DECISION-023, DECISION-024, DECISION-025, DECISION-026, DECISION-027, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, FRAMEWORK-ADV-022, FRAMEWORK-ADV-023, FRAMEWORK-FEASIBILITY-009
 ---
 
 # FRAMEWORK-BACKLOG-001 — Remaining work to complete Adversarial SDD Framework v1
@@ -662,7 +662,7 @@ The following candidates incorporate the review of [Fadi88/one-man-startup](http
 
 - **Priority:** P2 — strengthens portability and offline review of hosted gate evidence after exact-run CI binding exists.
 - **Goal:** Produce a compact signed receipt that lets another verifier confirm who issued a gate-evidence claim and which repository revision, workflow, contract, checks, and artifact digests it identifies.
-- **Requirements:** Assign v2 requirement IDs only after v2 scope is opened and approved.
+- **Requirements:** FR-FW-032, FR-FW-033, and FR-FW-034, approved for this bounded scope by DECISION-027.
 - **Dependencies:** FW-TASK-019 completed app CI/evidence binding; FW-TASK-017 evidence types and contract versioning; FW-TASK-020's app-hosted run requirement remains independent and cannot be replaced by a locally generated receipt.
 - **Work:** Define a versioned receipt schema and deterministic verifier. Bind repository identity, exact commit, gate contract and workflow revisions, provider run/attempt/event/ref, required check conclusions, applicable artifact/evidence digests, issuer identity, and verification instructions. Sign only in a trusted hosted CI identity with an explicit trust root; local receipt generation is unsigned and cannot satisfy trusted-attestation requirements. Reference durable evidence by bounded digest and provider link rather than embedding full source, diffs, secrets, personal data, or unrestricted logs. Specify keyless/key rotation or provider identity discovery, trust-root enrollment, replay/revocation/expiry behavior where supported, and transparent failure modes. Explicitly state that cryptographic integrity/authorship does not prove test adequacy, semantic correctness, reviewer independence, or production outcome.
 - **Acceptance criteria:**
@@ -673,7 +673,8 @@ The following candidates incorporate the review of [Fadi88/one-man-startup](http
   5. Verification succeeds outside the originating CI run using documented public or repository-authorized trust material; missing trust data fails closed.
   6. Documentation limits receipt claims to provenance and integrity and preserves separate semantic review and release authorization requirements.
 - **Evidence:** Versioned receipt schema, signer/trust configuration, standalone verifier, tamper/mismatch/replay fixtures, privacy review, exact hosted positive/negative runs, and independent cryptographic/provenance review.
-- **State:** **TODO — proposed v2; cannot satisfy FW-TASK-020 until an actual app-hosted CI run is observed.**
+- **State:** **G-REQ active; approved scope frozen pending independent review and exact-revision verification.** No signer/provider, key-management scheme, or application adoption has been selected. The task cannot satisfy or replace FW-TASK-020 until an actual app-hosted CI run is observed.
+- **Scope approval / G-REQ work record (2026-10-24):** Owner approved FW-TASK-029 only and FR-FW-032–034 in DECISION-027. Scope: (a) a versioned deterministic receipt bound to repository, source SHA, contract/workflow revisions, provider run/attempt/event/ref, required check identities/conclusions, evidence digests, and issuer identity; (b) an offline verifier that checks signatures, configured trusted issuer material, exact evidence identity and artifact digests, and fails closed when trust material is missing or unsupported; and (c) data-minimized payloads and strict claim limits. Explicit exclusions: choosing a provider or signer mechanism before G-FEAS/G-ARCH; app adoption; replacing FW-TASK-020's app-hosted run requirement; production credentials; changing repository CI policy; and FW-TASK-030 or any other v2 task. Acceptance remains mapped to the six task criteria and FR-FW-032–034. The frozen scope is ready for independent G-REQ review; implementation is not authorized by scope approval alone.
 
 ### FW-TASK-030 — Define a least-privilege isolated execution adapter
 
