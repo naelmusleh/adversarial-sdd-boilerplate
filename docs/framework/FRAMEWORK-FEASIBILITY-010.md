@@ -3,7 +3,7 @@ id: FRAMEWORK-FEASIBILITY-010
 type: feasibility-register
 title: FW-TASK-029 signed evidence receipt feasibility
 status: draft
-version: 0.2
+version: 0.3
 created: 2026-10-24
 updated: 2026-10-24
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-024, DECISION-027, DECISION-019, FRAMEWORK-CI-RELEASE-POLICY-001
@@ -48,10 +48,16 @@ Sigstore Cosign also supports keyless blob signing with a bundle containing the 
 5. Verify with locally supplied receipt, bundle, root and policy inputs outside the signing workflow. Test tampered inputs. Describe this as offline verification capability only; do not claim the host had network access denied.
 6. Delete the temporary workflow and fixture files, preserve the bounded result record, and run the existing Verify Pipeline on the final evidence commit. Re-review the exact final evidence and update dependent task states.
 
+## Frozen synthetic check policy and temporary workflow design
+
+The only policy fixture is schema `sdd-required-checks/v1`, with repository identity `repo-id: R_kgDOExample029` explicitly marked synthetic, profile `governance-receipt-probe`, source ref `refs/heads/codex/v2-backlog-roadmap`, and exactly these three required checks: `Metadata & Artifact Audit`, `Initializer Regression Gate`, and `TypeScript Static Code Analysis`. The fixture maps them to synthetic stable provider IDs `check-synth-029-001`, `check-synth-029-002`, and `check-synth-029-003`, respectively. For the positive case, each conclusion is `success`, each check's head SHA equals the frozen probe source SHA, and the manifest SHA-256 is computed over canonical UTF-8 JSON (sorted keys, compact separators, no trailing newline). Negative fixtures change one field at a time, including omitted/duplicate check, changed name or ID, non-success conclusion, wrong head SHA, wrong manifest digest, and wrong repository ID. These values are test data, not observed GitHub checks and not branch-protection evidence.
+
+The temporary workflow design is fixed to a manually dispatched workflow on the authorized feature branch, with no `pull_request` trigger and no secrets. A read-only preparation job checks out the exact triggering SHA using the pinned checkout action, creates the synthetic manifest/receipt/evidence fixture, computes digests, and validates the exact check set. A separate signing job depends on that preparation, downloads only the bounded synthetic receipt artifact, and grants only `id-token: write`, `attestations: write`, and `artifact-metadata: write` at job scope; it invokes the pinned attest action on the receipt digest with a custom predicate. No repository code is executed beyond the checked-in workflow steps, and no untrusted PR payload is accepted. The workflow emits only the receipt and attestation bundle as a short-retention artifact. Offline verification is a separate local step using explicit receipt, bundle, trust root, and policy files; it must verify the issuer/workflow identity and then enforce all frozen policy fields and mutation cases. The exact rendered workflow file, permission diff, and action pins must be included in the independent pre-execution review; any deviation requires a new plan revision and review.
+
 ## G-FEAS pass boundary
 
 G-FEAS may pass only if at least one candidate can produce and independently verify a receipt bound to the exact source, required-check manifest, trusted workflow identity, provider check evidence and artifact digests; negative substitution/tamper cases fail; and privacy/permission limits are bounded. If no candidate meets those conditions, record the blocker and stop. A pass establishes feasibility only for the observed repository visibility, GitHub-hosted runner, candidate pins and trust-root snapshot. It does not choose a provider/key strategy, establish root freshness or revocation, prove repository branch protection, prove test adequacy or authorize production adoption.
 
 ## Status
 
-Plan prepared 2026-10-24 after G-REQ PASS. No signing probe has run. Independent review of the exact plan and temporary workflow remains required before execution.
+Plan v0.3 prepared 2026-10-24 after G-REQ PASS and updated to freeze the synthetic check names/IDs and temporary-workflow design following independent review feedback. No signing probe has run. Independent review of the exact plan and rendered temporary workflow remains required before execution.
