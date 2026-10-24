@@ -95,6 +95,8 @@ jobs:
           }
           if jobs_response.get("total_count") != len(jobs) or len(jobs) > 100:
               raise SystemExit("provider job result is incomplete or unbounded")
+          if {job.get("name") for job in jobs} != expected:
+              raise SystemExit("provider run has missing or unexpected check names")
           named = {}
           for job in jobs:
               if job.get("name") in expected:

@@ -3,7 +3,7 @@ id: FRAMEWORK-FEASIBILITY-010
 type: feasibility-register
 title: FW-TASK-029 signed evidence receipt feasibility
 status: draft
-version: 0.8
+version: 0.9
 created: 2026-10-24
 updated: 2026-10-24
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-024, DECISION-027, DECISION-019, FRAMEWORK-CI-RELEASE-POLICY-001
@@ -60,4 +60,4 @@ G-FEAS may pass only if at least one candidate can produce and independently ver
 
 ## Status
 
-Plan v0.8 records the independent G-FEAS plan review **PASS** at exact source commit `3456e5d9f86a070534a901c12858865a1bb2c72d` by `/root/infinite_gallery_reviewer`, followed by a separate workflow review BLOCK at `f08ed85eaf14a7453b94d42f5d6581323e309415`. The workflow now binds gate contract ID/version/revision/digest and explicitly rejects a Verify Pipeline definition ref that differs from the authorized source ref. It includes four immutable action pins and an isolated signer permission set for short-retention artifact transfer. No signing probe has run; independent review of the corrected exact workflow and permissions remains required before execution.
+Plan v0.9 records the independent G-FEAS plan review **PASS** at exact source commit `3456e5d9f86a070534a901c12858865a1bb2c72d` by `/root/infinite_gallery_reviewer`, followed by workflow review blockers at `f08ed85eaf14a7453b94d42f5d6581323e309415` and `30d0c0911157bc433c17c7df333c709c5e9c16e1`. The workflow now binds gate contract ID/version/revision/digest, rejects a Verify Pipeline definition ref that differs from the authorized source ref, and rejects any missing or unexpected check-job name. It includes four immutable action pins and an isolated signer permission set for short-retention artifact transfer. No signing probe has run; independent review of the corrected exact workflow and permissions remains required before execution.
