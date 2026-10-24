@@ -100,10 +100,14 @@ class Fw029ContractsTests(unittest.TestCase):
         receipt = copy.deepcopy(self.receipt)
         receipt["unreviewed_claim"] = True
         self.assertIn("receipt.schema_invalid", self.codes(validate_receipt(encode(receipt))))
+        for value in ("2026-10-24t18:00:00z", "2026-10-24T18:00:00z"):
+            with self.subTest(valid_issued_at=value):
+                receipt = copy.deepcopy(self.receipt)
+                receipt["issued_at"] = value
+                self.assertEqual(validate_receipt(encode(receipt))["state"], "contract_valid")
         for value in (
             "not-a-date",
             "2026-10-24 18:00:00Z",
-            "2026-10-24t18:00:00Z",
             "2026-10-24T18:00Z",
             "2026-10-24T18:00:00+0000",
             "2026-02-30T18:00:00Z",
@@ -159,6 +163,10 @@ class Fw029ContractsTests(unittest.TestCase):
         receipt = copy.deepcopy(self.receipt)
         receipt["checks"] = receipt["checks"] * 101
         self.assert_case(self.evaluate(receipt=receipt), "FW029-SEM-26")
+
+        receipt_evidence_over = copy.deepcopy(self.receipt)
+        receipt_evidence_over["evidence"] = receipt_evidence_over["evidence"] * 101
+        self.assert_case(self.evaluate(receipt=receipt_evidence_over), "FW029-SEM-26")
 
         policy = copy.deepcopy(self.policy)
         policy["required_checks"] = policy["required_checks"] * 101
