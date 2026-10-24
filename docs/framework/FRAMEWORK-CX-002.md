@@ -6,14 +6,14 @@ status: draft
 version: 0.4
 created: 2026-10-24
 updated: 2026-10-24
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-COVERAGE-002, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-029, DECISION-027, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-COVERAGE-002, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-029, FRAMEWORK-ADV-030, FRAMEWORK-ADV-031, DECISION-027, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
 ---
 
 # FRAMEWORK-CX-002 — FW-TASK-029 receipt verification interaction contract
 
 ## Gate work record
 
-- **Gate:** G-CX — final authorized review cycle in progress; no pass is asserted.
+- **Gate:** G-CX — PASS within the bounded scope; see FRAMEWORK-ADV-031.
 - **Task:** FW-TASK-029, within DECISION-027 and FR-FW-032–034 only.
 - **Prerequisites:** G-REQ and bounded G-FEAS passed; G-COVERAGE passed for FRAMEWORK-COVERAGE-002.
 - **Target:** A nonvisual governance workflow spanning a local verifier, a bounded hosted CI workflow, provider check/artifact records, and pull-request/gate review. There is no end-user interface, mobile surface, or production service in this scope.
@@ -63,7 +63,8 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-COVERAGE
 - **Covered journeys:** J-029-01 through J-029-04 in FRAMEWORK-COVERAGE-002; all requirements, task criteria, failure categories and applicable surfaces are included.
 - **Evidence refs:** DECISION-027; FRAMEWORK-COVERAGE-002; FRAMEWORK-FEASIBILITY-010; FRAMEWORK-ADV-027/028; GATE-CATALOG-001; contract v1.0.
 - **G-CX-01/02/03:** Prepared for independent review across all four traces; no visual prototype, runtime behavior, accessibility test, or product UI evidence is claimed.
-- **Next action:** Independent critique of this complete interaction contract, followed by exact-commit Verify Pipeline and recorded findings/disposition.
+- **G-CX disposition:** FRAMEWORK-ADV-031 records independent PASS for GCX-01–03 on the complete v0.4 contract. Verify Pipeline [40133369128](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40133369128) passed all three required jobs on exact commit `25c2574f244405b44c408911d4792548320f3f78`, containing the reviewed v0.4 blob `c51eb817aeddb7d6505f57b83a2ab1ca954cb15d`.
+- **Next action:** Proceed to G-ARCH planning only after its scope and evidence are opened under the applicable owner-approved scope. No implementation/provider selection/production trust-source choices, app adoption, or release are authorized.
 - **Prohibited next work:** implementation/provider selection/production trust-source choices, app adoption, release, or changes to FW-TASK-020.
 
 
@@ -83,6 +84,6 @@ On FRAMEWORK-CX-002 v0.2 at exact commit `c229554f130243bd4ea445811ae541bd707e6b
 
 This was the second consecutive review/fix cycle. Per the repository operating guard, G-CX is **BLOCKED** pending an explicit owner checkpoint before any third correction/review cycle. This v0.3 record does not implement the CX029-03 correction and has not been independently reviewed.
 
-## G-CX review round 3 — owner authorized
+## G-CX review round 3 — owner authorized and complete
 
-The owner explicitly authorized one final correction and full-scope independent review after round 2. Version 0.4 resolves CX029-03 by defining attempt status separately from reviewer disposition, assigning every named failure in CX-029-A through CX-029-D one deterministic status, and using earliest blocking stage when multiple conditions occur. The corrected contract is not yet passed: exact-revision CI and the authorized independent full-scope review remain required. No further correction/review loop is authorized by this checkpoint.
+The owner explicitly authorized one final correction and full-scope independent review after round 2. Version 0.4 resolves CX029-03 by defining attempt status separately from reviewer disposition, assigning every named failure in CX-029-A through CX-029-D one deterministic status, and using earliest blocking stage when multiple conditions occur. The independent reviewer passed GCX-01–03 for exact reviewed blob `c51eb817aeddb7d6505f57b83a2ab1ca954cb15d` at source commit `813019f11a0c8bf4f669926b1c9ff0cc4955dda3`; FRAMEWORK-ADV-031 records criterion-level evidence and all finding dispositions. Verify Pipeline [40133369128](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40133369128) passed all three required jobs on exact commit `25c2574f244405b44c408911d4792548320f3f78`, which contains the same reviewed contract blob. G-CX passes within the approved scope. The final owner-authorized review cycle is consumed; the next lifecycle gate is G-ARCH. No implementation/provider adoption/production trust-source selection/application integration/release/FW-TASK-020 substitution is authorized.
