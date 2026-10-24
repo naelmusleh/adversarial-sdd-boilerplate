@@ -3,17 +3,17 @@ id: FRAMEWORK-ARCHITECTURE-002
 type: framework-architecture
 title: FW-TASK-028 risk-scaled quality and traceability architecture
 status: draft
-version: 0.8
+version: 0.9
 created: 2026-10-23
 updated: 2026-10-23
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-009, FRAMEWORK-COVERAGE-001, FRAMEWORK-CX-001, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, FRAMEWORK-ADV-022, DECISION-026, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-009, FRAMEWORK-COVERAGE-001, FRAMEWORK-CX-001, FRAMEWORK-ADV-020, FRAMEWORK-ADV-021, FRAMEWORK-ADV-022, FRAMEWORK-ADV-023, DECISION-026, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
 ---
 
 # FRAMEWORK-ARCHITECTURE-002 — FW-TASK-028 risk-scaled quality and traceability
 
 ## G-ARCH work record
 
-- **Gate:** G-ARCH — in progress under owner-authorized correction/review cycle; no pass is asserted.
+- **Gate:** G-ARCH — PASS within the approved FW-TASK-028 architecture-planning scope. Implementation remains unauthorized.
 - **Task and requirements:** FW-TASK-028; FR-FW-029, FR-FW-030, FR-FW-031; seven acceptance criteria in FRAMEWORK-BACKLOG-001.
 - **Approved boundary:** DECISION-026 and the G-REQ record in FRAMEWORK-BACKLOG-001. Covers app-owned quality profiles, deterministic task/criterion/path/check traceability, and anti-gaming diagnostics. It does not change framework repository checks or thresholds. FW-TASK-024, signed receipts, sandboxing, agent budgets, draft gate-contract adoption, app implementation, and other v2 work are excluded.
 - **Upstream gates:** Bounded G-FEAS passed in FRAMEWORK-FEASIBILITY-009; G-COVERAGE passed in FRAMEWORK-COVERAGE-001; G-CX passed in FRAMEWORK-CX-001. These are planning evidence, not implemented capability.
@@ -167,12 +167,26 @@ All units must revalidate against approved FRAMEWORK-GATE-CONTRACT-001 v1.0 and 
 - **Additional fixture concern:** `quality-profile.missing-rationale.invalid.json` also appears to violate threshold shape, so its expected missing-rationale diagnostic may not be uniquely attributable. This was noted as a fixture-quality issue; the major blocker is FINDING-004.
 - **Loop limit:** The owner-authorized final correction/review loop is consumed. No further independent reviewer loop is authorized by that checkpoint. G-ARCH remains BLOCKED; G-IMPL remains unauthorized.
 
+
+
+### Round 4 review — G-ARCH pass
+
+- **Reviewer/evaluator:** Independent reviewer `/root/infinite_gallery_reviewer`, read-only full-scope review.
+- **Reviewed revision:** `cf97c4b32f1b992793a99d44d0b18220d7b6fe12` (FRAMEWORK-ARCHITECTURE-002 v0.8).
+- **Verification:** Verify Pipeline [40042644492](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40042644492) passed all three jobs on this exact commit.
+- **GARCH-01:** PASS. Scope stays within the owner-approved FW-TASK-028 boundary; framework threshold changes and implementation remain excluded.
+- **GARCH-02:** PASS. Exact revision/profile binding, risk floors, path-escape handling, provider evidence checks and fail-closed exception authority are specified.
+- **GARCH-03:** PASS. Manifest logical check_id is bound to result required_check_id; provider-reported check_name is checked. SEM-07 tests omission of Static Analysis; SEM-09 tests substitution by Unit Tests. The invalid profile fixture violates only the missing-rationale requirement.
+- **FRAMEWORK-ARCHITECTURE-002/FINDING-004 disposition:** Resolved in v0.8 by defining stable logical identity across manifest and normalized provider result, binding provider-reported name, and adding separate omission/substitution cases.
+- **Limitations:** These remain design-time contracts. CI validates repository artifacts/checks only; no semantic validator, runtime enforcement, production provider integration, branch protection, or G-IMPL authorization is established.
+- **Gate result:** G-ARCH PASS within the approved architecture-planning scope. No implementation authorization follows.
+
 ## Owner checkpoint and correction
 
-The owner authorized one bounded correction and independent G-ARCH review cycle for FRAMEWORK-ARCHITECTURE-002/FINDING-004. v0.8 adds a stable `required_check_id` binding to provider results, records the provider-reported `check_name`, and adds explicit missing and substituted-check semantic cases. The missing-rationale fixture was also made otherwise schema-conformant so its diagnostic is attributable. The independent full-scope review and exact-revision Verify Pipeline are pending. This authorization does not authorize implementation.
+The owner authorized one bounded correction and independent G-ARCH review cycle for FRAMEWORK-ARCHITECTURE-002/FINDING-004. v0.8 adds a stable `required_check_id` binding to provider results, records the provider-reported `check_name`, adds explicit missing and substituted-check semantic cases, and makes the missing-rationale fixture otherwise schema-conformant. The exact-revision review passed GARCH-01–03 and Verify Pipeline passed; evidence is recorded below. This authorization does not authorize implementation.
 
 ## Exclusions and next action
 
 This design does not choose numeric thresholds, select real app stacks/providers, implement validators/adapters, set repository protection, accept exceptions, or authorize FW-TASK-024 or other v2 work.
 
-**Next action:** Run the authorized full-scope independent G-ARCH review after exact-revision Verify Pipeline succeeds. G-IMPL remains unauthorized until G-ARCH passes and implementation is separately authorized.
+**Next action:** G-ARCH planning passed for the approved FW-TASK-028 boundary. Any implementation requires a separate explicit G-IMPL authorization and task selection. No implementation is authorized by this G-ARCH pass.
