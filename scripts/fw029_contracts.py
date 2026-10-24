@@ -171,6 +171,15 @@ def _format_valid(value: str, fmt: str) -> bool:
         except ValueError:
             return False
     if fmt == "date-time":
+        # JSON Schema's date-time format is RFC 3339; fromisoformat alone also
+        # accepts Python-specific forms such as a space instead of "T".
+        if not re.fullmatch(
+            r"\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])"
+            r"T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d"
+            r"(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)",
+            value,
+        ):
+            return False
         try:
             parsed = datetime.fromisoformat(value[:-1] + "+00:00" if value.endswith("Z") else value)
             return parsed.tzinfo is not None and parsed.utcoffset() is not None
