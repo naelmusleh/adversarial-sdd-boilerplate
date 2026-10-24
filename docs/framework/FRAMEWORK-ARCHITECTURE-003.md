@@ -3,7 +3,7 @@ id: FRAMEWORK-ARCHITECTURE-003
 type: framework-architecture
 title: FW-TASK-029 signed CI evidence receipt architecture
 status: draft
-version: 0.2
+version: 0.3
 created: 2026-10-24
 updated: 2026-10-24
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-027, DECISION-028, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-COVERAGE-002, FRAMEWORK-CX-002, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-031, FRAMEWORK-ADV-032, FRAMEWORK-GATE-CONTRACT-001
@@ -13,7 +13,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-027, DECI
 
 ## Gate work record
 
-- **Gate:** G-ARCH — BLOCKED at GARCH-03 pending an owner checkpoint for a final correction/review cycle; no pass is asserted.
+- **Gate:** G-ARCH — final owner-authorized correction/review cycle in progress; no pass is asserted until exact-revision CI and independent review complete.
 - **Task and requirements:** FW-TASK-029, FR-FW-032–034, under DECISION-027 and the bounded G-ARCH authorization DECISION-028.
 - **Accepted inputs:** G-REQ PASS for FRAMEWORK-SPEC-001/DECISION-027; bounded G-FEAS PASS in FRAMEWORK-FEASIBILITY-010; G-COVERAGE PASS in FRAMEWORK-COVERAGE-002; G-CX PASS in FRAMEWORK-CX-002 and FRAMEWORK-ADV-031.
 - **Architecture scope:** Receipt and verification data boundaries, hosted signing workflow boundary, local verification flow, privacy/retention, operational failures, candidate contracts and fixtures, owner decisions, and task-ready implementation decomposition.
@@ -119,9 +119,9 @@ The verifier is not a production monitor or gate runner. It makes no network cal
 
 | Requirement / acceptance invariant | Cases and expected assertion | Planned unit |
 | --- | --- | --- |
-| FR-FW-032: versioned payload binds source/repository/workflow/contract/run/manifest/check/evidence/issuer identities | SEM-01, 02, 04, 12–21 reject mismatch, ambiguity, missing/duplicate checks, signature changes, and evidence changes with the named diagnostic. The policy schema carries the exact per-run source and provider-run identity. Positive shape is `receipt.valid.synthetic.json`; missing source is rejected by its schema fixture. | FW029-IMPL-01; provider cross-checks also FW029-IMPL-02. |
-| FR-FW-033: signature, issuer and external trust inputs are checked fail-closed | SEM-05–09 and SEM-12 reject missing/mismatched policy/root pins and untrusted issuer/signature. | FW029-IMPL-01 / 03. |
-| FR-FW-033: exact required check set, successful conclusions, identity and source | SEM-03–04 and SEM-17–20 reject unavailable, ambiguous, missing, duplicate, failed, substituted, or wrong-source check results. The pinned per-run policy binds source SHA/ref and provider run/attempt/event/ref. | FW029-IMPL-01 / 02 / 03. |
+| FR-FW-032: versioned payload binds source/repository/workflow/contract/run/manifest/check/evidence/issuer identities | SEM-01, 02, 04, 12–21, and 29 reject mismatch, ambiguity, missing/duplicate checks, signature changes, evidence changes, and top-level source-ref mismatch with the named diagnostic. The policy schema carries the exact per-run source and provider-run identity. Positive shape is `receipt.valid.synthetic.json`; missing source is rejected by its schema fixture. | FW029-IMPL-01; provider cross-checks also FW029-IMPL-02. |
+| FR-FW-033: signature, issuer and external trust inputs are checked fail-closed | SEM-05–09 and SEM-12/27 reject missing/mismatched policy/root pins, untrusted issuer/signature, and unsigned-receipt promotion. | FW029-IMPL-01 / 03. |
+| FR-FW-033: exact required check set, successful conclusions, identity and source | SEM-03–04, 17–20, and 28 reject unavailable, ambiguous, missing, duplicate, extra, failed, substituted, or wrong-source check results. The pinned per-run policy binds source SHA/ref and provider run/attempt/event/ref. | FW029-IMPL-01 / 02 / 03. |
 | FR-FW-033: stale scope and conditional replay semantics | SEM-10 returns stale for superseded scope; SEM-22 rejects unsupported one-use/replay policy; SEM-23 confirms repeated read-only verification passes. No action authorization or consumption is implemented. | FW029-IMPL-01 / 03; any future action-token behavior needs a separate owner-approved scope. |
 | FR-FW-033: supplied evidence digest and bounded inputs | SEM-21 rejects evidence-byte mismatch; SEM-24–26 reject byte/array ceilings before acceptance. | FW029-IMPL-01 / 03. |
 | FR-FW-034: privacy-minimized receipt and strict claims | Schema excludes unbounded free-form fields and raw source/log fields; SEM-11 labels freshness unknown. Privacy/content review and no-production-claim review are required for FW029-IMPL-04. | FW029-IMPL-01 / 04. |
@@ -136,11 +136,11 @@ No unit is a product backlog commitment until G-ARCH is accepted and the owner s
 | --- | --- | --- |
 | GARCH-01 — Boundaries, identities, data, integration/failure, security/privacy, deployment/operations/recovery | System context and trust-boundary table; lifecycle, retention, failure and recovery contracts; snapshot freshness limits. | PASS on review revision `a37ea6989d7090a4cf897ed82f87934cac8d2b4c`. |
 | GARCH-02 — Material ADRs, authority, alternatives, constraints, linked task scope and checks | Five ADRs state options, evidence, decision authority and downstream blockers; four proposed implementation units map to FR-FW-032–034. | PASS with owner decisions gated; ADR-05 size ceilings require owner acceptance or revision before implementation. |
-| GARCH-03 — Structural contracts, invariant checks and frozen handoff | Versioned JSON Schemas, synthetic valid/invalid fixtures, bounded input ceilings, requirement-to-semantic-case matrix and frozen semantic case IDs. | BLOCKED by ARCH029-04 and ARCH029-05 in FRAMEWORK-ADV-032. |
+| GARCH-03 — Structural contracts, invariant checks and frozen handoff | Versioned JSON Schemas, synthetic valid/invalid fixtures, bounded input ceilings, requirement-to-semantic-case matrix and frozen semantic case IDs. | Corrections for ARCH029-04/05 are prepared; final independent review and exact-revision CI are pending. |
 
-The architecture remains draft and G-ARCH is BLOCKED until ARCH029-04/05 are resolved in an owner-authorized final review cycle, exact-revision Verify Pipeline passes, and independent review passes GARCH-01–03. The review-loop limit has been reached; no further correction/review begins without the owner's manual checkpoint. Unresolved owner decisions are visible conditions on dependent tasks, not implicit approval. G-IMPL, provider adoption, production trust decisions and release remain unauthorized.
+The architecture remains draft and G-ARCH is in progress during the owner-authorized final correction/review cycle for ARCH029-04/05. Exact-revision Verify Pipeline and full-scope independent GARCH-01–03 review are pending. Unresolved owner decisions are visible conditions on dependent tasks, not implicit approval. G-IMPL, provider adoption, production trust decisions and release remain unauthorized.
 
 ## Independent G-ARCH review history
 
 - **Round 1 — NEEDS-CHANGES:** Reviewer `/root/fw029_independent_review` reviewed commit `805251ca5dfaea729997c7cdeb6f3c2533e991e5` (architecture blob `6f076fd05618f88c790aab86ae792916a6eace7c`). Findings ARCH029-01 (replay condition not reconciled), ARCH029-02 (acceptance criteria lacked semantic case mapping), and ARCH029-03 (input arrays/bytes unbounded) were recorded. The reviewer found no separate owner decision required to map repeatable read-only verification; any future action authorization remains a separate owner-approved scope.
-- **Round 2 — NEEDS-CHANGES:** Reviewer `/root/fw029_independent_review` reviewed commit `a37ea6989d7090a4cf897ed82f87934cac8d2b4c` (architecture blob `cefd5b503d1d268f233696896d9d78edd142e895`). GARCH-01 and GARCH-02 passed; GARCH-03 remains blocked by ARCH029-04 (the invalid policy fixture also omitted newly required `source` and `provider_run`, so it did not isolate the trust-root failure) and ARCH029-05 (no explicit negatives for unsigned-receipt promotion, an extra check, or top-level `source.ref` mismatch). Review report: [FRAMEWORK-ADV-032](../adversarial-reviews/FRAMEWORK-ADV-032.md). The two permitted review/fix loops are consumed. Manual owner authorization is required before a third bounded correction and full-scope re-review.
+- **Round 2 — NEEDS-CHANGES:** Reviewer `/root/fw029_independent_review` reviewed commit `a37ea6989d7090a4cf897ed82f87934cac8d2b4c` (architecture blob `cefd5b503d1d268f233696896d9d78edd142e895`). GARCH-01 and GARCH-02 passed; GARCH-03 remained blocked by ARCH029-04 (the invalid policy fixture also omitted newly required `source` and `provider_run`, so it did not isolate the trust-root failure) and ARCH029-05 (no explicit negatives for unsigned-receipt promotion, an extra check, or top-level `source.ref` mismatch). Review report: [FRAMEWORK-ADV-032](../adversarial-reviews/FRAMEWORK-ADV-032.md). The owner authorized one final bounded correction and full-scope re-review; no further review loop is authorized.
