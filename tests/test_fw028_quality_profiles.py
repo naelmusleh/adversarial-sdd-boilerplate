@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from scripts.quality_profiles import (
+    diagnose_change_scope,
     evaluate_profile,
     parse_json,
     validate_profile,
@@ -188,6 +189,48 @@ class FrameworkQualityProfileTests(unittest.TestCase):
     def test_duplicate_json_keys_are_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "duplicate JSON key"):
             parse_json('{"schema_version":"1","schema_version":"2"}', label="profile fixture")
+
+    def test_scope_diagnostics_keep_generated_exports_and_unrelated_paths_visible(self) -> None:
+        diagnostics = diagnose_change_scope(
+            changed_paths=["src/domain/rule.py", "src/generated/client.py", "docs/notes.md"],
+            task_paths=["src/domain/rule.py", "src/generated/client.py"],
+            measured_paths=["src/domain/rule.py"],
+            generated_paths=["src/generated/client.py"],
+            exported_symbols={"src/domain/rule.py": ["authorize"]},
+            traced_symbols={"src/domain/rule.py": []},
+        )
+        codes = [item["code"] for item in diagnostics]
+        self.assertIn("CHANGED-PATH-UNMEASURED", codes)
+        self.assertIn("GENERATED-PATH-REVIEW", codes)
+        self.assertIn("EXPORTED-SYMBOL-UNTRACED", codes)
+        self.assertIn("UNRELATED-CHANGE-PATH", codes)
+        self.assertIn("MIXED-SCOPE-CHANGE", codes)
+
+    def test_scope_diagnostics_reject_noncanonical_paths_without_crashing(self) -> None:
+        diagnostics = diagnose_change_scope(
+            changed_paths=["../outside.py", "src/domain/rule.py"],
+            task_paths="src/domain/rule.py",
+            measured_paths=["src/domain/rule.py"],
+        )
+        codes = [item["code"] for item in diagnostics]
+        self.assertIn("SCOPE-PATH-INVALID", codes)
+        self.assertIn("SCOPE-PATHS-INVALID", codes)
+
+    def test_scope_diagnostics_do_not_mutate_source_bytes(self) -> None:
+        source_path = Path(self.id().replace(".", "_") + "_source.py")
+        source = b"def authorize(user): return user.is_allowed\n"
+        try:
+            source_path.write_bytes(source)
+            before = hashlib.sha256(source_path.read_bytes()).hexdigest()
+            diagnose_change_scope(
+                changed_paths=["src/domain/rule.py"],
+                task_paths=[],
+                measured_paths=[],
+                exported_symbols={"src/domain/rule.py": ["authorize"]},
+            )
+            self.assertEqual(hashlib.sha256(source_path.read_bytes()).hexdigest(), before)
+        finally:
+            source_path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

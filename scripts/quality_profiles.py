@@ -485,6 +485,83 @@ def evaluate_profile(
     }
 
 
+def diagnose_change_scope(
+    *,
+    changed_paths: Iterable[str],
+    task_paths: Iterable[str],
+    measured_paths: Iterable[str],
+    generated_paths: Iterable[str] = (),
+    exported_symbols: Mapping[str, Iterable[str]] | None = None,
+    traced_symbols: Mapping[str, Iterable[str]] | None = None,
+) -> list[Diagnostic]:
+    """Return review diagnostics for scope gaps without touching source files.
+
+    This is a bounded visibility check. It does not determine whether a path is
+    semantically related to a task, whether generated code is safe, or whether a
+    reported export inventory is complete; those remain review/evidence duties.
+    """
+    diagnostics: list[Diagnostic] = []
+
+    def collect_paths(value: Any, field: str) -> set[str]:
+        if not isinstance(value, list):
+            _add(diagnostics, "SCOPE-PATHS-INVALID", "QUALITY-SCOPE", field, "must be an array of canonical repository paths")
+            return set()
+        paths: set[str] = set()
+        for index, path in enumerate(value):
+            location = f"{field}[{index}]"
+            if not _safe_changed_path(path):
+                _add(diagnostics, "SCOPE-PATH-INVALID", "QUALITY-SCOPE", location, "must be a canonical relative POSIX path")
+            elif path in paths:
+                _add(diagnostics, "SCOPE-PATH-DUPLICATE", "QUALITY-SCOPE", location, f"duplicate path {path!r}")
+            else:
+                paths.add(path)
+        return paths
+
+    changed = collect_paths(changed_paths, "changed_paths")
+    task = collect_paths(task_paths, "task_paths")
+    measured = collect_paths(measured_paths, "measured_paths")
+    generated = collect_paths(generated_paths, "generated_paths")
+
+    for path in sorted(changed - measured):
+        _add(diagnostics, "CHANGED-PATH-UNMEASURED", "QUALITY-SCOPE", path, "changed path is outside the reported measurement scope")
+    changed_generated = changed & generated
+    for path in sorted(changed_generated):
+        _add(diagnostics, "GENERATED-PATH-REVIEW", "QUALITY-SCOPE", path, "generated or generated-looking code remains visible for review")
+    unrelated = changed - task
+    for path in sorted(unrelated):
+        _add(diagnostics, "UNRELATED-CHANGE-PATH", "QUALITY-SCOPE", path, "changed path is outside the selected task path inventory")
+    if changed - unrelated and unrelated:
+        _add(diagnostics, "MIXED-SCOPE-CHANGE", "QUALITY-SCOPE", "changed_paths", "task-related and unrelated paths are mixed; review each path independently")
+
+    def symbol_map(value: Any, field: str) -> dict[str, set[str]]:
+        if value is None:
+            return {}
+        if not isinstance(value, Mapping):
+            _add(diagnostics, "SCOPE-SYMBOLS-INVALID", "QUALITY-SCOPE", field, "must map repository paths to symbol arrays")
+            return {}
+        result: dict[str, set[str]] = {}
+        for path, symbols in value.items():
+            if not _safe_changed_path(path):
+                _add(diagnostics, "SCOPE-PATH-INVALID", "QUALITY-SCOPE", f"{field}.{path}", "must use a canonical relative POSIX path")
+                continue
+            if not isinstance(symbols, list):
+                _add(diagnostics, "SCOPE-SYMBOLS-INVALID", "QUALITY-SCOPE", f"{field}.{path}", "must be an array of non-empty symbol names")
+                continue
+            names = list(symbols)
+            if any(not _text(name) for name in names) or len(names) != len(set(names)):
+                _add(diagnostics, "SCOPE-SYMBOLS-INVALID", "QUALITY-SCOPE", f"{field}.{path}", "must contain unique non-empty symbol names")
+                continue
+            result[path] = set(names)
+        return result
+
+    exports = symbol_map(exported_symbols, "exported_symbols")
+    traced = symbol_map(traced_symbols, "traced_symbols")
+    for path in sorted(changed):
+        for name in sorted(exports.get(path, set()) - traced.get(path, set())):
+            _add(diagnostics, "EXPORTED-SYMBOL-UNTRACED", "QUALITY-SCOPE", f"{path}:{name}", "exported symbol has no acceptance-criteria trace and needs review")
+    return diagnostics
+
+
 def _policy_view(profile: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "metric_rules": profile.get("metric_rules"),
