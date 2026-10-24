@@ -3,10 +3,10 @@ id: FRAMEWORK-ARCHITECTURE-003
 type: framework-architecture
 title: FW-TASK-029 signed CI evidence receipt architecture
 status: draft
-version: 0.6
+version: 0.7
 created: 2026-10-24
 updated: 2026-10-24
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-027, DECISION-028, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-COVERAGE-002, FRAMEWORK-CX-002, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-031, FRAMEWORK-ADV-032, FRAMEWORK-GATE-CONTRACT-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-027, DECISION-028, DECISION-029, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-COVERAGE-002, FRAMEWORK-CX-002, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-031, FRAMEWORK-ADV-032, FRAMEWORK-GATE-CONTRACT-001
 ---
 
 # FRAMEWORK-ARCHITECTURE-003 — FW-TASK-029 signed CI evidence receipt architecture
@@ -104,7 +104,7 @@ The verifier is not a production monitor or gate runner. It makes no network cal
 
 ### ADR-FW029-ARCH-05 — Bound v1 receipt and policy inputs
 
-**Options:** leave input size to runtime defaults; bind count/byte limits in the versioned contract; or derive ceilings from a versioned required-check manifest and separately configured evidence quota. **Evidence:** feasibility exercised a small three-check workflow and a metadata-only receipt; it did not measure large manifests. **Proposed v1 ceilings:** 100 required/check entries, 100 evidence references, 262,144 serialized receipt bytes and 65,536 serialized policy bytes. The array ceilings align the policy and receipt and exceed the observed workflow size; byte caps bound parser and storage work. They are contract limits, not measured provider guarantees. **Authority:** these ceilings are proposed for owner review at G-ARCH acceptance; any app that cannot fit must not override them locally and requires a versioned contract revision. **Impact:** implementation must reject over-limit bytes before parsing and over-limit arrays during schema validation, with deterministic diagnostics; no truncation is allowed.
+**Options:** leave input size to runtime defaults; bind count/byte limits in the versioned contract; or derive ceilings from a versioned required-check manifest and separately configured evidence quota. **Evidence:** feasibility exercised a small three-check workflow and a metadata-only receipt; it did not measure large manifests. **Proposed v1 ceilings:** 100 required/check entries, 100 evidence references, 262,144 serialized receipt bytes and 65,536 serialized policy bytes. The array ceilings align the policy and receipt and exceed the observed workflow size; byte caps bound parser and storage work. They are contract limits, not measured provider guarantees. **Authority:** Owner Nael Musleh accepted these ceilings for the FW-TASK-029 v1 architecture contract in DECISION-029. Any app that cannot fit must not override them locally and requires a versioned contract revision. **Impact:** implementation must reject over-limit bytes before parsing and over-limit arrays during schema validation, with deterministic diagnostics; no truncation is allowed.
 
 ## Task-ready implementation decomposition (not authorized)
 
@@ -135,10 +135,10 @@ No unit is a product backlog commitment until G-ARCH is accepted and the owner s
 | Criterion | Evidence in this artifact | Status before independent review |
 | --- | --- | --- |
 | GARCH-01 — Boundaries, identities, data, integration/failure, security/privacy, deployment/operations/recovery | System context and trust-boundary table; lifecycle, retention, failure and recovery contracts; snapshot freshness limits. | PASS on final review revision `8326b77b10486e4140e9785cd44fcf31b78829e9`. |
-| GARCH-02 — Material ADRs, authority, alternatives, constraints, linked task scope and checks | Five ADRs state options, evidence, decision authority and downstream blockers; four proposed implementation units map to FR-FW-032–034. | PASS; ADR-05 size ceilings require owner acceptance or revision before G-IMPL. |
+| GARCH-02 — Material ADRs, authority, alternatives, constraints, linked task scope and checks | Five ADRs state options, evidence, decision authority and downstream blockers; four proposed implementation units map to FR-FW-032–034. | PASS; ADR-05 ceilings accepted per DECISION-029; remaining owner-controlled choices retain their own gates. |
 | GARCH-03 — Structural contracts, invariant checks and frozen handoff | Versioned JSON Schemas, synthetic valid/invalid fixtures, bounded input ceilings, requirement-to-semantic-case matrix and frozen semantic case IDs. | PASS: SEM-30/31 cover provider and run-ID mismatch against pinned policy, and FR-FW-032 maps both. |
 
-G-ARCH passes within the approved FW-TASK-029 scope. ARCH029-04/05 were resolved in the prior review cycle and ARCH029-06 is resolved by SEM-30/31. Exact-revision Verify Pipeline [40137156642](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40137156642) passed all three required jobs, and the independent reviewer passed GARCH-01–03 at source commit `8326b77b10486e4140e9785cd44fcf31b78829e9`. ADR-05 size ceilings remain proposed and require owner acceptance or revision before G-IMPL. No G-IMPL, provider adoption, production trust decisions or release is authorized.
+G-ARCH passes within the approved FW-TASK-029 scope. ARCH029-04/05 were resolved in the prior review cycle and ARCH029-06 is resolved by SEM-30/31. Exact-revision Verify Pipeline [40137156642](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40137156642) passed all three required jobs, and the independent reviewer passed GARCH-01–03 at source commit `8326b77b10486e4140e9785cd44fcf31b78829e9`. ADR-05 size ceilings are accepted under DECISION-029. This does not authorize G-IMPL or resolve provider adoption, production trust-source, retention, freshness/revocation, or replay authorization choices. No G-IMPL, provider adoption, production trust decisions or release is authorized.
 
 ## Independent G-ARCH review history
 
