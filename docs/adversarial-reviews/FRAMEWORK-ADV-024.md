@@ -2,8 +2,8 @@
 id: FRAMEWORK-ADV-024
 type: adversarial-review
 title: FW-TASK-029 requirements scope review
-status: in-review
-version: 1.0
+status: approved
+version: 1.1
 created: 2026-10-24
 updated: 2026-10-24
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-027, FRAMEWORK-GATE-CONTRACT-001
@@ -29,4 +29,13 @@ FR-FW-032 listed individual check identities and workflow revisions, but did not
 
 ## Corrective review
 
-The requirements and AC-1 were amended to include the manifest digest and trusted workflow identity. Exact corrected revision and Verify Pipeline result will be recorded after publication. Independent re-review is pending; G-REQ remains blocked until the finding is resolved at the exact reviewed revision.
+The requirements and AC-1 were amended to include the exact required-check manifest digest and trusted workflow identity, both validated against configured policy. No signer/provider selection was introduced.
+
+- Corrected revision: `309e667a659fa285632cb0d6066f2fd337769ebf`.
+- Verify Pipeline: [40093307764](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40093307764) passed all three required jobs on the exact corrected revision.
+- Independent reviewer: `/root/infinite_gallery_reviewer`, read-only focused re-review of that exact revision.
+- Verdict: **PASS — G-REQ**. FINDING-001 is resolved. The reviewer confirmed consistency with DECISION-019 and FW-TASK-020, and found no remaining scope, trust, feasibility-claim, or privacy-boundary finding.
+
+## G-REQ disposition and limits
+
+G-REQ passes for FW-TASK-029 and FR-FW-032–034 within DECISION-027. G-FEAS may proceed within this scope. The pass does not select a provider or key mechanism, authorize implementation, application adoption, production credentials, or substitution for an app-hosted CI run. Offline verification and issuer trust remain subject to G-FEAS/G-ARCH evidence.
