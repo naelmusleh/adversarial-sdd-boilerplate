@@ -3,17 +3,17 @@ id: FRAMEWORK-ARCHITECTURE-003
 type: framework-architecture
 title: FW-TASK-029 signed CI evidence receipt architecture
 status: draft
-version: 0.1
+version: 0.2
 created: 2026-10-24
 updated: 2026-10-24
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-027, DECISION-028, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-COVERAGE-002, FRAMEWORK-CX-002, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-031, FRAMEWORK-GATE-CONTRACT-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-027, DECISION-028, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-COVERAGE-002, FRAMEWORK-CX-002, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-031, FRAMEWORK-ADV-032, FRAMEWORK-GATE-CONTRACT-001
 ---
 
 # FRAMEWORK-ARCHITECTURE-003 — FW-TASK-029 signed CI evidence receipt architecture
 
 ## Gate work record
 
-- **Gate:** G-ARCH — in progress; no pass is asserted.
+- **Gate:** G-ARCH — BLOCKED at GARCH-03 pending an owner checkpoint for a final correction/review cycle; no pass is asserted.
 - **Task and requirements:** FW-TASK-029, FR-FW-032–034, under DECISION-027 and the bounded G-ARCH authorization DECISION-028.
 - **Accepted inputs:** G-REQ PASS for FRAMEWORK-SPEC-001/DECISION-027; bounded G-FEAS PASS in FRAMEWORK-FEASIBILITY-010; G-COVERAGE PASS in FRAMEWORK-COVERAGE-002; G-CX PASS in FRAMEWORK-CX-002 and FRAMEWORK-ADV-031.
 - **Architecture scope:** Receipt and verification data boundaries, hosted signing workflow boundary, local verification flow, privacy/retention, operational failures, candidate contracts and fixtures, owner decisions, and task-ready implementation decomposition.
@@ -134,8 +134,13 @@ No unit is a product backlog commitment until G-ARCH is accepted and the owner s
 
 | Criterion | Evidence in this artifact | Status before independent review |
 | --- | --- | --- |
-| GARCH-01 — Boundaries, identities, data, integration/failure, security/privacy, deployment/operations/recovery | System context and trust-boundary table; lifecycle, retention, failure and recovery contracts; snapshot freshness limits. | Prepared; reviewer to assess completeness and safe boundaries. |
-| GARCH-02 — Material ADRs, authority, alternatives, constraints, linked task scope and checks | Four ADRs state options, evidence, decision authority and downstream blockers; four proposed implementation units map to FR-FW-032–034. | Prepared; provider/trust/retention choices deliberately remain owner-controlled. |
-| GARCH-03 — Structural contracts, invariant checks and frozen handoff | Versioned JSON Schemas, synthetic valid/invalid fixtures, bounded input ceilings, requirement-to-semantic-case matrix and frozen semantic case IDs. | JSON syntax and limited fixture/schema conformance were checked by the independent reviewer; Verify Pipeline artifact validation passed on the exact revision. Full semantic execution remains deferred to G-IMPL. |
+| GARCH-01 — Boundaries, identities, data, integration/failure, security/privacy, deployment/operations/recovery | System context and trust-boundary table; lifecycle, retention, failure and recovery contracts; snapshot freshness limits. | PASS on review revision `a37ea6989d7090a4cf897ed82f87934cac8d2b4c`. |
+| GARCH-02 — Material ADRs, authority, alternatives, constraints, linked task scope and checks | Five ADRs state options, evidence, decision authority and downstream blockers; four proposed implementation units map to FR-FW-032–034. | PASS with owner decisions gated; ADR-05 size ceilings require owner acceptance or revision before implementation. |
+| GARCH-03 — Structural contracts, invariant checks and frozen handoff | Versioned JSON Schemas, synthetic valid/invalid fixtures, bounded input ceilings, requirement-to-semantic-case matrix and frozen semantic case IDs. | BLOCKED by ARCH029-04 and ARCH029-05 in FRAMEWORK-ADV-032. |
 
-The architecture remains draft until the exact revision passes Verify Pipeline and an independent reviewer passes GARCH-01–03. Unresolved owner decisions are visible conditions on dependent tasks, not implicit approval. G-IMPL, provider adoption, production trust decisions and release remain unauthorized.
+The architecture remains draft and G-ARCH is BLOCKED until ARCH029-04/05 are resolved in an owner-authorized final review cycle, exact-revision Verify Pipeline passes, and independent review passes GARCH-01–03. The review-loop limit has been reached; no further correction/review begins without the owner's manual checkpoint. Unresolved owner decisions are visible conditions on dependent tasks, not implicit approval. G-IMPL, provider adoption, production trust decisions and release remain unauthorized.
+
+## Independent G-ARCH review history
+
+- **Round 1 — NEEDS-CHANGES:** Reviewer `/root/fw029_independent_review` reviewed commit `805251ca5dfaea729997c7cdeb6f3c2533e991e5` (architecture blob `6f076fd05618f88c790aab86ae792916a6eace7c`). Findings ARCH029-01 (replay condition not reconciled), ARCH029-02 (acceptance criteria lacked semantic case mapping), and ARCH029-03 (input arrays/bytes unbounded) were recorded. The reviewer found no separate owner decision required to map repeatable read-only verification; any future action authorization remains a separate owner-approved scope.
+- **Round 2 — NEEDS-CHANGES:** Reviewer `/root/fw029_independent_review` reviewed commit `a37ea6989d7090a4cf897ed82f87934cac8d2b4c` (architecture blob `cefd5b503d1d268f233696896d9d78edd142e895`). GARCH-01 and GARCH-02 passed; GARCH-03 remains blocked by ARCH029-04 (the invalid policy fixture also omitted newly required `source` and `provider_run`, so it did not isolate the trust-root failure) and ARCH029-05 (no explicit negatives for unsigned-receipt promotion, an extra check, or top-level `source.ref` mismatch). Review report: [FRAMEWORK-ADV-032](../adversarial-reviews/FRAMEWORK-ADV-032.md). The two permitted review/fix loops are consumed. Manual owner authorization is required before a third bounded correction and full-scope re-review.
