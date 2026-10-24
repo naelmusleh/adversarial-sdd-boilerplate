@@ -2,8 +2,8 @@
 id: FRAMEWORK-ADV-033
 type: adversarial-review
 title: FW-TASK-029 FW029-IMPL-01 review rounds 1 and 2
-status: blocked
-version: 1.0
+status: approved
+version: 1.1
 created: 2026-10-24
 updated: 2026-10-24
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ARCHITECTURE-003, FRAMEWORK-ADV-032, DECISION-029
@@ -42,3 +42,16 @@ The timestamp validator was constrained to RFC3339 syntax and exact input limits
 ## Disposition
 
 FW029-IMPL-01 is **BLOCKED** pending owner checkpoint before a third consecutive adversarial review loop, as required by the repository operating contract. The next code correction and independent rerun are not authorized until that checkpoint. No G-IMPL pass is claimed for this unit or for FW-TASK-029. The other implementation units remain gated and unstarted.
+
+## Owner checkpoint and round 3 — PASS
+
+The owner authorized one bounded third review loop after the manual checkpoint recorded above. The correction accepts lowercase RFC 3339 `t`/`z` timestamps and adds positive cases, while retaining rejection of malformed near-valid timestamps. Tests now cover exact receipt/policy byte ceilings and limit + 1, and exact-limit/101-item cases for receipt checks, receipt evidence, and policy required checks.
+
+- **Reviewed commit:** `a28238acf852ba0a9e5ea2e907542dc88c7af1ad`.
+- **Source blob:** `e430c1793ecc8e692c5b5f3d227c55ce7b48d3ea`.
+- **Test blob:** `69d8e0a72e817ce3e8edce7d33309bffd6e88a23`.
+- **Independent verdict:** PASS; no findings remain within FW029-IMPL-01.
+- **Verify Pipeline:** [40142958309](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40142958309) passed all three required jobs on the exact commit; optional synthetic evidence probe skipped.
+- **Intermediate correction commit:** Verify Pipeline [40142952610](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40142952610) failed the Python suite because its old test still expected lowercase syntax rejection. The subsequent test commit above updated that expectation, and its exact-revision pipeline passed.
+
+FW029-IMPL-01 passes within its bounded scope. It validates provider-neutral contract structure and deterministic supplied-input bindings only; it does not verify signatures, authenticate provider responses, establish trust-root freshness, authorize a gate, or make a release decision. FW-TASK-029 as a whole remains in progress; IMPL-02–04 remain unimplemented and gated.
