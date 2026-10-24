@@ -175,6 +175,18 @@
       "mutation": "top-level receipt source ref differs from the policy-pinned source ref",
       "expected_status": "failed",
       "expected_diagnostic": "receipt.source_ref_mismatch"
+    },
+    {
+      "id": "FW029-SEM-30",
+      "mutation": "receipt provider identity differs from the policy-pinned provider",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.run_mismatch"
+    },
+    {
+      "id": "FW029-SEM-31",
+      "mutation": "receipt provider run ID differs from the policy-pinned run ID",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.run_mismatch"
     }
   ]
 }
