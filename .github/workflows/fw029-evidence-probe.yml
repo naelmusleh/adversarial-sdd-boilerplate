@@ -1,7 +1,7 @@
 name: FW-029 Synthetic Evidence Probe
 
 on:
-  workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read

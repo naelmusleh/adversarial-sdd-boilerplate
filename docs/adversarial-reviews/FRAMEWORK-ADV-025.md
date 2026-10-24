@@ -2,7 +2,7 @@
 id: FRAMEWORK-ADV-025
 type: adversarial-review
 title: FW-TASK-029 temporary signed-receipt probe workflow review
-status: blocked
+status: approved
 version: 1.0
 created: 2026-10-24
 updated: 2026-10-24
@@ -32,6 +32,10 @@ Reviewer: `/root/infinite_gallery_reviewer`, independent and read-only. Review w
 ## Owner gate
 
 The repository operating instructions impose a circuit breaker after more than two consecutive adversarial review/fix cycles. Three workflow review rounds were reached. The probe therefore remains blocked pending explicit owner direction to resume after this circuit-breaker halt, even though the third review passed. This process halt does not indicate a remaining technical finding. Hosted CI status for the reviewed commit was not available from the connected status lookup and remains unverified.
+
+## Resumption addendum
+
+On 2026-10-24, the owner explicitly directed resumption. The review-loop halt is cleared. Before dispatch, a workflow-list inspection showed the standalone temporary workflow was not available on the default branch and therefore could not be directly dispatched. FEASIBILITY-010 v1.1 and a new commit convert it to a local reusable workflow called only by the existing Verify Pipeline manual dispatch on the approved feature ref. That new caller/reusable-workflow combination is not covered by the earlier PASS and requires its own exact-commit independent review before execution.
 
 ## Evidence and disposition
 

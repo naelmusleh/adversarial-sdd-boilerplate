@@ -79,3 +79,15 @@ jobs:
 
       - name: Enforce configured 100 percent coverage thresholds
         run: npm run test:coverage
+
+  fw029-synthetic-evidence-probe:
+    name: FW-029 Synthetic Evidence Probe
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/v2-backlog-roadmap'
+    uses: ./.github/workflows/fw029-evidence-probe.yml
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
