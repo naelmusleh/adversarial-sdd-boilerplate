@@ -17,7 +17,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBIL
 - **Task:** FW-TASK-029, Produce verifiable signed CI evidence receipts.
 - **Approved requirements:** FR-FW-032–034 under DECISION-027.
 - **Prerequisites:** G-REQ passed for the approved task scope; G-FEAS passed for bounded feasibility only in FRAMEWORK-FEASIBILITY-010 and FRAMEWORK-ADV-027.
-- **Source baseline:** `codex/v2-backlog-roadmap`, current work-record checkpoint `86d9195dc8bf0688f57583ea827450e558b8ff72`; this coverage artifact requires its own exact-revision checks and independent review.
+- **Source baseline:** `codex/v2-backlog-roadmap`, coverage artifact commit `cd0a0ba949a1815b6af781488cd7df8bc0c788b2` (content blob `b7fdf60a8da517935512941eba50a76dd772fea6`); remote CI and review use later commits containing this same exact blob.
 - **Boundary:** Journey/state coverage and surface applicability only. No provider adoption, signing-key/trust architecture choice, application integration, implementation, policy threshold, production readiness, FW-TASK-020 substitution, or other v2 task is included.
 - **Scope interpretation for review:** The feature is a governance workflow over local repository files, GitHub-hosted workflow/check results and artifacts, and repository pull-request review. These surfaces are inferred from DECISION-027, the FW-029 feasibility record, and the framework's local-first mission; no end-user web product or native mobile client is declared. Independent review should flag if this interpretation requires an owner decision.
 
@@ -87,15 +87,24 @@ The surface interpretation above is a reasoned inference from the approved local
 
 | Criterion | Prepared evidence | Current status |
 | --- | --- | --- |
-| GCOV-01 | Four journeys map FR-FW-032–034 and all six task acceptance criteria to actors, preconditions, transitions, success/failure exits and recovery. | Prepared; independent review pending. |
-| GCOV-02 | All seven required failure categories are explicitly applicable with expected fail-closed or blocked outcomes and recovery. | Prepared; independent review pending. |
+| GCOV-01 | Four journeys map FR-FW-032–034 and all six task acceptance criteria to actors, preconditions, transitions, success/failure exits and recovery. | PASS; see the exact review and CI disposition below. |
+| GCOV-02 | All seven required failure categories are explicitly applicable with expected fail-closed or blocked outcomes and recovery. | PASS; see the exact review and CI disposition below. |
 | GCOV-03 | Every declared workflow/review surface is in the matrix; end-user web/mobile and unrelated stack adapters are excluded with rationale and downstream effect. | Prepared; independent review pending; scope inference submitted for review. |
 
 ## Evidence, exclusions and next action
 
-- **Evidence refs:** DECISION-027; FR-FW-032–034 and FW-TASK-029 AC-1–6; FRAMEWORK-FEASIBILITY-010 v2.2; FRAMEWORK-ADV-027; GATE-CATALOG-001; approved FRAMEWORK-GATE-CONTRACT-001 v1.0.
+- **Evidence refs:** DECISION-027; FR-FW-032–034 and FW-TASK-029 AC-1–6; FRAMEWORK-FEASIBILITY-010 v2.2; FRAMEWORK-ADV-027; FRAMEWORK-ADV-028; GATE-CATALOG-001; approved FRAMEWORK-GATE-CONTRACT-001 v1.0.
 - **Known feasibility limits carried forward:** tested repo visibility/runner/action pins and supplied trust snapshot only; no current root freshness/revocation proof; hosted attestation retention/deletion unknown; production policy-digest trust source deferred to G-ARCH.
 - **Exclusions:** provider adoption, production trust lifecycle/architecture, app integration, source changes, end-user UI, release/merge authorization, FW-TASK-020 replacement, and all unrelated v2 tasks.
-- **Gate result:** G-COVERAGE in progress. No G-COVERAGE pass is claimed.
-- **Next action:** Independent review of this exact artifact and its surface interpretation. On pass, prepare product-appropriate nonvisual G-CX evidence for these receipt creation, offline verification, and review journeys. If a scope decision is required, stop and request it before G-CX.
+- **Gate result:** G-COVERAGE PASS for the approved bounded FW-TASK-029 scope, recorded below.
+- **Next action:** Proceed to product-appropriate nonvisual G-CX evidence for receipt creation, offline verification, and review journeys. No owner scope decision was required by the independent coverage review.
 - **Prohibited next work:** implementation, provider adoption, production trust-source selection, app integration, branch-protection changes, or deployment.
+
+
+## Independent G-COVERAGE disposition (2026-10-24)
+
+**G-COVERAGE: PASS** for the approved bounded FW-TASK-029 scope. Independent reviewer `/root/fw029_independent_review` passed GCOV-01, GCOV-02, and GCOV-03 on the exact coverage artifact blob `b7fdf60a8da517935512941eba50a76dd772fea6`, present at remote review commit `ac2efd31870a10a2589b6cfb8f6ce577ea1ce5bb`. The reviewer confirmed four complete journeys map all requirements and six acceptance criteria; all seven required failure categories are addressed; and the local verifier, hosted workflow/checks/artifacts, and pull-request review surfaces follow DECISION-027. End-user web/mobile surfaces and unrelated profile lanes are properly excluded. No owner decision is needed. The review and criterion rationale are recorded in [FRAMEWORK-ADV-028](../adversarial-reviews/FRAMEWORK-ADV-028.md).
+
+Verify Pipeline [40120164557](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40120164557) passed all three required jobs on exact commit `e1bab3677b28ea18d9de8931faaec284ed4e9343`, which contains the reviewed coverage blob. The earlier run [40120004006](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40120004006) is excluded because an incomplete transferred backlog lacked its front matter and caused the Python job to fail; the backlog was restored from the intact prior revision before the successful run.
+
+G-COVERAGE clears journey and surface coverage only. It does not authorize implementation, provider adoption, production trust-source decisions, or replacement of FW-TASK-020. The next permitted gate is G-CX.
