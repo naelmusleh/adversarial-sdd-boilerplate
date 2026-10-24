@@ -97,14 +97,19 @@ jobs:
               "Initializer Regression Gate",
               "TypeScript Static Code Analysis",
           }
+          expected_skipped = {"FW-029 Synthetic Evidence Probe"}
           if jobs_response.get("total_count") != len(jobs) or len(jobs) > 100:
               raise SystemExit("provider job result is incomplete or unbounded")
-          if {job.get("name") for job in jobs} != expected:
+          job_names = {job.get("name") for job in jobs}
+          if job_names != expected | expected_skipped:
               raise SystemExit("provider run has missing or unexpected check names")
           named = {}
           for job in jobs:
               if job.get("name") in expected:
                   named.setdefault(job["name"], []).append(job)
+          skipped_probe = [job for job in jobs if job.get("name") in expected_skipped]
+          if len(skipped_probe) != 1 or skipped_probe[0].get("conclusion") != "skipped":
+              raise SystemExit("probe caller job must be present exactly once and skipped on push")
           if set(named) != expected or any(len(items) != 1 for items in named.values()):
               raise SystemExit("required provider checks are missing or duplicated")
 
