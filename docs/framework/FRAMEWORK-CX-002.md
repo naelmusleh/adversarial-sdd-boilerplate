@@ -3,10 +3,10 @@ id: FRAMEWORK-CX-002
 type: framework-cx
 title: FW-TASK-029 receipt verification interaction contract
 status: draft
-version: 0.1
+version: 0.2
 created: 2026-10-24
 updated: 2026-10-24
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-COVERAGE-002, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, DECISION-027, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-COVERAGE-002, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-029, DECISION-027, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
 ---
 
 # FRAMEWORK-CX-002 — FW-TASK-029 receipt verification interaction contract
@@ -36,15 +36,12 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-COVERAGE
 | --- | --- | --- | --- |
 | CX-029-A — Prepare offline inputs | Reviewer selects receipt, bundle, policy, external expected policy digest and supplied root. Verifier reports each input's filename, digest match, and policy scope before starting signature checks. | `ready` only when every required file is present and both external pins match. Show repository/source/ref/workflow expected by policy. | Missing file, unsupported format, or digest mismatch → `blocked` with exact input name and expected-vs-observed digest; advise obtaining inputs/pins from authorized source. No silent defaults or network fetch. |
 | CX-029-B — Create receipt from hosted checks | Authorized operator starts the bounded workflow on the intended ref. Workflow resolves one run/attempt, identifies required provider checks, builds the bounded receipt, signs it, and uploads the receipt/bundle. | Show run URL/ID, source SHA/ref, workflow identity, required-check count and conclusion, signing outcome, artifact ID/name, and retention. Distinguish “receipt signed” from “offline verification pending.” | Ambiguous run/attempt, missing/duplicate/unexpected check, wrong SHA/ref/workflow, non-success conclusion, signer failure, or upload failure → `failed`/`blocked` with the failed stage and bounded diagnostic; no partial output is treated as a complete receipt. Correct inputs and create a fresh run. |
-| CX-029-C — Verify receipt locally | Reviewer invokes the documented read-only verifier with all explicit inputs. It verifies cryptographic issuer/signature and exact policy/receipt fields, then reports each stage separately. | `passed` is phrased “signature and configured provenance policy verified,” with source/run/policy digest. Explicitly say that tests, code semantics, gate approval and release authorization are not established. | Any mismatch → `failed` with named rule, expected and observed identity where safe, and evidence location. Preserve inputs; do not edit receipt/bundle. Correct policy through authorized path or obtain a new receipt; rerun all steps. |
-| CX-029-D — Review evidence and decide next action | Reviewer follows provider links, confirms run/check identities, examines bounded receipt fields and known retention, then records a gate/review disposition. | Separate labels for cryptographic verification, provider check success, reviewer disposition and owner authorization. Indicate whether review is `accepted`, `changes requested`, or `blocked`; identify the responsible role. | Stale source/policy, missing provider evidence, retention uncertainty, overclaimed trust or a proposed use as FW-TASK-020 replacement → `blocked` or request changes. Reopen at the affected upstream step; no gate/merge/release is implied by a valid signature. |
+| CX-029-C — Verify receipt locally | Reviewer invokes the documented read-only verifier with all explicit inputs. It verifies cryptographic issuer/signature and exact policy/receipt fields, then reports each stage separately. | `passed` is phrased “signature and configured provenance policy verified,” with source/run/policy digest. Explicitly say that tests, code semantics, gate approval and release authorization are not established. | Missing required inputs before verifier start → `blocked`; verifier rejection of a supplied signature/identity/receipt/check/policy/evidence value → `failed`. Preserve inputs; do not edit receipt/bundle. Correct policy through authorized path or obtain a new receipt; rerun all steps. |
+| CX-029-D — Review evidence and decide next action | Reviewer follows provider links, confirms run/check identities, examines bounded receipt fields and the retention facts (one-day artifact retention; hosted-attestation retention/deletion unknown), then records a gate/review disposition. | Separate labels for cryptographic verification, provider check success, reviewer disposition and owner authorization. Indicate whether review is `accepted`, `changes requested`, or `blocked`; identify the responsible role. | Stale source/policy, missing provider evidence, or overclaimed trust → `blocked` or request changes. Record the one-day artifact retention and unknown hosted-attestation retention/deletion without implying a guarantee. Retention uncertainty blocks only when the intended use requires a retention/deletion guarantee that this evidence cannot establish. A proposed use as FW-TASK-020 replacement is out of scope and must be rejected. Reopen at the affected upstream step; no gate/merge/release is implied by a valid signature. |
 
 ## Status rollup and recovery rules
 
-- Overall status is `blocked` if a required identity, trust input, policy pin, run/check or evidence item is missing, unsupported, stale or mismatched.
-- Overall status is `failed` if verification runs and rejects a signature, receipt field, check result, policy digest or evidence digest.
-- Overall status is `in progress` while hosted receipt creation, local verification, or human review remains incomplete.
-- Overall status is `passed` only for the bounded cryptographic and configured-policy verification step; it never rolls up to gate acceptance or authorization by itself.
+- Apply this precedence to each attempt: (1) `stale` when a previously produced result references a source, workflow, contract, policy or trust revision that no longer matches the currently selected scope; (2) `unavailable` when the required verifier, provider record or artifact cannot be obtained; (3) `blocked` when preflight finds a required input or external pin absent/unsupported before verification starts; (4) `failed` when verification runs and rejects a supplied signature, identity, receipt field, check result, policy digest or evidence digest; (5) `in progress` while an operation/review remains incomplete; (6) `passed` only when every bounded cryptographic and configured-policy step succeeds. These states describe one current attempt; do not roll a verifier pass up to gate acceptance or authorization.
 - Preserve the failed run/receipt as historical evidence. Recovery creates a fresh source-bound run or corrected owner-controlled policy and a new verification result. Never rewrite receipt bytes or relabel a failed result.
 - Read-only verification may be repeated. Repetition does not change receipt state, grant authority, or establish freshness/revocation.
 
@@ -67,3 +64,13 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-COVERAGE
 - **G-CX-01/02/03:** Prepared for independent review across all four traces; no visual prototype, runtime behavior, accessibility test, or product UI evidence is claimed.
 - **Next action:** Independent critique of this complete interaction contract, followed by exact-commit Verify Pipeline and recorded findings/disposition.
 - **Prohibited next work:** implementation/provider selection/production trust-source choices, app adoption, release, or changes to FW-TASK-020.
+
+
+## Initial independent G-CX review and finding dispositions
+
+The first full-scope independent critique returned **NEEDS-CHANGES** at source commit `644ed30f96794f6aec6ffda28539ba6e88c935de`, CX artifact blob `a9ab320a497acc8de21c26e821dbe188c826454e`. Findings and rationale are recorded in [FRAMEWORK-ADV-029](../adversarial-reviews/FRAMEWORK-ADV-029.md).
+
+- **CX029-01 — P2 status taxonomy ambiguity — resolved in this revision.** The earlier traces could classify the same mismatch as either blocked or failed. The state rollup now defines deterministic precedence: stale prior results; unavailable evidence/tool; preflight-missing input as blocked; verifier rejection as failed; in-progress; then bounded passed. CX-A and CX-C align to that boundary.
+- **CX029-02 — P2 retention uncertainty framed as a block — resolved in this revision.** The trace now states the observed one-day artifact retention and unknown hosted-attestation retention/deletion. Uncertainty alone does not block this bounded feasibility use; block only if a specific intended use requires a retention/deletion guarantee the evidence cannot establish.
+
+Both corrections require a full affected-scope independent rerun and exact-revision Verify Pipeline. G-CX remains in progress until both are recorded. No owner decision is required for these bounded corrections.
