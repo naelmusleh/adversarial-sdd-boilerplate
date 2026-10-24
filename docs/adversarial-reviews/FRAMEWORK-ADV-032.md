@@ -1,15 +1,15 @@
 ---
 id: FRAMEWORK-ADV-032
 type: adversarial-review
-title: FW-TASK-029 G-ARCH review rounds 1 and 2
+title: FW-TASK-029 G-ARCH review rounds 1 through 3
 status: blocked
-version: 1.0
+version: 1.1
 created: 2026-10-24
 updated: 2026-10-24
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ARCHITECTURE-003, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-COVERAGE-002, FRAMEWORK-CX-002, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-031, DECISION-027, DECISION-028
 ---
 
-# FRAMEWORK-ADV-032 — FW-TASK-029 G-ARCH review rounds 1 and 2
+# FRAMEWORK-ADV-032 — FW-TASK-029 G-ARCH review rounds 1 through 3
 
 ## Review scope and independence
 
@@ -52,8 +52,16 @@ Findings:
 
 The reviewer parsed all seven JSON documents and performed a limited structural/fixture check. Valid fixtures conformed to checked schema constraints; the invalid policy failed for three missing fields, so it did not isolate the intended error. This was not complete JSON Schema 2020-12 conformance or semantic verifier execution. Review evidence is limited to artifacts at the exact source commit above.
 
-## Gate status and required checkpoint
+## Round 3 — NEEDS-CHANGES (final owner-authorized cycle)
 
-**G-ARCH is BLOCKED at GARCH-03.** ARCH029-01–03 are addressed in round 2; ARCH029-04/05 remain unresolved. No owner choice is needed to correct these two findings. However, the repository's operating guard limits consecutive adversarial review/fix loops to two. The owner must explicitly authorize a third, final bounded correction and full-scope independent review before that work begins.
+- **Source:** commit `8402aae63965ccab19e5ef8ed070a2af140e49a9`; architecture blob `d527290cf7e374eaaa01c1f47c5203a414507999`; semantic-case blob `62d47e34a12e8a794136501bede26431abcb445b`; isolated missing-trust-root fixture blob `f1f0906287cacd256ad2028069480c53de72547b`.
+- **GARCH-01 — PASS.** Trust/data boundaries, failure and recovery behavior, privacy limits, retention uncertainty, and snapshot verification limits are explicit.
+- **GARCH-02 — PASS with a downstream owner condition.** ADRs state alternatives, evidence, authority and blockers. ADR-05's proposed size ceilings require owner acceptance or revision before G-IMPL.
+- **GARCH-03 — NEEDS-CHANGES.** ARCH029-04 is resolved: the negative policy fixture includes valid `source` and `provider_run` and omits only `issuer.trust_root_sha256`. ARCH029-05 is resolved: SEM-27 covers unsigned-receipt promotion, SEM-28 covers an extra required-check result, and SEM-29 covers top-level source-ref mismatch, all mapped to requirements.
+- **ARCH029-06 (Major) — Provider/run identity case incomplete:** SEM-16 covers attempt/event/ref/URL mismatch but omits provider and run ID, although FR-FW-032 requires provider run identity binding. Add explicit provider/run-ID mismatch semantic coverage with expected diagnostic `receipt.run_mismatch`.
+- The reviewer stated the correction itself requires no owner decision. The owner-authorized final review cycle is consumed, so a further correction and independent rerun requires a new owner checkpoint.
+- **Exact-revision CI:** Verify Pipeline [40135758687](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40135758687) passed Metadata & Artifact Audit, TypeScript Static Code Analysis, and Initializer Regression Gate on the exact reviewed source commit. The optional FW-029 Synthetic Evidence Probe job was skipped.
 
-The proposed checkpoint scope is limited to correcting the isolated invalid policy fixture and adding explicit semantic cases/mappings for unsigned-receipt rejection, extra-check rejection, and source-ref mismatch. It excludes changing FR-FW-032–034, provider or key selection, production trust anchoring, replay/authorization design, trust freshness/revocation, retention guarantees, implementation, app adoption, and release. Exact-revision Verify Pipeline and full-scope GARCH-01–03 review would follow if authorized. Implementation remains unauthorized.
+## Gate status
+
+**G-ARCH is BLOCKED at GARCH-03 by ARCH029-06.** ARCH029-04/05 are resolved. No further review/fix loop is authorized by the consumed final checkpoint. Owner action required: authorize a new bounded correction and independent review addressing only the missing provider/run-ID mismatch case, or defer FW-TASK-029. ADR-05 size-ceiling acceptance/revision remains required before implementation. G-IMPL, provider adoption, production trust decisions, app adoption and release remain unauthorized.
