@@ -253,6 +253,10 @@ jobs:
               or not 0 < bundles[0].stat().st_size <= 4_194_304
           ):
               raise SystemExit("expected one bounded attestation bundle")
+          safe_bundle = Path(os.environ["BUNDLE_DIR"]) / "attestation-bundle.jsonl"
+          if safe_bundle.exists():
+              raise SystemExit("normalized bundle path already exists")
+          bundles[0].rename(safe_bundle)
           PY
 
       - name: Preserve receipt and bundle briefly for offline verification
@@ -261,6 +265,6 @@ jobs:
           name: fw029-receipt-and-bundle-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/fw029-receipt/receipt.json
-            ${{ runner.temp }}/fw029-attestation-bundle/sha256*.jsonl
+            ${{ runner.temp }}/fw029-attestation-bundle/attestation-bundle.jsonl
           if-no-files-found: error
           retention-days: 1
