@@ -1,0 +1,31 @@
+{
+  "policy_version": "1.0",
+  "repository": {
+    "host": "github.example.test",
+    "owner": "sample-owner",
+    "name": "sample-repo",
+    "id": "123456789"
+  },
+  "gate_contract": {
+    "id": "FRAMEWORK-GATE-CONTRACT-001",
+    "version": "1.0",
+    "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "workflow": {
+    "path": ".github/workflows/verify-pipeline.yml",
+    "revision_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "identity": "sample-owner/sample-repo/.github/workflows/verify-pipeline.yml@refs/heads/sample"
+  },
+  "required_check_manifest_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "required_checks": [
+    {
+      "logical_id": "metadata-audit",
+      "name": "Metadata & Artifact Audit"
+    }
+  ],
+  "issuer": {
+    "provider": "example-attestor",
+    "identity": "sample-owner/sample-repo/.github/workflows/verify-pipeline.yml@refs/heads/sample"
+  },
+  "verification_mode": "read-only-repeatable"
+}
