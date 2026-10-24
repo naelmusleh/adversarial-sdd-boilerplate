@@ -3,7 +3,7 @@ id: FRAMEWORK-ARCHITECTURE-003
 type: framework-architecture
 title: FW-TASK-029 signed CI evidence receipt architecture
 status: draft
-version: 0.5
+version: 0.6
 created: 2026-10-24
 updated: 2026-10-24
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-027, DECISION-028, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-COVERAGE-002, FRAMEWORK-CX-002, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-031, FRAMEWORK-ADV-032, FRAMEWORK-GATE-CONTRACT-001
@@ -13,7 +13,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-027, DECI
 
 ## Gate work record
 
-- **Gate:** G-ARCH — owner authorized a new bounded ARCH029-06 correction/review cycle; exact-revision CI and independent review are pending.
+- **Gate:** G-ARCH — PASS within the approved FW-TASK-029 / FR-FW-032–034 scope, confirmed by exact-revision CI and independent review.
 - **Task and requirements:** FW-TASK-029, FR-FW-032–034, under DECISION-027 and the bounded G-ARCH authorization DECISION-028.
 - **Accepted inputs:** G-REQ PASS for FRAMEWORK-SPEC-001/DECISION-027; bounded G-FEAS PASS in FRAMEWORK-FEASIBILITY-010; G-COVERAGE PASS in FRAMEWORK-COVERAGE-002; G-CX PASS in FRAMEWORK-CX-002 and FRAMEWORK-ADV-031.
 - **Architecture scope:** Receipt and verification data boundaries, hosted signing workflow boundary, local verification flow, privacy/retention, operational failures, candidate contracts and fixtures, owner decisions, and task-ready implementation decomposition.
@@ -134,11 +134,11 @@ No unit is a product backlog commitment until G-ARCH is accepted and the owner s
 
 | Criterion | Evidence in this artifact | Status before independent review |
 | --- | --- | --- |
-| GARCH-01 — Boundaries, identities, data, integration/failure, security/privacy, deployment/operations/recovery | System context and trust-boundary table; lifecycle, retention, failure and recovery contracts; snapshot freshness limits. | PASS on review revision `a37ea6989d7090a4cf897ed82f87934cac8d2b4c`. |
-| GARCH-02 — Material ADRs, authority, alternatives, constraints, linked task scope and checks | Five ADRs state options, evidence, decision authority and downstream blockers; four proposed implementation units map to FR-FW-032–034. | PASS with owner decisions gated; ADR-05 size ceilings require owner acceptance or revision before implementation. |
-| GARCH-03 — Structural contracts, invariant checks and frozen handoff | Versioned JSON Schemas, synthetic valid/invalid fixtures, bounded input ceilings, requirement-to-semantic-case matrix and frozen semantic case IDs. | ARCH029-06 correction prepared with separate provider and run-ID mismatch cases; exact-revision CI and full-scope independent review pending. |
+| GARCH-01 — Boundaries, identities, data, integration/failure, security/privacy, deployment/operations/recovery | System context and trust-boundary table; lifecycle, retention, failure and recovery contracts; snapshot freshness limits. | PASS on final review revision `8326b77b10486e4140e9785cd44fcf31b78829e9`. |
+| GARCH-02 — Material ADRs, authority, alternatives, constraints, linked task scope and checks | Five ADRs state options, evidence, decision authority and downstream blockers; four proposed implementation units map to FR-FW-032–034. | PASS; ADR-05 size ceilings require owner acceptance or revision before G-IMPL. |
+| GARCH-03 — Structural contracts, invariant checks and frozen handoff | Versioned JSON Schemas, synthetic valid/invalid fixtures, bounded input ceilings, requirement-to-semantic-case matrix and frozen semantic case IDs. | PASS: SEM-30/31 cover provider and run-ID mismatch against pinned policy, and FR-FW-032 maps both. |
 
-The architecture remains draft and G-ARCH is in the newly owner-authorized bounded correction/review cycle for ARCH029-06. ARCH029-04/05 are resolved. Separate provider and run-ID mismatch cases have been added and mapped; exact-revision Verify Pipeline and full-scope independent review are pending. Unresolved owner decisions are visible conditions on dependent tasks, not implicit approval. G-IMPL, provider adoption, production trust decisions and release remain unauthorized.
+G-ARCH passes within the approved FW-TASK-029 scope. ARCH029-04/05 were resolved in the prior review cycle and ARCH029-06 is resolved by SEM-30/31. Exact-revision Verify Pipeline [40137156642](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40137156642) passed all three required jobs, and the independent reviewer passed GARCH-01–03 at source commit `8326b77b10486e4140e9785cd44fcf31b78829e9`. ADR-05 size ceilings remain proposed and require owner acceptance or revision before G-IMPL. No G-IMPL, provider adoption, production trust decisions or release is authorized.
 
 ## Independent G-ARCH review history
 
@@ -147,4 +147,4 @@ The architecture remains draft and G-ARCH is in the newly owner-authorized bound
 
 - **Round 3 — NEEDS-CHANGES:** Reviewer `/root/fw029_independent_review` reviewed source commit `8402aae63965ccab19e5ef8ed070a2af140e49a9`, architecture blob `d527290cf7e374eaaa01c1f47c5203a414507999`, semantic-case blob `62d47e34a12e8a794136501bede26431abcb445b`, and isolated missing-trust-root fixture blob `f1f0906287cacd256ad2028069480c53de72547b`. GARCH-01 passed; GARCH-02 passed subject to ADR-05 size-ceiling owner acceptance or revision before G-IMPL; GARCH-03 needs changes. ARCH029-04 and ARCH029-05 are resolved. **ARCH029-06 (Major):** semantic case FW029-SEM-16 covers run attempt/event/ref/URL mismatch but omits provider and run-ID mismatch, despite FR-FW-032 binding provider run identity. Add explicit deterministic mismatch coverage with `receipt.run_mismatch`. The reviewer stated no owner decision is needed for the content change; however, this final owner-authorized review cycle is consumed under the repository's review-loop limit, so another correction plus independent review requires a new owner checkpoint. Review report: [FRAMEWORK-ADV-032](../adversarial-reviews/FRAMEWORK-ADV-032.md). Verify Pipeline [40135758687](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40135758687) passed all three required checks on the exact reviewed source commit; the synthetic evidence probe job was skipped. G-IMPL remains unauthorized.
 
-- **Round 4 — bounded correction prepared:** Following the owner's new authorization, added separate semantic cases for provider mismatch and run-ID mismatch (FW029-SEM-30/31), both expecting `receipt.run_mismatch`, and mapped them to FR-FW-032. Exact-revision Verify Pipeline and final full-scope independent review are pending. No provider, trust, replay, retention, or implementation decision changed.
+- **Round 4 — PASS:** Following the owner's bounded authorization, separate semantic cases FW029-SEM-30/31 cover provider and run-ID mismatch against the pinned policy and both expect `failed` / `receipt.run_mismatch`. Reviewer `/root/fw029_independent_review` passed GARCH-01–03 at exact source commit `8326b77b10486e4140e9785cd44fcf31b78829e9`. Verify Pipeline [40137156642](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40137156642) passed all three required jobs on that exact commit; the optional synthetic evidence probe was skipped. ARCH029-06 is resolved. No provider, trust, replay, retention, or implementation decision changed.
