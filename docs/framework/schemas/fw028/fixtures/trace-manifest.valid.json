@@ -3,10 +3,32 @@
   "repository": "https://github.com/example/sample",
   "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "task_id": "APP-TASK-001",
-  "criterion_ids": ["AC-1"],
-  "changed_paths": ["src/domain/rule.py"],
-  "path_criteria": [{"path": "src/domain/rule.py", "criterion_ids": ["AC-1"]}],
-  "profile": {"profile_id": "sample", "profile_version": "1.0.0", "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
-  "required_checks": [{"check_id": "CI-UNIT", "provider": "github-actions", "name": "Unit Tests"}],
-  "exceptions": []
+  "criterion_ids": [
+    "AC-1"
+  ],
+  "changed_paths": [
+    "src/domain/rule.py"
+  ],
+  "path_criteria": [
+    {
+      "path": "src/domain/rule.py",
+      "criterion_ids": [
+        "AC-1"
+      ]
+    }
+  ],
+  "profile": {
+    "profile_id": "sample",
+    "profile_version": "1.0.0",
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "required_checks": [
+    {
+      "check_id": "CI-UNIT",
+      "provider": "github-actions",
+      "name": "Unit Tests"
+    }
+  ],
+  "exceptions": [],
+  "declared_risk_tier": "low"
 }
