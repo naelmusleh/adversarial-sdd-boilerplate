@@ -1,0 +1,72 @@
+{
+  "contract_version": "1.0",
+  "synthetic_only": true,
+  "cases": [
+    {
+      "id": "FW029-SEM-01",
+      "mutation": "provider run source SHA differs from receipt source SHA",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.source_mismatch"
+    },
+    {
+      "id": "FW029-SEM-02",
+      "mutation": "provider metadata returns more than one matching run attempt",
+      "expected_status": "failed",
+      "expected_diagnostic": "provider.run_ambiguous"
+    },
+    {
+      "id": "FW029-SEM-03",
+      "mutation": "provider check query cannot be retrieved",
+      "expected_status": "unavailable",
+      "expected_diagnostic": "provider.checks_unavailable"
+    },
+    {
+      "id": "FW029-SEM-04",
+      "mutation": "returned required check set omits or duplicates a logical check",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.check_set_mismatch"
+    },
+    {
+      "id": "FW029-SEM-05",
+      "mutation": "policy file is present but its separately supplied expected digest is absent",
+      "expected_status": "blocked",
+      "expected_diagnostic": "policy.expected_digest_missing"
+    },
+    {
+      "id": "FW029-SEM-06",
+      "mutation": "policy bytes differ from the externally pinned digest",
+      "expected_status": "failed",
+      "expected_diagnostic": "policy.digest_mismatch"
+    },
+    {
+      "id": "FW029-SEM-07",
+      "mutation": "required trust-root file was not supplied before verification starts",
+      "expected_status": "blocked",
+      "expected_diagnostic": "trust_root.missing"
+    },
+    {
+      "id": "FW029-SEM-08",
+      "mutation": "supplied trust-root bytes differ from the policy-bound root digest",
+      "expected_status": "failed",
+      "expected_diagnostic": "trust_root.digest_mismatch"
+    },
+    {
+      "id": "FW029-SEM-09",
+      "mutation": "signature verifies but issuer identity is not allowed by the pinned policy",
+      "expected_status": "failed",
+      "expected_diagnostic": "issuer.identity_untrusted"
+    },
+    {
+      "id": "FW029-SEM-10",
+      "mutation": "previously produced verification result is evaluated after selected policy revision changes",
+      "expected_status": "stale",
+      "expected_diagnostic": "result.scope_stale"
+    },
+    {
+      "id": "FW029-SEM-11",
+      "mutation": "receipt and signature verify against supplied snapshot, but snapshot freshness is unknown",
+      "expected_status": "passed",
+      "expected_diagnostic": "trust.freshness_unknown"
+    }
+  ]
+}
