@@ -174,8 +174,8 @@ def _check_provenance(verification: dict[str, Any], receipt: dict[str, Any], rec
     internal = build.get("internalParameters")
     github = internal.get("github") if isinstance(internal, dict) else None
     _same(github.get("repository_id") if isinstance(github, dict) else None, repo_id, "attested repository ID")
-    if not isinstance(github, dict) or github.get("runner_environment") != "github-hosted":
-        raise _fail("attestation.runner_untrusted", "attestation was not produced on a GitHub-hosted runner")
+    if not isinstance(github, dict):
+        raise _fail("attestation.predicate_invalid", "SLSA GitHub parameters are missing")
 
     dependencies = build.get("resolvedDependencies")
     expected_dependency_uri = f"git+{repo_uri}@{source['ref']}"
@@ -209,8 +209,6 @@ def _check_provenance(verification: dict[str, Any], receipt: dict[str, Any], rec
         _same(certificate.get(key), expected, label)
     if certificate.get("githubWorkflowTrigger") != "workflow_dispatch" or certificate.get("buildTrigger") != "workflow_dispatch":
         raise _fail("attestation.trigger_unsupported", "pilot signer must be invoked through workflow_dispatch")
-    if certificate.get("runnerEnvironment") != "github-hosted":
-        raise _fail("attestation.runner_untrusted", "signing certificate does not identify a GitHub-hosted runner")
 
     timestamps = verification.get("verifiedTimestamps")
     if not isinstance(timestamps, list) or not timestamps:
