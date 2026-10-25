@@ -3,10 +3,10 @@ id: FRAMEWORK-ARCHITECTURE-003
 type: framework-architecture
 title: FW-TASK-029 signed CI evidence receipt architecture
 status: draft
-version: 0.7
+version: 0.8
 created: 2026-10-24
-updated: 2026-10-24
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-027, DECISION-028, DECISION-029, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-COVERAGE-002, FRAMEWORK-CX-002, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-031, FRAMEWORK-ADV-032, FRAMEWORK-GATE-CONTRACT-001
+updated: 2026-10-25
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-027, DECISION-028, DECISION-029, DECISION-030, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-COVERAGE-002, FRAMEWORK-CX-002, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-031, FRAMEWORK-ADV-032, FRAMEWORK-GATE-CONTRACT-001
 ---
 
 # FRAMEWORK-ARCHITECTURE-003 — FW-TASK-029 signed CI evidence receipt architecture
@@ -88,7 +88,7 @@ The verifier is not a production monitor or gate runner. It makes no network cal
 
 ### ADR-FW029-ARCH-01 — Preserve provider choice as an adapter decision
 
-**Options:** adopt the tested GitHub Actions/attestation candidate for the first implementation; design a provider-neutral interface and defer adapters; or compare another provider before implementation. **Evidence:** FRAMEWORK-FEASIBILITY-010 demonstrates only the GitHub candidate and supplied trust-root snapshot. **Proposed boundary:** retain one explicit provider adapter contract and report unsupported providers honestly. The architecture does not adopt a provider. **Authority:** owner must select provider/key mechanism before a provider-specific implementation task is authorized. **Impact:** FW029-IMPL-02 remains conditional until that decision and a reviewed exact workflow identity are recorded.
+**Options:** adopt the tested GitHub Actions/attestation candidate for the first implementation; design a provider-neutral interface and defer adapters; or compare another provider before implementation. **Evidence:** FRAMEWORK-FEASIBILITY-010 demonstrates only the GitHub candidate and supplied trust-root snapshot. **Owner selection (DECISION-030, 2026-10-25):** GitHub Actions artifact attestations with Sigstore-backed keyless signing for FW029-IMPL-02. The exact reusable signer identity is `naelmusleh/adversarial-sdd-boilerplate/.github/workflows/fw029-evidence-probe.yml@refs/heads/codex/v2-backlog-roadmap`, invoked only by `.github/workflows/verify-pipeline.yml` on that exact ref. **Boundary:** implement this one provider adapter, report unsupported providers honestly, pin actions by immutable commit, keep preparation/signing jobs separate, and permit only the approved manual-dispatch path; no signing of untrusted pull-request code. **Impact:** this resolves provider/signer selection for FW029-IMPL-02 only. Production policy/trust-root distribution, freshness/revocation, retention, provider adoption by apps, gate authorization and release remain undecided or out of scope.
 
 ### ADR-FW029-ARCH-02 — Require an independent trust anchor for policy and root bytes
 
@@ -128,7 +128,7 @@ The verifier is not a production monitor or gate runner. It makes no network cal
 
 Semantic cases are a frozen implementation handoff, not execution evidence. G-IMPL must execute every listed case and compare the actual diagnostic/status with the expected value. If a requirement/acceptance criterion changes, the map and case IDs must be reviewed with the contract.
 
-No unit is a product backlog commitment until G-ARCH is accepted and the owner separately authorizes a G-IMPL scope. FW-TASK-020 remains independent and its app-hosted run cannot be replaced.
+No unit is a product backlog commitment until G-ARCH is accepted and the owner separately authorizes a G-IMPL scope. DECISION-030 resolves the provider/signer condition for FW029-IMPL-02 only; separate owner decisions and G-IMPL scopes remain required for later units. FW-TASK-020 remains independent and its app-hosted run cannot be replaced.
 
 ## G-ARCH acceptance mapping and evidence status
 
