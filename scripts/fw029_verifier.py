@@ -15,6 +15,7 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Callable
 
@@ -267,8 +268,22 @@ def verify_files(
         raise _fail("receipt.canonicalization_mismatch", "signed receipt bytes are not the required canonical JSON serialization")
     if not hmac.compare_digest(hashlib.sha256(root_bytes).hexdigest(), policy["issuer"]["trust_root_sha256"]):
         raise _fail("trust_root.digest_mismatch", "trust-root bytes do not match policy pin")
-    verification = _run_gh(receipt_path, bundle_path, trust_root_path, policy, runner)
-    timestamp_count = _check_provenance(verification, receipt, receipt_bytes, policy)
+    # Do not let the verifier and GitHub CLI observe different bytes if a
+    # caller replaces an input path after the validation reads above.
+    with tempfile.TemporaryDirectory(prefix="fw029-verify-") as snapshot_dir:
+        snapshots = Path(snapshot_dir)
+        snapshot_receipt = snapshots / "receipt.json"
+        snapshot_bundle = snapshots / "attestation-bundle.jsonl"
+        snapshot_root = snapshots / "trusted_root.jsonl"
+        for path, content in (
+            (snapshot_receipt, receipt_bytes),
+            (snapshot_bundle, bundle_bytes),
+            (snapshot_root, root_bytes),
+        ):
+            path.write_bytes(content)
+            path.chmod(0o400)
+        verification = _run_gh(snapshot_receipt, snapshot_bundle, snapshot_root, policy, runner)
+        timestamp_count = _check_provenance(verification, receipt, receipt_bytes, policy)
     return {
         "state": "passed",
         "signature_status": "cryptographically-verified",

@@ -220,6 +220,29 @@ class VerifierTests(unittest.TestCase):
         self.assertEqual(error.exception.code, "bundle.size_invalid")
         self.assertEqual(calls, [])
 
+    def test_cli_consumes_snapshots_if_original_paths_change(self) -> None:
+        original_receipt = self.receipt_path.read_bytes()
+        original_bundle = self.bundle_path.read_bytes()
+        original_root = self.root_path.read_bytes()
+        calls = []
+
+        def replace_inputs_then_verify(command, **kwargs):
+            calls.append(command)
+            self.receipt_path.write_bytes(b"replaced receipt")
+            self.bundle_path.write_bytes(b"replaced bundle")
+            self.root_path.write_bytes(b"replaced root")
+            receipt_snapshot = Path(command[3])
+            bundle_snapshot = Path(command[command.index("--bundle") + 1])
+            root_snapshot = Path(command[command.index("--custom-trusted-root") + 1])
+            self.assertEqual(receipt_snapshot.read_bytes(), original_receipt)
+            self.assertEqual(bundle_snapshot.read_bytes(), original_bundle)
+            self.assertEqual(root_snapshot.read_bytes(), original_root)
+            return CompletedProcess(command, 0, self.output, b"")
+
+        result = self.verify(replace_inputs_then_verify)
+        self.assertEqual(result["state"], "passed")
+        self.assertEqual(len(calls), 1)
+
     def test_untrusted_gh_result_is_not_passed(self) -> None:
         runner, _ = self.runner(b"not-json")
         with self.assertRaises(VerificationError) as error:
