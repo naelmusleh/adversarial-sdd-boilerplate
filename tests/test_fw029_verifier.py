@@ -80,6 +80,7 @@ def _verified_output(receipt: dict[str, Any]) -> bytes:
         "sourceRepositoryRef": source_ref,
         "githubWorkflowRepository": "sample-owner/sample-repo",
         "githubWorkflowSHA": source_sha,
+        "buildSignerDigest": source_sha,
         "githubWorkflowRef": "refs/heads/sample",
         "githubWorkflowTrigger": "workflow_dispatch",
         "buildTrigger": "workflow_dispatch",

@@ -1,5 +1,5 @@
 ---
-id: FW029-IMPL-03-VERIFIER
+id: FRAMEWORK-IMPL-003
 type: framework-implementation-guide
 title: FW-TASK-029 offline receipt verifier
 status: draft
