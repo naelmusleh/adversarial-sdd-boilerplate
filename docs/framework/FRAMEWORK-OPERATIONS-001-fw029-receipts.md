@@ -3,10 +3,10 @@ id: FRAMEWORK-OPERATIONS-001
 type: framework-operations-guide
 title: FW-TASK-029 receipt retrieval and operator handling
 status: draft
-version: 1.4
+version: 1.5
 created: 2026-10-25
 updated: 2026-10-25
-related-artifacts: FRAMEWORK-ARCHITECTURE-003, FRAMEWORK-IMPL-003, FRAMEWORK-CX-002, FRAMEWORK-BACKLOG-001, DECISION-027, DECISION-030, DECISION-031, DECISION-032
+related-artifacts: FRAMEWORK-ARCHITECTURE-003, FRAMEWORK-IMPL-003, FRAMEWORK-CX-002, FRAMEWORK-BACKLOG-001, DECISION-027, DECISION-030, DECISION-031, DECISION-032, DECISION-033
 ---
 
 # FW029-IMPL-04 — Receipt retrieval and operator handling
@@ -33,7 +33,7 @@ The current pilot configures workflow artifact retention to one day. This is a c
 
 ## Prepare exact verification inputs
 
-The verifier needs four files: receipt, detached bundle, policy, and a caller-supplied `trusted_root.jsonl` snapshot. It also needs the expected policy SHA-256 from a channel independent of the policy file and bundle. Use the policy and trust root selected for the exact repository, source ref, workflow and provider run. Obtain their expected digests through the approved channel for the bounded review. The repository's synthetic policy fixtures are test data and must not be substituted for a run-specific policy.
+The verifier needs four files: receipt, detached bundle, policy, and a caller-supplied `trusted_root.jsonl` snapshot. It also needs the expected policy SHA-256 from a channel independent of the policy file and bundle. For this bounded pilot, the owner supplies the trusted-root snapshot and its expected digest, and supplies the expected policy digest, through a channel independent of the files and bundle being checked. The owner is the input/recovery contact. If an independent digest or required input is unavailable, stop; verification is blocked. The repository's synthetic policy fixtures are test data and must not be substituted for a run-specific policy.
 
 Check that the trust-root digest matches the root digest pinned in the policy. A matching digest proves byte identity with that pin; it does not prove that the root is current or that the pin source is trustworthy. If either expected digest is missing, arrives through the same untrusted source as the file, or does not match, stop and obtain the input through its owner. Do not refresh or replace a root during a verification attempt.
 
