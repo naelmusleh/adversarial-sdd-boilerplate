@@ -3,10 +3,10 @@ id: FRAMEWORK-IMPL-003
 type: framework-implementation-guide
 title: FW-TASK-029 offline receipt verifier
 status: draft
-version: 1.0
+version: 1.1
 created: 2026-10-25
 updated: 2026-10-25
-related-artifacts: FRAMEWORK-ARCHITECTURE-003, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-031
+related-artifacts: FRAMEWORK-ARCHITECTURE-003, FRAMEWORK-OPERATIONS-001, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-031, DECISION-032
 ---
 
 # FW029-IMPL-03 — Offline receipt verifier
@@ -28,4 +28,4 @@ python3 scripts/fw029_verifier.py \
 
 The command is read-only and emits one bounded JSON result. A `passed` result means the receipt and provenance verify against the exact caller-supplied policy and root snapshot. It always reports `freshness: unknown`, `revocation_status: not-established`, and `authorization: false`. It does not fetch current repository state, prove branch protection, establish test quality, pass a lifecycle gate, or authorize merge/release. GitHub CLI local-bundle verification binds certificate repository names as they were at signing; the verifier additionally checks the signed certificate's repository ID but does not establish whether GitHub has since renamed or reassigned the repository. See the [GitHub CLI verification documentation](https://cli.github.com/manual/gh_attestation_verify).
 
-The root snapshot is caller-supplied trust material. A passing snapshot check does not mean it is current. Production trust distribution, root rotation, freshness/revocation policy, retention and operator recovery remain outside this implementation unit.
+The root snapshot is caller-supplied trust material. A passing snapshot check does not mean it is current. Production trust distribution, root rotation, freshness/revocation policy, retention and operator recovery remain outside this implementation unit. The bounded pilot retrieval, local handling, recovery, privacy and claim-limit procedure is recorded in [FRAMEWORK-OPERATIONS-001](FRAMEWORK-OPERATIONS-001-fw029-receipts.md); it makes no durability or authorization promise.
