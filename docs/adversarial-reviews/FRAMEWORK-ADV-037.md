@@ -2,8 +2,8 @@
 id: FRAMEWORK-ADV-037
 type: adversarial-review
 title: FW-TASK-029 task-wide reconciliation review
-status: revision-required
-version: 0.1
+status: approved
+version: 0.2
 created: 2026-10-25
 updated: 2026-10-25
 reviewed-artifact: FW-TASK-029 / task-wide G-IMPL reconciliation
@@ -23,6 +23,10 @@ The reviewer found that the saved local verification record referenced an earlie
 
 **Correction:** The receipt, bundle, policy, and root were matched to the owner-approved exact policy digest above. Verification returned `state=passed`, `signature_status=cryptographically-verified`, `freshness=unknown`, `revocation_status=not-established`, `authorization=false`, with no diagnostics. The policy binds source SHA `e1bfd4366ff4050928d16f289c0ecb394a16e822`. The evidence and claim limits are now recorded in the backlog work record. Root and bundle bytes remain outside the repository; only digests and bounded verification output are recorded.
 
-## Follow-up review
+## Follow-up review — PASS
 
-Pending independent read-only review of the corrected exact commit and exact-revision Verify Pipeline. Until both pass, this artifact and the task-wide G-IMPL reconciliation remain `revision-required` / pending; component-unit completions do not imply task-wide PASS.
+The independent reviewer rechecked corrected commit `65471b64312e65d2de4385ea60e90e8972e65da` read-only. The exact policy digest, source run/SHA, signer run, attached ZIP digest, receipt subject, detached bundle, and supplied root hash match. GitHub confirms the source and signer runs succeeded and all required source checks passed. The run-specific verifier output is `passed`; freshness remains `unknown`, revocation `not-established`, and authorization `false`. No material findings remain within the task-wide reconciliation scope.
+
+Verify Pipeline [40243911705](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40243911705) succeeded on the exact reviewed commit: Metadata & Artifact Audit, Initializer Regression Gate, and TypeScript Static Code Analysis passed; the optional FW-029 Synthetic Evidence Probe was skipped on push.
+
+This PASS reconciles FW029-IMPL-01 through -04 under the approved scope. It does not authorize application adoption, gate or release action, durable retention/deletion claims, or production trust/freshness claims.
