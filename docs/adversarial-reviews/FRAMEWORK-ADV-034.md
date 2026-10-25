@@ -2,8 +2,8 @@
 id: FRAMEWORK-ADV-034
 type: adversarial-review
 title: FW-TASK-029 FW029-IMPL-02 hosted evidence review
-status: revision-required
-version: 0.1
+status: approved
+version: 0.2
 created: 2026-10-25
 updated: 2026-10-25
 reviewed-artifact: FW-TASK-029 / FW029-IMPL-02 at e1bfd4366ff4050928d16f289c0ecb394a16e822
@@ -34,3 +34,12 @@ The source review found the workflow restricted to the approved manual dispatch 
 ## Disposition
 
 FW029-IMPL-02 remains incomplete pending resolution of FW029-IMPL02-01 and an independent read-only follow-up. No G-IMPL pass is claimed for this unit or FW-TASK-029. The implementation and exact-revision hosted run are recorded as evidence, but acceptance is not inferred from run success or artifact metadata alone.
+
+
+## Follow-up review — PASS
+
+After the owner supplied the hosted artifact ZIP, reviewer `/root/fw029_independent_review` performed the bounded read-only content inspection. ZIP SHA-256 `573229d599741eafe2f0dab198fdad273ccda1623a47ea5968b2fafc15612bb8` matches GitHub artifact metadata. The archive contains exactly `receipt.json` (1969 bytes) and one DSSE/Sigstore JSONL entry (11908 bytes). Receipt SHA-256 `dfd1f9fd9983ef6bb52f9363e7d48d25a38e206b10e672be031305bace2467b5` matches the in-toto statement subject digest exactly.
+
+The receipt binds candidate `e1bfd4366ff4050928d16f289c0ecb394a16e822`, ref `refs/heads/codex/v2-backlog-roadmap`, source Verify Pipeline push run `40198720450` attempt 1, repository ID `1413825865`, and all three required successful check IDs/names/conclusions. GitHub API records confirm those checks share the source SHA and GitHub Actions app/check suite. The reviewer also confirmed the required-manifest digest, exact gate-contract byte digest, and canonical check-set digest. The bundle statement binds the Verify Pipeline workflow as caller, `workflow_dispatch`, repository ID and candidate commit/ref; its invocation identifies run `40199087833` attempt 1 and its builder identity/ref matches the reusable signer. The certificate SAN names that signer identity.
+
+**Independent verdict: PASS; no receipt or invocation mismatch found.** Review was limited to contents and consistency. It did not verify the cryptographic signature, Rekor inclusion, trusted root, or trust freshness; those remain FW029-IMPL-03. The one-day artifact retention is not a durability guarantee. FW029-IMPL-02 passes within its approved scope; FW-TASK-029 remains in progress.
