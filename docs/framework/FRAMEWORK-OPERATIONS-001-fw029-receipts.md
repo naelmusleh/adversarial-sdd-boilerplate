@@ -3,7 +3,7 @@ id: FRAMEWORK-OPERATIONS-001
 type: framework-operations-guide
 title: FW-TASK-029 receipt retrieval and operator handling
 status: draft
-version: 1.0
+version: 1.1
 created: 2026-10-25
 updated: 2026-10-25
 related-artifacts: FRAMEWORK-ARCHITECTURE-003, FRAMEWORK-IMPL-003, FRAMEWORK-CX-002, FRAMEWORK-BACKLOG-001, DECISION-027, DECISION-030, DECISION-031, DECISION-032
@@ -49,7 +49,13 @@ python3 scripts/fw029_verifier.py \
   --trusted-root /private/path/trusted_root.jsonl
 ```
 
-Keep the JSON output with the run identity and the four input digests. A zero exit status and `state: passed` mean only that the bounded verification succeeded against those exact supplied bytes. A nonzero exit or any other state is a failed verification; retain the diagnostic and do not repair or edit signed inputs in place. Re-run only after an authorized source supplies corrected inputs or a distinct fresh run.
+The JSON output includes the receipt, policy, and trust-root digests. The verifier does not emit the bundle digest, so record it separately; on macOS or Linux, run:
+
+```sh
+shasum -a 256 /private/path/attestation-bundle.jsonl
+```
+
+Keep that digest with the JSON output and exact run identity. Preserve the verifier's exact `state` and diagnostic. `blocked` means a required local input is missing or cannot be read; `unavailable` means the verifier dependency could not be obtained or started; `failed` means verification ran and rejected an input or claim. A zero exit status and `state: passed` mean only that the bounded verification succeeded against those exact supplied bytes. Any other state or nonzero exit means the attempt did not pass. Do not repair or edit signed inputs in place. Re-run only after an authorized source supplies corrected inputs or a distinct fresh run.
 
 ## Interpret limits and recover
 
@@ -74,6 +80,6 @@ This guide does not select a local storage provider, define a retention period, 
 
 ## Review record
 
-For each use, record the exact verifier revision, run ID/attempt, source SHA/ref, policy and trust-root digests, receipt digest, CLI version, result state, diagnostics, operator, review date, and the separate gate/release decision or its pending owner. Do not copy a `passed` result into a gate record as PASS without the gate owner reviewing all required evidence against that gate's contract.
+For each use, record the exact verifier revision, run ID/attempt, source SHA/ref, receipt, detached-bundle, policy, and trust-root digests, CLI version, exact result state and diagnostics, operator, review date, and the separate gate/release decision or its pending owner. Do not copy a `passed` result into a gate record as PASS without the gate owner reviewing all required evidence against that gate's contract.
 
 The pilot's configured one-day artifact expiry and one observed retrieval do not establish a service-level retention guarantee. Trust freshness, revocation status, long-term availability, policy/root distribution and rotation, secure erasure, gate approval and release authorization remain unproven or out of scope.
