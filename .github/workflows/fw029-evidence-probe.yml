@@ -1,4 +1,4 @@
-name: FW-029 Synthetic Evidence Probe
+name: FW-029 Hosted Receipt and Sigstore Adapter
 
 on:
   workflow_call:
@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   prepare-receipt:
-    name: Resolve exact hosted checks and prepare synthetic receipt
+    name: Resolve exact hosted checks and prepare signed receipt
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -20,188 +20,20 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Resolve one exact Verify Pipeline run and construct receipt
+      - name: Build canonical receipt from exact GitHub provider records
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPOSITORY: ${{ github.repository }}
           GH_SHA: ${{ github.sha }}
           GH_REF: ${{ github.ref }}
-          GH_REF_NAME: ${{ github.ref_name }}
           GH_EVENT: ${{ github.event_name }}
           GH_CALLER_WORKFLOW_REF: ${{ github.workflow_ref }}
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import hashlib
-          import json
-          import os
-          import re
-          import subprocess
-          from pathlib import Path
-
-          def api(endpoint):
-              result = subprocess.run(
-                  ["gh", "api", endpoint], check=True, capture_output=True, text=True
-              )
-              return json.loads(result.stdout)
-
-          repo = os.environ["GH_REPOSITORY"]
-          sha = os.environ["GH_SHA"]
-          ref = os.environ["GH_REF"]
-          ref_name = os.environ["GH_REF_NAME"]
-          if os.environ["GH_EVENT"] != "workflow_dispatch":
-              raise SystemExit("probe must be manually dispatched")
-          if ref != "refs/heads/codex/v2-backlog-roadmap":
-              raise SystemExit("probe is restricted to the authorized feature branch")
-          expected_caller = f"{repo}/.github/workflows/verify-pipeline.yml@{ref}"
-          if os.environ["GH_CALLER_WORKFLOW_REF"] != expected_caller:
-              raise SystemExit("probe was not called by the authorized Verify Pipeline workflow")
-
-          runs_response = api(
-              f"repos/{repo}/actions/workflows/verify-pipeline.yml/runs"
-              f"?head_sha={sha}&event=push&per_page=100"
-          )
-          runs = runs_response["workflow_runs"]
-          if runs_response.get("total_count") != len(runs) or len(runs) > 100:
-              raise SystemExit("provider workflow run result is incomplete or unbounded")
-          candidates = [
-              run for run in runs
-              if run.get("head_sha") == sha
-              and run.get("head_branch") == ref_name
-              and run.get("event") == "push"
-              and run.get("path", "").split("@", 1)[0]
-                  == ".github/workflows/verify-pipeline.yml"
-          ]
-          if len(candidates) != 1:
-              raise SystemExit(f"expected one Verify Pipeline run, found {len(candidates)}")
-          run = candidates[0]
-          if run.get("status") != "completed" or run.get("conclusion") != "success":
-              raise SystemExit("exact Verify Pipeline run is not completed successfully")
-          if not isinstance(run.get("run_attempt"), int) or run["run_attempt"] < 1:
-              raise SystemExit("provider run attempt is missing or invalid")
-          if run.get("head_sha") != sha or run.get("head_branch") != ref_name:
-              raise SystemExit("provider run source SHA or ref mismatch")
-          workflow_path = run.get("path", "")
-          if workflow_path != ".github/workflows/verify-pipeline.yml":
-              raise SystemExit("provider workflow identity mismatch")
-          workflow_ref = f"refs/heads/{run['head_branch']}"
-          if workflow_ref != ref:
-              raise SystemExit("Verify Pipeline definition ref differs from the approved source ref")
-
-          jobs_response = api(
-              f"repos/{repo}/actions/runs/{run['id']}/attempts/{run['run_attempt']}/jobs?per_page=100"
-          )
-          jobs = jobs_response["jobs"]
-          expected = {
-              "Metadata & Artifact Audit",
-              "Initializer Regression Gate",
-              "TypeScript Static Code Analysis",
-          }
-          expected_skipped = {"FW-029 Synthetic Evidence Probe"}
-          if jobs_response.get("total_count") != len(jobs) or len(jobs) > 100:
-              raise SystemExit("provider job result is incomplete or unbounded")
-          job_names = {job.get("name") for job in jobs}
-          if job_names != expected | expected_skipped:
-              raise SystemExit("provider run has missing or unexpected check names")
-          named = {}
-          for job in jobs:
-              if job.get("name") in expected:
-                  named.setdefault(job["name"], []).append(job)
-          skipped_probe = [job for job in jobs if job.get("name") in expected_skipped]
-          if len(skipped_probe) != 1 or skipped_probe[0].get("conclusion") != "skipped":
-              raise SystemExit("probe caller job must be present exactly once and skipped on push")
-          if set(named) != expected or any(len(items) != 1 for items in named.values()):
-              raise SystemExit("required provider checks are missing or duplicated")
-
-          check_records = []
-          for name in sorted(expected):
-              job = named[name][0]
-              if job.get("run_id") != run["id"] or job.get("run_attempt") != run["run_attempt"]:
-                  raise SystemExit(f"{name}: provider job run/attempt mismatch")
-              if job.get("head_sha") != sha or job.get("status") != "completed" or job.get("conclusion") != "success":
-                  raise SystemExit(f"{name}: provider job is not a success for the exact SHA")
-              check_id = job.get("id")
-              if not isinstance(check_id, int):
-                  raise SystemExit(f"{name}: provider check ID is invalid")
-              check = api(f"repos/{repo}/check-runs/{check_id}")
-              app = check.get("app") or {}
-              if app.get("id") != 15368 or app.get("slug") != "github-actions":
-                  raise SystemExit(f"{name}: check was not created by GitHub Actions app 15368")
-              suite = check.get("check_suite") or {}
-              if suite.get("id") != run.get("check_suite_id"):
-                  raise SystemExit(f"{name}: check suite does not belong to selected workflow run")
-              if check.get("name") != name or check.get("head_sha") != sha:
-                  raise SystemExit(f"{name}: check identity or source SHA mismatch")
-              if check.get("status") != "completed" or check.get("conclusion") != "success":
-                  raise SystemExit(f"{name}: check is not successful")
-              check_records.append({
-                  "id": check_id,
-                  "name": name,
-                  "app_id": app["id"],
-                  "app_slug": app["slug"],
-                  "check_suite_id": suite["id"],
-                  "conclusion": check["conclusion"],
-                  "head_sha": check["head_sha"],
-              })
-
-          repository = api(f"repos/{repo}")
-          contract_path = Path("docs/framework/FRAMEWORK-GATE-CONTRACT-001.md")
-          contract_bytes = contract_path.read_bytes()
-          front_matter = contract_bytes.split(b"---", 2)[1].decode("utf-8")
-          version_match = re.search(r"^version:\s*([0-9]+\.[0-9]+)\s*$", front_matter, re.MULTILINE)
-          if not version_match or version_match.group(1) != "1.2":
-              raise SystemExit("gate contract is missing or not the expected version 1.2")
-          contract_digest = hashlib.sha256(contract_bytes).hexdigest()
-          policy = {
-              "schema": "sdd-required-checks/v1",
-              "profile": "governance-receipt-probe",
-              "expected_ref": "refs/heads/codex/v2-backlog-roadmap",
-              "expected_event": "push",
-              "workflow_path": ".github/workflows/verify-pipeline.yml",
-              "workflow_ref": ref,
-              "gate_contract": {
-                  "id": "FRAMEWORK-GATE-CONTRACT-001",
-                  "version": version_match.group(1),
-                  "revision": sha,
-                  "sha256": contract_digest,
-              },
-              "expected_app_id": 15368,
-              "expected_app_slug": "github-actions",
-              "required_check_names": sorted(expected),
-          }
-          canonical = lambda value: json.dumps(
-              value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-          ).encode("utf-8")
-          receipt = {
-              "schema": "sdd-ci-evidence-receipt/v1",
-              "repository": {"full_name": repo, "id": repository["id"]},
-              "source": {"sha": sha, "ref": ref, "event": run["event"]},
-              "gate_contract": {
-                  "id": "FRAMEWORK-GATE-CONTRACT-001",
-                  "version": version_match.group(1),
-                  "revision": sha,
-                  "sha256": contract_digest,
-              },
-              "workflow": {
-                  "path": workflow_path,
-                  "ref": workflow_ref,
-                  "revision": sha,
-                  "run_id": run["id"],
-                  "run_attempt": run["run_attempt"],
-                  "check_suite_id": run["check_suite_id"],
-              },
-              "required_check_manifest_sha256": hashlib.sha256(canonical(policy)).hexdigest(),
-              "checks": check_records,
-              "checks_sha256": hashlib.sha256(canonical(check_records)).hexdigest(),
-          }
-          Path("receipt.json").write_bytes(canonical(receipt))
-          print("Prepared bounded receipt for exact successful hosted run; no source or logs included.")
-          PY
+        run: python3 -m scripts.fw029_github_adapter
 
       - name: Upload receipt for isolated signing job
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
-          name: fw029-synthetic-receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          name: fw029-receipt-${{ github.run_id }}-${{ github.run_attempt }}
           path: receipt.json
           if-no-files-found: error
           retention-days: 1
@@ -220,10 +52,10 @@ jobs:
       - name: Download only the bounded receipt
         uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3
         with:
-          name: fw029-synthetic-receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          name: fw029-receipt-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/fw029-receipt
 
-      - name: Attest receipt bytes
+      - name: Attest canonical receipt bytes
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
         with:
           subject-path: ${{ runner.temp }}/fw029-receipt/receipt.json
