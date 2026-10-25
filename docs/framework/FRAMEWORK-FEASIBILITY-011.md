@@ -3,7 +3,7 @@ id: FRAMEWORK-FEASIBILITY-011
 type: feasibility-register
 title: FW-TASK-030 isolated execution adapter feasibility
 status: draft
-version: 0.2
+version: 0.3
 created: 2026-10-25
 updated: 2026-10-25
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-038, DECISION-034, WORKFLOW-FEASIBILITY-001
@@ -55,7 +55,7 @@ The local host boundary remains the GitHub-hosted runner VM. The container bound
 4. Execute the positive and negative matrix against exact frozen inputs. Save only bounded result codes, identities/digests, and sanitized output. Do not make G-FEAS pass on plan review or package availability alone.
 5. Remove temporary workflow/fixture files after the run; run artifact validation and the exact-revision Verify Pipeline on the evidence record. Independently review the final record before deciding G-FEAS.
 
-Current state: plan review round 1 at exact commit `e7351e841eaaeed1a65b28ed95e2278fcec007be` returned NEEDS-CHANGES for the two coverage gaps now addressed in v0.2: explicit secret non-inheritance and a child-process boundary attempt. No hosted workload has run, no workload image digest has been selected, and no isolation or supported-host claim is established. The corrected plan requires a fresh independent review before any temporary workflow or hosted execution. If the temporary hosted pilot cannot safely run without extra permissions or mutable dependencies, record that as a blocker instead of weakening the policy.
+Current state: plan review round 1 at exact commit `e7351e841eaaeed1a65b28ed95e2278fcec007be` returned NEEDS-CHANGES for two coverage gaps: explicit secret non-inheritance and a child-process boundary attempt. Both corrections in v0.2 were independently re-reviewed at exact commit `a70e989a47c54a69643ccee8e6a56e18c55d293d` and passed; see [FRAMEWORK-ADV-039](../adversarial-reviews/FRAMEWORK-ADV-039.md). This PASS establishes plan readiness only. No hosted workload has run, no workload image digest has been frozen for execution, and no isolation or supported-host claim is established. The temporary workflow must be drafted, frozen, and independently reviewed before execution. If the temporary hosted pilot cannot safely run without extra permissions or mutable dependencies, record that as a blocker instead of weakening the policy.
 
 ## G-FEAS disposition
 
