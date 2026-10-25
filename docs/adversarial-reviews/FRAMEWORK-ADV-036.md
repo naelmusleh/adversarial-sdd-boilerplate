@@ -3,7 +3,7 @@ id: FRAMEWORK-ADV-036
 type: adversarial-review
 title: FW-TASK-029 FW029-IMPL-04 operator guide review
 status: in-review
-version: 0.2
+version: 0.3
 created: 2026-10-25
 updated: 2026-10-25
 reviewed-artifact: FW-TASK-029 / FW029-IMPL-04 operator handling and evidence claims
@@ -32,4 +32,10 @@ The reviewer otherwise confirmed the artifact name and retention configuration a
 
 - **FW029-IMPL04-03 — State descriptions incomplete.** `blocked` also covers an invalid separately supplied policy digest; `unavailable` also covers a verifier timeout after the CLI starts. **Resolution:** candidate `e2faea49850e3999fa4f869c7ed3388d15baaf2b` describes both cases and preserves the exact attempt state and diagnostic.
 
-The candidate awaits an owner checkpoint before a third review, under the repository's adversarial-loop guard. No hosted checks have been verified for the corrected candidate.
+## Owner-authorized review round 3 — NEEDS-CHANGES
+
+**Exact revision:** `44331824784ee1ec7023a02fa2d311d346bc2248`.
+
+- **FW029-IMPL04-04 — CLI usage error conflated with verifier state.** Omitting required `--policy-sha256` exits through argument parsing before JSON is emitted; a malformed supplied digest returns the verifier's `blocked` state. **Resolution:** candidate `6d29dc4f06722e8de822cf24791f0a7f46e5d85a` distinguishes omitted-argument usage errors from malformed supplied digests and the verifier's `blocked`, `unavailable`, and `failed` states.
+
+The reviewer otherwise confirmed the bundle digest and status distinctions, and found the remaining guide and checkpoint changes aligned with the architecture, pilot workflow, and verifier. The corrected candidate awaits an owner checkpoint before a fourth review under the repository's adversarial-loop guard. Exact-revision hosted checks have not been verified.
