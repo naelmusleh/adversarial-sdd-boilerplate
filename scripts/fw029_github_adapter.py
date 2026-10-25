@@ -209,6 +209,7 @@ def build_check_records(
             or job.get("run_attempt") != run["run_attempt"]
             or job.get("head_sha") != source_sha
             or job.get("status") != "completed"
+            or job.get("conclusion") != "success"
             or not isinstance(job.get("id"), int)
             or isinstance(job.get("id"), bool)
             or job["id"] < 1
