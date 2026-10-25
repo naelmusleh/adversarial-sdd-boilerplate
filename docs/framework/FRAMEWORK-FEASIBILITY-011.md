@@ -3,7 +3,7 @@ id: FRAMEWORK-FEASIBILITY-011
 type: feasibility-register
 title: FW-TASK-030 isolated execution adapter feasibility
 status: draft
-version: 0.1
+version: 0.2
 created: 2026-10-25
 updated: 2026-10-25
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-038, DECISION-034, WORKFLOW-FEASIBILITY-001
@@ -42,8 +42,8 @@ The local host boundary remains the GitHub-hosted runner VM. The container bound
 | ID | Question / method | Required result for supported pilot profile | Dependencies |
 | --- | --- | --- | --- |
 | FEAS-FW030-01 | Does a fresh GitHub-hosted Ubuntu 24.04 job have a usable rootless Podman runtime? Record runner image, kernel, Podman, storage/network backends, and rootless identity. | Run a harmless synthetic command as non-root; otherwise classify unsupported and do not fall back to Docker's rootful daemon. | FR-FW-035; hosted runner availability. |
-| FEAS-FW030-02 | Can the invocation constrain command, immutable image digest, user, mounts, network, resource/time ceilings, and cleanup? | Positive allowlisted command succeeds; denied command/network fails; read-only/isolated mount behavior is observed; resource/time limit and container removal are evidenced. Image reference is pinned by digest. | FR-FW-036; exact image digest and action pins must be frozen before execution. |
-| FEAS-FW030-03 | Do adversarial path probes escape the container's intended mount? | Parent/absolute path and symlink probes cannot read a synthetic host sentinel or unmounted runner path. Runtime socket/host mount is absent. A failed case blocks the corresponding claim. | FR-FW-037; test only synthetic sentinels and no sensitive host files. |
+| FEAS-FW030-02 | Can the invocation constrain command, immutable image digest, user, mounts, network, resource/time ceilings, cleanup, and secret/environment propagation? | Positive allowlisted command succeeds; denied command/network fails; read-only/isolated mount behavior is observed; resource/time limit and container removal are evidenced. The workflow defines no secrets, uses no secret context, and injects a synthetic host-only environment sentinel; the container must not receive it. Image reference is pinned by digest. | FR-FW-036; exact image digest and action pins must be frozen before execution. No real credentials are used. |
+| FEAS-FW030-03 | Do direct and subprocess adversarial path probes escape the container's intended mount? | Parent/absolute path and symlink probes cannot read a synthetic host sentinel or unmounted runner path. A child process launched inside the container repeats the sentinel and denied-network probes and must not gain access. Runtime socket/host mount is absent. A failed case blocks the corresponding claim. | FR-FW-037; test only synthetic sentinels and no sensitive host files. |
 | FEAS-FW030-04 | Are cancellation and failure cleanup observable? | A bounded long-running synthetic process receives cancellation; workflow cleanup confirms the disposable container is removed, or documents a clear cleanup failure. | FR-FW-036; hosted runner cancellation semantics. |
 | FEAS-FW030-05 | Does generated evidence remain bounded and secret-free? | Record exact commit, run, runner/runtime/image/policy identities, commands, exit codes, case outcomes, and bounded logs; no tokens, environment dumps, source, or unrestricted logs. | FR-FW-036/037; no secret permissions. |
 
@@ -55,7 +55,7 @@ The local host boundary remains the GitHub-hosted runner VM. The container bound
 4. Execute the positive and negative matrix against exact frozen inputs. Save only bounded result codes, identities/digests, and sanitized output. Do not make G-FEAS pass on plan review or package availability alone.
 5. Remove temporary workflow/fixture files after the run; run artifact validation and the exact-revision Verify Pipeline on the evidence record. Independently review the final record before deciding G-FEAS.
 
-Current state: the plan is not yet independently reviewed, no hosted runtime command has run, no workload image digest has been selected, and no isolation or supported-host claim is established. If the temporary hosted pilot cannot safely run without extra permissions or mutable dependencies, record that as a blocker instead of weakening the policy.
+Current state: plan review round 1 at exact commit `e7351e841eaaeed1a65b28ed95e2278fcec007be` returned NEEDS-CHANGES for the two coverage gaps now addressed in v0.2: explicit secret non-inheritance and a child-process boundary attempt. No hosted workload has run, no workload image digest has been selected, and no isolation or supported-host claim is established. The corrected plan requires a fresh independent review before any temporary workflow or hosted execution. If the temporary hosted pilot cannot safely run without extra permissions or mutable dependencies, record that as a blocker instead of weakening the policy.
 
 ## G-FEAS disposition
 
