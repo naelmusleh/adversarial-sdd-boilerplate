@@ -3,7 +3,7 @@ id: FRAMEWORK-OPERATIONS-001
 type: framework-operations-guide
 title: FW-TASK-029 receipt retrieval and operator handling
 status: draft
-version: 1.3
+version: 1.4
 created: 2026-10-25
 updated: 2026-10-25
 related-artifacts: FRAMEWORK-ARCHITECTURE-003, FRAMEWORK-IMPL-003, FRAMEWORK-CX-002, FRAMEWORK-BACKLOG-001, DECISION-027, DECISION-030, DECISION-031, DECISION-032
@@ -59,7 +59,7 @@ Keep that digest with the JSON output and exact run identity. Preserve the verif
 
 ## Interpret limits and recover
 
-Every result reports `freshness: unknown`, `revocation_status: not-established`, and `authorization: false`. These are substantive limits, not warnings an operator can clear. A passing result does not establish current branch protection, test adequacy, semantic correctness, a gate PASS, approval to merge, or approval to release. The verifier does not fetch current repository state. The pilot does not establish an application trust-root distribution or rotation process, durable evidence archive, secure-erasure method, provider-side deletion, or hosted-attestation retention period.
+On successful output, the verifier reports `freshness: unknown`, `revocation_status: not-established`, and `authorization: false`. Failure output reports `freshness: unknown` and `authorization: false`; it omits `revocation_status`, and the failed attempt has not established revocation status. These are substantive limits, not warnings an operator can clear. A passing result does not establish current branch protection, test adequacy, semantic correctness, a gate PASS, approval to merge, or approval to release. The verifier does not fetch current repository state. The pilot does not establish an application trust-root distribution or rotation process, durable evidence archive, secure-erasure method, provider-side deletion, or hosted-attestation retention period.
 
 Use these recovery actions:
 
