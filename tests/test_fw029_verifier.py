@@ -10,7 +10,7 @@ from subprocess import CompletedProcess
 from typing import Any
 
 from scripts.fw029_contracts import canonical_json_bytes
-from scripts.fw029_verifier import VerificationError, verify_files
+from scripts.fw029_verifier import MAX_TOOL_OUTPUT, VerificationError, verify_files
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -164,6 +164,30 @@ class VerifierTests(unittest.TestCase):
         self.assertEqual(error.exception.code, "attestation.provenance_mismatch")
         self.assertEqual(len(calls), 1)
 
+    def test_changed_trusted_root_fails_before_signature_verification(self) -> None:
+        self.root_path.write_bytes(self.root + b"tamper")
+        runner, calls = self.runner()
+        with self.assertRaises(VerificationError) as error:
+            self.verify(runner)
+        self.assertEqual(error.exception.code, "trust_root.digest_mismatch")
+        self.assertEqual(calls, [])
+
+    def test_signer_identity_mutation_is_rejected(self) -> None:
+        result = json.loads(self.output)
+        result[0]["verificationResult"]["signature"]["certificate"]["subjectAlternativeName"] = "https://attacker.example/signer"
+        runner, _ = self.runner(json.dumps(result).encode())
+        with self.assertRaises(VerificationError) as error:
+            self.verify(runner)
+        self.assertEqual(error.exception.code, "attestation.provenance_mismatch")
+
+    def test_gh_signature_rejection_fails_closed(self) -> None:
+        def rejected(command, **kwargs):
+            return CompletedProcess(command, 1, b"", b"signature invalid")
+
+        with self.assertRaises(VerificationError) as error:
+            self.verify(rejected)
+        self.assertEqual(error.exception.code, "attestation.signature_invalid")
+
     def test_repository_identity_mutation_is_rejected(self) -> None:
         result = json.loads(self.output)
         result[0]["verificationResult"]["signature"]["certificate"]["sourceRepositoryIdentifier"] = "999"
@@ -178,6 +202,22 @@ class VerifierTests(unittest.TestCase):
         with self.assertRaises(VerificationError) as error:
             self.verify(runner)
         self.assertEqual(error.exception.code, "evidence.unsupported")
+        self.assertEqual(calls, [])
+
+    def test_noncanonical_signed_receipt_fails_before_signature_verification(self) -> None:
+        self.receipt_path.write_text(json.dumps(self.receipt, indent=2), encoding="utf-8")
+        runner, calls = self.runner()
+        with self.assertRaises(VerificationError) as error:
+            self.verify(runner)
+        self.assertEqual(error.exception.code, "receipt.canonicalization_mismatch")
+        self.assertEqual(calls, [])
+
+    def test_oversized_bundle_fails_at_bounded_read(self) -> None:
+        self.bundle_path.write_bytes(b"x" * (MAX_TOOL_OUTPUT + 4096))
+        runner, calls = self.runner()
+        with self.assertRaises(VerificationError) as error:
+            self.verify(runner)
+        self.assertEqual(error.exception.code, "bundle.size_invalid")
         self.assertEqual(calls, [])
 
     def test_untrusted_gh_result_is_not_passed(self) -> None:

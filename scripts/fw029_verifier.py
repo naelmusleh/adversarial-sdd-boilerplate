@@ -44,7 +44,8 @@ def _fail(code: str, message: str, state: str = "failed") -> VerificationError:
 
 def _read(path: str | Path, label: str, limit: int = MAX_INPUT) -> bytes:
     try:
-        data = Path(path).read_bytes()
+        with Path(path).open("rb") as handle:
+            data = handle.read(limit + 1)
     except OSError as exc:
         raise _fail(f"{label}.input_missing", f"cannot read {label} input", "blocked") from exc
     if not data or len(data) > limit:
@@ -258,6 +259,12 @@ def verify_files(
         first = diagnostics[0] if diagnostics else {"code": "policy.invalid", "message": "receipt or policy failed validation"}
         state = policy_result.get("state", "failed")
         raise _fail(first.get("code", "policy.invalid"), first.get("message", "receipt or policy failed validation"), state)
+    try:
+        canonical_receipt = canonical_json_bytes(receipt)
+    except ValueError as exc:
+        raise _fail("receipt.canonicalization_invalid", "receipt cannot be serialized under the canonical v1 format") from exc
+    if not hmac.compare_digest(canonical_receipt, receipt_bytes):
+        raise _fail("receipt.canonicalization_mismatch", "signed receipt bytes are not the required canonical JSON serialization")
     if not hmac.compare_digest(hashlib.sha256(root_bytes).hexdigest(), policy["issuer"]["trust_root_sha256"]):
         raise _fail("trust_root.digest_mismatch", "trust-root bytes do not match policy pin")
     verification = _run_gh(receipt_path, bundle_path, trust_root_path, policy, runner)
