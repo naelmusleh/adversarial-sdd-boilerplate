@@ -3,7 +3,7 @@ id: FRAMEWORK-ADV-036
 type: adversarial-review
 title: FW-TASK-029 FW029-IMPL-04 operator guide review
 status: in-review
-version: 0.3
+version: 0.4
 created: 2026-10-25
 updated: 2026-10-25
 reviewed-artifact: FW-TASK-029 / FW029-IMPL-04 operator handling and evidence claims
@@ -38,4 +38,10 @@ The reviewer otherwise confirmed the artifact name and retention configuration a
 
 - **FW029-IMPL04-04 — CLI usage error conflated with verifier state.** Omitting required `--policy-sha256` exits through argument parsing before JSON is emitted; a malformed supplied digest returns the verifier's `blocked` state. **Resolution:** candidate `6d29dc4f06722e8de822cf24791f0a7f46e5d85a` distinguishes omitted-argument usage errors from malformed supplied digests and the verifier's `blocked`, `unavailable`, and `failed` states.
 
-The reviewer otherwise confirmed the bundle digest and status distinctions, and found the remaining guide and checkpoint changes aligned with the architecture, pilot workflow, and verifier. The corrected candidate awaits an owner checkpoint before a fourth review under the repository's adversarial-loop guard. Exact-revision hosted checks have not been verified.
+## Owner-authorized review round 4 — NEEDS-CHANGES
+
+**Exact revision:** `9af459f582f5d23d1411d63570cf8b96c7aa797f`.
+
+- **FW029-IMPL04-05 — Failure-output fields overstated.** Failure JSON omits `revocation_status`, although successful JSON includes `not-established`; the guide incorrectly said every result contains that field. **Resolution:** candidate `50ff55cc52c26e21ced7fa03603f737a25c5c10f` states which fields occur in each output and that a failed attempt has not established revocation status.
+
+The reviewer otherwise confirmed the prior corrections and found the remaining guide and checkpoint claims aligned with the architecture, verifier, and pilot workflow. The corrected candidate awaits an owner checkpoint before a fifth review under the repository's adversarial-loop guard. Exact-revision hosted checks have not been verified.
