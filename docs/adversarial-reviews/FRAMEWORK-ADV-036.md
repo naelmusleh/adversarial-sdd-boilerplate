@@ -2,8 +2,8 @@
 id: FRAMEWORK-ADV-036
 type: adversarial-review
 title: FW-TASK-029 FW029-IMPL-04 operator guide review
-status: in-review
-version: 0.4
+status: approved
+version: 0.5
 created: 2026-10-25
 updated: 2026-10-25
 reviewed-artifact: FW-TASK-029 / FW029-IMPL-04 operator handling and evidence claims
@@ -44,4 +44,14 @@ The reviewer otherwise confirmed the artifact name and retention configuration a
 
 - **FW029-IMPL04-05 — Failure-output fields overstated.** Failure JSON omits `revocation_status`, although successful JSON includes `not-established`; the guide incorrectly said every result contains that field. **Resolution:** candidate `50ff55cc52c26e21ced7fa03603f737a25c5c10f` states which fields occur in each output and that a failed attempt has not established revocation status.
 
-The reviewer otherwise confirmed the prior corrections and found the remaining guide and checkpoint claims aligned with the architecture, verifier, and pilot workflow. The corrected candidate awaits an owner checkpoint before a fifth review under the repository's adversarial-loop guard. Exact-revision hosted checks have not been verified.
+The reviewer otherwise confirmed the prior corrections and found the remaining guide and checkpoint claims aligned with the architecture, verifier, and pilot workflow.
+
+## Owner-authorized review round 5 — PASS
+
+**Exact revision:** `e13cfd4869dc52efd967506a56b90e3a37bddc72`.
+
+The reviewer confirmed the omitted-argument CLI error is distinguished from a malformed supplied digest, bundle SHA-256 capture is explicit, and success/failure JSON claims match the verifier implementation. The artifact name, configured one-day artifact retention, and unknown hosted-attestation lifecycle remain accurately bounded. No material mismatch or new finding remains.
+
+Verify Pipeline [40212807109](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40212807109) passed the exact candidate: Metadata & Artifact Audit, TypeScript Static Code Analysis, and Initializer Regression Gate succeeded. The optional FW-029 Synthetic Evidence Probe was skipped on the push event as configured.
+
+**Independent verdict: PASS for FW029-IMPL-04 within the bounded documentation scope.** This does not select a durable-retention policy or storage owner, establish deletion guarantees or current trust, authorize a gate/release, or complete FW-TASK-029 as a whole.
