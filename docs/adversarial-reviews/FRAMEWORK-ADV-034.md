@@ -2,7 +2,7 @@
 id: FRAMEWORK-ADV-034
 type: adversarial-review
 title: FW-TASK-029 FW029-IMPL-02 hosted evidence review
-status: needs-changes
+status: revision-required
 version: 0.1
 created: 2026-10-25
 updated: 2026-10-25
