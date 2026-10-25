@@ -3,7 +3,7 @@ id: FRAMEWORK-OPERATIONS-001
 type: framework-operations-guide
 title: FW-TASK-029 receipt retrieval and operator handling
 status: draft
-version: 1.2
+version: 1.3
 created: 2026-10-25
 updated: 2026-10-25
 related-artifacts: FRAMEWORK-ARCHITECTURE-003, FRAMEWORK-IMPL-003, FRAMEWORK-CX-002, FRAMEWORK-BACKLOG-001, DECISION-027, DECISION-030, DECISION-031, DECISION-032
@@ -55,7 +55,7 @@ The JSON output includes the receipt, policy, and trust-root digests. The verifi
 shasum -a 256 /private/path/attestation-bundle.jsonl
 ```
 
-Keep that digest with the JSON output and exact run identity. Preserve the verifier's exact `state` and diagnostic. `blocked` means a required local input is missing or unreadable, or the separately supplied policy digest is missing or malformed; `unavailable` means the GitHub CLI could not start or complete within its time limit; `failed` means verification ran and rejected an input or claim. A zero exit status and `state: passed` mean only that the bounded verification succeeded against those exact supplied bytes. Any other state or nonzero exit means the attempt did not pass. Do not repair or edit signed inputs in place. Re-run only after an authorized source supplies corrected inputs or a distinct fresh run.
+Keep that digest with the JSON output and exact run identity. Preserve the verifier's exact `state` and diagnostic. `blocked` means a required local input is missing or unreadable, or the separately supplied policy digest is present but malformed. The required `--policy-sha256` argument must be provided: if it is omitted, command-line argument parsing exits with a usage error before the verifier emits JSON, so correct the invocation and do not label that event as a verifier state. `unavailable` means the GitHub CLI could not start or complete within its time limit; `failed` means verification ran and rejected an input or claim. A zero exit status and `state: passed` mean only that the bounded verification succeeded against those exact supplied bytes. Any other state or nonzero exit means the attempt did not pass. Do not repair or edit signed inputs in place. Re-run only after an authorized source supplies corrected inputs or a distinct fresh run.
 
 ## Interpret limits and recover
 
