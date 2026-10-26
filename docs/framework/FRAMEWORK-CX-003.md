@@ -2,11 +2,11 @@
 id: FRAMEWORK-CX-003
 type: framework-cx
 title: FW-TASK-030 runner request and evidence interaction contract
-status: draft
-version: 0.4
+status: approved
+version: 1.1
 created: 2026-10-26
 updated: 2026-10-26
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-COVERAGE-003, FRAMEWORK-FEASIBILITY-011, FRAMEWORK-ADV-047, FRAMEWORK-ADV-048, DECISION-034, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001, WORKFLOW-CX-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-COVERAGE-003, FRAMEWORK-FEASIBILITY-011, FRAMEWORK-ADV-047, FRAMEWORK-ADV-048, FRAMEWORK-ADV-049, DECISION-034, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001, WORKFLOW-CX-001
 ---
 
 # FRAMEWORK-CX-003 — FW-TASK-030 runner request and evidence interaction contract
@@ -95,15 +95,20 @@ The independent critique must walk all six traces across every state axis define
 
 | Finding ID | Location / evidence | Severity | User/operator impact | Recommendation | Owner decision needed | Disposition / rerun evidence |
 | --- | --- | --- | --- | --- | --- | --- |
-| CX030-01 | v0.1 state table and CX-030-A preflight/authorization transition. | P2 | `READY` could be mistaken for permission to dispatch. | Separate readiness from one-run authorization and gate dispatch on both. | No. | Resolved in v0.2 with distinct `Request readiness` and `Authorization` axes; only READY + AUTHORIZED enables dispatch. Confirmed by full-scope review; see FRAMEWORK-ADV-049. |
-| CX030-02 | v0.1 Run axis and CX-030-E cleanup recovery. | P1 | Cleanup completion could overwrite a failed/cancelled execution outcome. | Separate terminal execution result from cleanup state and preserve both across recovery. | No. | Resolved in v0.2 with independent `Execution` and `Cleanup` axes; cleanup `CLEAN` does not change `FAILED`/`CANCELLED`. Confirmed by full-scope review; see FRAMEWORK-ADV-049. |
-| CX030-03 | v0.2 full-scope rerun checklist. | P2 | Stale axis count could omit authorization or cleanup states from critique. | Name all state axes in the full rerun scope. | No. | Corrected in v0.4: full-scope critique explicitly enumerates request readiness, authorization, execution, cleanup, evidence, and review for all six traces. Independent verification pending. |
-| CX030-04 | v0.2 CX-030-A authorization handoff. | P2 | Authorization could remain active after a non-revision request field changes. | Invalidate authorization on any change to the complete request summary and require preflight plus fresh authorization. | No. | Resolved in v0.3 by explicit whole-summary binding and invalidation. Pending review of correction. |
+| CX030-01 | v0.1 state table and CX-030-A preflight/authorization transition. | P2 | `READY` could be mistaken for permission to dispatch. | Separate readiness from one-run authorization and gate dispatch on both. | No. | Resolved in v0.2; independent full-scope rerun confirmed resolution (FRAMEWORK-ADV-049). |
+| CX030-02 | v0.1 Run axis and CX-030-E cleanup recovery. | P1 | Cleanup completion could overwrite a failed/cancelled execution outcome. | Separate terminal execution result from cleanup state and preserve both across recovery. | No. | Resolved in v0.2; independent full-scope rerun confirmed resolution (FRAMEWORK-ADV-049). |
+| CX030-03 | v0.2 full-scope rerun checklist. | P2 | Stale axis count could omit authorization or cleanup states from critique. | Name all state axes in the full rerun scope. | No. | Resolved in v0.4; independent full-scope rerun confirmed the checklist explicitly covers all six axes for all six traces (FRAMEWORK-ADV-049). |
+| CX030-04 | v0.2 CX-030-A authorization handoff. | P2 | Authorization could remain active after a non-revision request field changes. | Invalidate authorization on any change to the complete request summary and require preflight plus fresh authorization. | No. | Resolved in v0.3; independent full-scope rerun confirmed whole-summary binding/invalidation (FRAMEWORK-ADV-049). |
+| CX030-05 | v0.4 metadata and CX030-03 disposition. | P2 | Reported version mismatch could make correction provenance unclear. | Reconcile the artifact version and correction reference. | No. | Withdrawn after source verification: exact reviewed blob `c07d2cd7b239c0bb54437e8e6a5615d3a25e15a6` is version 0.4 and correctly says “Corrected in v0.4”; reviewer confirmed the report misread it (FRAMEWORK-ADV-049). |
 
 ## Gate evidence and next action
 
-- **GCX-01:** Freeze this target, six journey IDs, P-01–P-06 applicability from FRAMEWORK-COVERAGE-003, all six state axes (request readiness, authorization, execution, cleanup, evidence, review), artifact blob, source commit, and exclusions. No visual target exists.
-- **GCX-02:** Durable review record must identify `manual tool-neutral review`, evaluator, date, exact source and artifact blobs, full trace/state scope, evidence locations, method limitations, and findings. See linked adversarial review disposition once complete.
-- **GCX-03:** Resolve every blocking finding in a coherent revision and rerun the complete six-journey scope across all six state axes; retain stable IDs and fix evidence.
-- **Required closeout:** Independent full-scope review, artifact validation, and exact-revision Verify Pipeline. CI does not replace the interaction critique.
-- **Next gate if passed:** G-ARCH, which must still resolve architecture/trust/host boundary questions before implementation; no implementation is authorized by this artifact.
+- **GCX-01:** PASS. Frozen target, six journey IDs, P-01–P-06 applicability, all six state axes, source revision, artifact blob, and exclusions are recorded.
+- **GCX-02:** PASS. Manual tool-neutral full-scope review method, evaluator/date, exact source and artifact blobs, scope, evidence locations, limitations, and findings are recorded in FRAMEWORK-ADV-049.
+- **GCX-03:** PASS. CX030-01–04 were resolved through focused corrections and full-scope reruns; CX030-05 was withdrawn after source verification. See criterion-level dispositions in FRAMEWORK-ADV-049.
+- **Required closeout:** Independent review and exact-revision Verify Pipeline passed; CI does not substitute for the interaction critique.
+- **Next gate:** G-ARCH; architecture must resolve or explicitly gate host/runtime profile adoption, trust boundaries, and implementation dependencies. This interaction contract authorizes no implementation.
+
+## Independent G-CX review record
+
+FRAMEWORK-ADV-049 records the independent manual tool-neutral critique by `/root/fw029_independent_review` (date reported: 2026-10-25), exact reviewed v0.4 artifact blob `c07d2cd7b239c0bb54437e8e6a5615d3a25e15a6`, source commit `af91de98d31ff37bb3811d9ffedaad41c508716a`, and FRAMEWORK-COVERAGE-003 blob `8c893d8d7c721924e38fc594b162142fe576049d`. It records GCX-01–03 PASS, all six journeys/state axes and P-01–P-06, finding dispositions CX030-01–04, and withdrawal of CX030-05 after exact-blob version verification. Exact-revision Verify Pipeline run `40264856695` passed all three required jobs. No runtime or accessibility result is implied.
