@@ -18,11 +18,12 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-038, FRAM
 - **Evaluator:** `/root/fw029_independent_review` (independent, read-only).
 - **Review date:** 2026-10-26.
 - **Gate:** G-COVERAGE for FW-TASK-031 slice B / FR-FW-041–043 under DECISION-038.
-- **Reviewed base revision:** `2077396f209d351dbc81aa2bdc944c0cb3367186` on local branch `codex/fw030-greq`, plus the uncommitted candidate changes.
+- **Exact reviewed revision:** `a22bfe20319a9ce02ad04de6d4e4abc2076ccf73` on `codex/fw031-greq`.
 - **Reviewed artifact:** FRAMEWORK-COVERAGE-005 v0.1, blob `b7c39f4e5cc50644189999fc2d5e04502c2e2ded`.
 - **Reviewed backlog:** FRAMEWORK-BACKLOG-001 candidate blob `f1c17e7f492caf11124c2098c944014054ffe6bf`.
 - **Review method:** Read-only, criterion-level challenge of GCOV-01–03, requirements/acceptance mapping, actors and recovery, all required failure categories and applicability rationales, surface scope, feasibility boundaries, and owner-decision need. No edits or tests were performed by the reviewer.
-- **Local checks at review:** `git diff --check` passed; no tests were run.
+- **Exact-revision CI:** Verify Pipeline [40336240261](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40336240261) passed Metadata & Artifact Audit, Initializer Regression Gate, and TypeScript Static Code Analysis on this exact revision; optional FW-029/FW-030 probes were skipped.
+- **Local checks at review:** `python3 scripts/artifacts.py validate` reported 124 artifacts and `git diff --check` passed; no tests were run.
 
 ## Review result — PASS within approved scope
 
@@ -38,6 +39,6 @@ No actionable findings. No owner decision is needed for this bounded coverage in
 
 ## Gate disposition and limits
 
-- **Review result:** PASS for the reviewed G-COVERAGE matrix within DECISION-038 and FR-FW-041–043.
+- **Review result:** PASS for the reviewed G-COVERAGE matrix within DECISION-038 and FR-FW-041–043. The same exact commit passed required CI.
 - **Limits:** The review does not establish implementation, profile adoption, workflow or permission changes, timeout configuration, runtime control, workload termination, actual metric collection, cost measurement, application use, or deployment.
 - **Next gate:** G-CX, if the reviewed artifacts also pass exact-revision Verify Pipeline. Use a nonvisual operator/reviewer interaction trace; no end-user prototype or visual/accessibility claim is applicable.
