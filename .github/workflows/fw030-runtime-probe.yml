@@ -23,16 +23,14 @@ jobs:
           readonly probe_dir="$(mktemp -d "${RUNNER_TEMP}/fw030.XXXXXX")"
           readonly input_dir="${probe_dir}/input"
           readonly output_dir="${probe_dir}/output"
-          readonly server_dir="${probe_dir}/server"
           readonly host_sentinel="${probe_dir}/host-sentinel"
           readonly expected_sentinel='host-only-synthetic-marker-do-not-print'
           readonly network_name='fw030-positive-control'
           readonly server_ip='10.253.30.10'
           readonly container_uid=1000
-          mkdir -m 755 "$input_dir" "$server_dir"
+          mkdir -m 755 "$input_dir"
           mkdir -m 777 "$output_dir"
           printf '%s\n' 'readable-synthetic-fixture' > "${input_dir}/fixture.txt"
-          printf '%s\n' 'fw030-network-positive-control' > "${server_dir}/index.html"
           printf '%s' "$expected_sentinel" > "$host_sentinel"
           chmod 600 "$host_sentinel"
           ln -s "$host_sentinel" "${input_dir}/escape-link"
@@ -133,8 +131,12 @@ jobs:
           podman network create --internal --subnet 10.253.30.0/24 "$network_name" >/dev/null
           podman run --pull=never --detach --name fw030-net-server \
             --network "${network_name}:ip=${server_ip}" \
-            --volume "${server_dir}:/srv:ro" "$image" \
-            sh -c 'exec /bin/busybox httpd -f -p 8080 -h /srv' >/dev/null
+            "$image" sh -c '
+              while :; do
+                { printf "HTTP/1.1 200 OK\\r\\nContent-Length: 30\\r\\nConnection: close\\r\\n\\r\\nfw030-network-positive-control"; } |
+                  /bin/busybox nc -l -p 8080
+              done
+            ' >/dev/null
           if [[ "$(podman inspect --format '{{.State.Running}}' fw030-net-server)" != 'true' ]]; then
             echo 'Positive-control server did not remain running.' >&2
             podman logs fw030-net-server >&2 || true
