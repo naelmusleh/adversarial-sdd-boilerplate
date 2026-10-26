@@ -2,11 +2,11 @@
 id: FRAMEWORK-FEASIBILITY-012
 type: feasibility-register
 title: FW-TASK-031 per-run limits and stop conditions feasibility
-status: draft
-version: 0.1
+status: approved
+version: 0.2
 created: 2026-10-26
 updated: 2026-10-26
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-036, FRAMEWORK-FEASIBILITY-011, FRAMEWORK-GATE-CONTRACT-001, WORKFLOW-FEASIBILITY-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-036, FRAMEWORK-FEASIBILITY-011, FRAMEWORK-GATE-CONTRACT-001, WORKFLOW-FEASIBILITY-001, FRAMEWORK-ADV-053
 ---
 
 # FRAMEWORK-FEASIBILITY-012 — FW-TASK-031 per-run limits and stop conditions feasibility
@@ -44,6 +44,6 @@ An advisory-only policy can warn and request cancellation without claiming that 
 | FW-TASK-031 monetary spend limit or numeric spend report | **Blocked** | Select a provider/host meter and demonstrate run correlation, currency/window, provenance, and unavailable/error behavior. |
 | Any application or production use | **Blocked** | Separate application-specific decision, architecture, authorization, and release evidence. |
 
-**G-FEAS finding:** The bounded assessment supports a PASS because every material unknown affecting hard enforcement or spend is retained as a blocking dependency and dependent implementation/use remains held. This finding is pending independent review and exact-revision verification. It establishes no runtime/provider/meter adoption, controller capability, process termination, spend value, or implementation permission.
+**G-FEAS result:** PASS for the bounded assessment at exact candidate revision `3d88575d977e67fbd3226742770bc5c1f24d1e75`. Independent review FRAMEWORK-ADV-053 passed the frozen v0.1 assessment, and Verify Pipeline run [40320680535](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40320680535) passed all three required jobs on that exact revision. Material unknowns affecting hard enforcement or spend remain blocking dependencies, and dependent implementation/use stays held. This result establishes no runtime/provider/meter adoption, controller capability, process termination, spend value, or implementation permission.
 
 **Next gate:** G-COVERAGE for FR-FW-038–040. Preserve the blocked/conditional rows in downstream coverage and architecture work; do not promote any capability to `enforced` without the corresponding observed evidence.
