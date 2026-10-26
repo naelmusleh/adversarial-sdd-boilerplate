@@ -3,11 +3,11 @@ id: FRAMEWORK-ADV-040
 type: adversarial-review
 title: FW-TASK-030 temporary runtime workflow review
 status: approved
-version: 0.7
+version: 0.8
 created: 2026-10-25
 updated: 2026-10-26
 reviewed-artifact: .github/workflows/fw030-runtime-probe.yml
-reviewed-version: c8b7298d1b274e0d1f488dc9f3ede40b632df7c9
+reviewed-version: 1d74fce5f4750ab2c395c76cea1ff34ce83b0475
 related-artifacts: FRAMEWORK-FEASIBILITY-011, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-039, DECISION-034
 ---
 
@@ -55,4 +55,8 @@ Independent reviewer `/root/fw029_independent_review` inspected exact workflow r
 
 ## Authorized synthetic retry — setup failure
 
-The one authorized retry ran in Verify Pipeline [40250816475](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40250816475), exact branch revision `248a7e53dcdeeb4391ec4cee1f500d9f51cff771`. The three standard CI jobs passed; the FW-030 runtime probe failed before either network control or isolated workload executed. Rootless Podman 4.9.3 pulled the pinned image, but the positive-control server exited because the pinned Alpine image's BusyBox build reported `httpd: applet not found`. The cleanup handler reported `final_cleanup=PASS` and verified containers, network, and temporary files absent. This is another harness setup failure, not evidence for or against the runtime boundary. The authorized retry is exhausted; no further correction or review is covered by that authorization.
+The owner-authorized retry ran in Verify Pipeline [40250816475](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40250816475), exact branch revision `248a7e53dcdeeb4391ec4cee1f500d9f51cff771`. The three standard CI jobs passed; the FW-030 runtime probe failed before either network control or isolated workload executed. Rootless Podman 4.9.3 pulled the pinned image, but the positive-control server exited because the pinned Alpine image's BusyBox build reported `httpd: applet not found`. The cleanup handler reported `final_cleanup=PASS` and verified containers, network, and temporary files absent. This is another harness setup failure, not evidence for or against the runtime boundary. That authorization was exhausted; the owner later authorized a separate bounded follow-up cycle.
+
+## Fresh owner checkpoint and follow-up review — PASS
+
+After the preceding retry failed on the missing BusyBox `httpd` applet, the owner instructed “proceed,” authorizing one bounded correction/review/retry cycle limited to replacing the control server implementation, reviewing the exact candidate, and retrying once. At exact commit `1d74fce5f4750ab2c395c76cea1ff34ce83b0475`, independent reviewer `/root/fw029_independent_review` returned PASS. The reviewer verified that the pinned image's BusyBox `nc` serves a syntactically valid HTTP response with a 30-byte body matching the positive-control marker; the positive client uses the dedicated internal network, while the adversarial workload and child remain on `--network=none`. Existing cleanup/status checks and prior policy controls remain intact. The workflow was not executed during review. Verify Pipeline [40253255605](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40253255605) passed all three standard jobs on the exact commit; optional probes were skipped on push. This approves only the one newly authorized synthetic retry and establishes no runtime support or isolation claim.
