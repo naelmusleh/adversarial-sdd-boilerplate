@@ -265,19 +265,25 @@ jobs:
           elapsed_seconds=$(( $(date +%s) - start_seconds ))
           timeout_state="$(podman inspect fw030-timeout)"
           printf 'timeout_process_exit=%s elapsed_seconds=%s\n' "$timeout_status" "$elapsed_seconds"
-          jq '{status: .[0].State.Status, running: .[0].State.Running, exit_code: .[0].State.ExitCode, started_at: .[0].State.StartedAt, finished_at: .[0].State.FinishedAt}' <<< "$timeout_state"
-          jq -e '.[0].State.StartedAt != "" and .[0].State.Running == false and .[0].State.ExitCode == 137' <<< "$timeout_state" >/dev/null
-          echo 'timeout_state=PASS (started, stopped, SIGKILL exit state observed)'
-          if [[ "$timeout_status" -ne 137 || "$elapsed_seconds" -gt 10 ]]; then
-            echo 'Runtime timeout did not produce the expected started-container SIGKILL result.' >&2
+          conmon_version="$(conmon --version)"
+          printf 'conmon_version=%s\n' "$conmon_version"
+          jq '{timeout_seconds: .[0].Config.Timeout, status: .[0].State.Status, running: .[0].State.Running, exit_code: .[0].State.ExitCode, oom_killed: .[0].State.OOMKilled, started_at: .[0].State.StartedAt, finished_at: .[0].State.FinishedAt}' <<< "$timeout_state"
+          case "$conmon_version" in
+            'conmon version 2.1.10'*) ;;
+            *) echo 'Unverified conmon timeout semantics; fail closed.' >&2; exit 23 ;;
+          esac
+          jq -e '.[0].Config.Timeout == 2 and .[0].State.StartedAt != "" and .[0].State.FinishedAt != "" and .[0].State.Running == false and .[0].State.Status == "exited" and .[0].State.ExitCode == -1 and .[0].State.OOMKilled == false' <<< "$timeout_state" >/dev/null
+          if [[ "$timeout_status" -ne 255 || "$elapsed_seconds" -lt 2 || "$elapsed_seconds" -gt 10 ]]; then
+            echo 'Runtime timeout did not produce the conmon 2.1.10 timeout result within bounds.' >&2
             exit 23
           fi
+          echo 'timeout_state=PASS (conmon 2.1.10 timeout path; started, stopped, SIGKILL requested, exit status represented as -1)'
           podman rm fw030-timeout >/dev/null
           if podman container exists fw030-timeout; then
             echo 'Timed-out container remains after cleanup.' >&2
             exit 24
           fi
-          printf 'timeout=PASS (container started, exit=137, elapsed_seconds=%s, cleanup=PASS)\n' "$elapsed_seconds"
+          printf 'timeout=PASS (conmon timeout behavior verified, elapsed_seconds=%s, cleanup=PASS)\n' "$elapsed_seconds"
 
           set +e
           podman run --pull=never --name fw030-resource --timeout 30 \
