@@ -2,11 +2,11 @@
 id: FRAMEWORK-CX-004
 type: cx-contract
 title: FW-TASK-031 operator and reviewer interaction contract
-status: draft
-version: 0.1
+status: approved
+version: 0.2
 created: 2026-10-26
 updated: 2026-10-26
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-COVERAGE-004, DECISION-036, WORKFLOW-CX-001, GATE-CATALOG-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-COVERAGE-004, DECISION-036, WORKFLOW-CX-001, GATE-CATALOG-001, FRAMEWORK-ADV-055
 ---
 
 # FRAMEWORK-CX-004 — FW-TASK-031 operator and reviewer interaction contract
@@ -88,6 +88,6 @@ Diagnostics must be actionable without exposing secrets, full source, user conte
 
 ## G-CX finding and next step
 
-**Provisional finding:** All six FRAMEWORK-COVERAGE-004 journeys now have start, actor action, system response, decision/authorization boundary, success/failure exit, interruption/cancel behavior, and recovery. Independent review must challenge all eight axes across the full trace set, especially separation of cancellation, checkpoint, verification, spend, review, and authorization states. No UX implementation, visual audit, accessibility result, runtime guarantee, or spend capability is claimed.
+**G-CX result:** PASS within DECISION-036 and FR-FW-038–040 at exact candidate `d2cd7c64819d86fc4acb8fb978077486762e07a1`. Independent full-scope critique FRAMEWORK-ADV-055 found no material findings. Verify Pipeline run [40322197363](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40322197363) passed all three required jobs on that exact revision; optional FW-029/FW-030 probes were skipped. The review and run establish only that the conceptual nonvisual interaction contract covers its declared journeys and state distinctions; they do not establish implementation, visual audit, accessibility, runtime, cancellation, spend, or application capability.
 
-**Next gate:** G-ARCH may proceed only after this full-scope interaction review passes and exact-revision CI passes. Preserve G-FEAS blocked/conditional dependencies in the architecture and implementation breakdown.
+**Next gate:** G-ARCH, preserving G-FEAS blocked/conditional dependencies in architecture and task breakdown.
