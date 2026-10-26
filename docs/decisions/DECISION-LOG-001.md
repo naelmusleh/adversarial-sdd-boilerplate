@@ -3,10 +3,10 @@ id: DECISION-LOG-001
 type: decision-log
 title: Reusable template decisions
 status: active
-version: 1.7
+version: 1.8
 created: 2026-10-10
-updated: 2026-10-25
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-EXERCISE-005, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-ARCHITECTURE-003, FRAMEWORK-ARCHITECTURE-004, FRAMEWORK-CONTRACT-030, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-COVERAGE-002, FRAMEWORK-CX-002, FRAMEWORK-ADV-035, FRAMEWORK-ADV-036, DECISION-033, DECISION-034, DECISION-035
+updated: 2026-10-26
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-EXERCISE-005, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-ARCHITECTURE-003, FRAMEWORK-ARCHITECTURE-004, FRAMEWORK-CONTRACT-030, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-COVERAGE-002, FRAMEWORK-CX-002, FRAMEWORK-ADV-035, FRAMEWORK-ADV-036, DECISION-033, DECISION-034, DECISION-035, DECISION-036
 ---
 
 # DECISION-LOG-001 — Reusable template decisions
@@ -32,6 +32,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-EXERCISE
 | DECISION-034 | 2026-10-25 | Approve bounded FW-TASK-030 scope and FR-FW-035 through FR-FW-037. | Owner Nael Musleh approved a versioned, optional, host-neutral execution-adapter contract with explicit fail-closed supported/unsupported behavior; explicit least-privilege invocation policy and a disposable pilot; and claims bounded by observed enforcement, including a file-generation-only initializer. The scope does not select a particular host/runtime at G-REQ; G-FEAS must select and evaluate the named environment and threat model. It excludes FW-TASK-031, application adoption, unsandboxed fallback, production credentials, and complete host isolation. This decision approves requirements scope only; G-FEAS, G-ARCH, G-IMPL, and subsequent gates remain required before implementation or use. | FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001 |
 | DECISION-035 | 2026-10-25 | Authorize FW030-IMPL-01 only. | Owner approved implementation of the versioned host-neutral request/result contract, schema validator, and synthetic fixtures for a declared supported profile, unsupported host/runtime, missing runtime, and unavailable capability. This unit may validate structure and supplied profile declarations only; it must not launch commands or claim real host/runtime support, adopt GitHub Actions or Podman, use application data/secrets, deploy, or begin another FW030 implementation unit. Runtime-backed FW030-IMPL-02 remains blocked pending a separate owner profile decision and residual-risk acceptance. | FRAMEWORK-ARCHITECTURE-004, FRAMEWORK-CONTRACT-030, FRAMEWORK-BACKLOG-001, FRAMEWORK-SPEC-001 |
 | DECISION-025 | 2026-10-22 | Accept FRAMEWORK-EXERCISE-007 v0.2 as the sample-contract prerequisite for FW-TASK-013. | Owner Nael Musleh accepted the independently reviewed artifact revision with SHA-256 `2bb91ef415110b336eb653c9ffaf9b1c1822d65ccad94b7710407ecd5357c17b` for use as FW-TASK-013's multi-platform sample prerequisite. The acceptance is limited to a framework fixture contract. Synthetic native lanes and profile/module assignments remain non-product examples; this decision does not amend Infinite Gallery v0.6, authorize its implementation, select its stack/provider, or establish runtime profile support. | FRAMEWORK-EXERCISE-007, FRAMEWORK-ADV-015, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-024 |
+| DECISION-036 | 2026-10-26 | Approve bounded FW-TASK-031 scope and FR-FW-038 through FR-FW-040. | Owner Nael Musleh approved opening G-REQ for FW-TASK-031 only: versioned per-run limits and enforcement states; truthful cancellation, partial-work preservation, and stop evidence; and authoritative spend-meter handling. The scope excludes runtime adapter implementation, provider/host adoption, and FW-TASK-030 follow-on units. This approves requirements scope only; feasibility, architecture, implementation, and later gates remain required before any enforcement or integration is adopted. | FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001 |
 
 ## Decision discipline
 
