@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:adversarial-sdd:fw031:budget-result:1.0",
+  "title": "FW-031 per-run budget observations and stop summary v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "policy_id", "policy_revision", "policy_digest", "source_revision", "run_id", "started_at", "ended_at", "accounting_mode", "runs", "observations", "stop_state", "execution_outcome", "cancellation", "checkpoint", "spend", "override_authorization", "reset_events"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "policy_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+    "policy_revision": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "policy_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "source_revision": { "type": "string", "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$" },
+    "run_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+    "started_at": { "type": "string", "minLength": 20, "maxLength": 40 },
+    "ended_at": { "type": "string", "minLength": 20, "maxLength": 40 },
+    "accounting_mode": { "enum": ["per-run-exclusive", "aggregate-at-root", "unavailable"] },
+    "runs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["run_id", "parent_run_id"],
+        "properties": {
+          "run_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+          "parent_run_id": { "type": ["string", "null"], "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" }
+        }
+      }
+    },
+    "observations": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["observation_id", "limit_id", "accounting_owner_run_id", "sequence", "state", "value", "unit", "source_id", "unavailable_reason"],
+        "properties": {
+          "observation_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+          "limit_id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,63}$" },
+          "accounting_owner_run_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+          "sequence": { "type": "integer", "minimum": 0 },
+          "state": { "enum": ["observed", "unavailable"] },
+          "value": { "type": ["number", "null"], "minimum": 0 },
+          "unit": { "type": "string", "minLength": 1, "maxLength": 16 },
+          "source_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "unavailable_reason": { "type": ["string", "null"], "enum": ["not-reported", "stale", "mismatch", "source-error", "not-selected", null] }
+        }
+      }
+    },
+    "stop_state": { "enum": ["clear", "warning", "exhausted"] },
+    "execution_outcome": { "enum": ["completed", "stop-requested", "terminated", "interrupted", "unknown"] },
+    "cancellation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "termination_observation_ref"],
+      "properties": {
+        "state": { "enum": ["none", "requested", "confirmed", "failed", "unknown"] },
+        "termination_observation_ref": { "type": ["string", "null"], "minLength": 1, "maxLength": 1024 }
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["last_durable_checkpoint_ref", "preservation_state", "preservation_evidence_ref", "remaining_verification", "next_authorized_action"],
+      "properties": {
+        "last_durable_checkpoint_ref": { "type": ["string", "null"], "minLength": 1, "maxLength": 1024 },
+        "preservation_state": { "enum": ["preserved", "not-preserved", "unknown"] },
+        "preservation_evidence_ref": { "type": ["string", "null"], "minLength": 1, "maxLength": 1024 },
+        "remaining_verification": { "type": "array", "uniqueItems": true, "maxItems": 256, "items": { "type": "string", "minLength": 1, "maxLength": 256 } },
+        "next_authorized_action": { "type": "string", "minLength": 1, "maxLength": 1024 }
+      }
+    },
+    "spend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "amount", "currency", "meter_kind", "meter_id", "source_run_id", "window", "provenance_ref", "unknown_reason"],
+      "properties": {
+        "state": { "enum": ["reported", "unknown"] },
+        "amount": { "type": ["string", "null"], "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$" },
+        "currency": { "type": ["string", "null"], "pattern": "^[A-Z]{3}$" },
+        "meter_kind": { "type": ["string", "null"], "enum": ["host-meter", "provider-meter", null] },
+        "meter_id": { "type": ["string", "null"], "minLength": 1, "maxLength": 128 },
+        "source_run_id": { "type": ["string", "null"], "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+        "window": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["start", "end"],
+          "properties": {
+            "start": { "type": "string", "minLength": 20, "maxLength": 40 },
+            "end": { "type": "string", "minLength": 20, "maxLength": 40 }
+          }
+        },
+        "provenance_ref": { "type": ["string", "null"], "minLength": 1, "maxLength": 1024 },
+        "unknown_reason": { "type": ["string", "null"], "enum": ["not-selected", "unavailable", "stale", "mismatch", "source-error", null] }
+      }
+    },
+    "override_authorization": { "type": "null" },
+    "reset_events": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "previous_run_id", "new_run_id"],
+        "properties": {
+          "kind": { "const": "new-run" },
+          "previous_run_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+          "new_run_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" }
+        }
+      }
+    }
+  }
+}
