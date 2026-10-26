@@ -198,7 +198,7 @@ jobs:
           run_allowlisted sh
           test -s "${output_dir}/result.txt"
           inspect="$(podman inspect fw030-policy)"
-          jq '{network_mode: .[0].HostConfig.NetworkMode, readonly_rootfs: .[0].HostConfig.ReadonlyRootfs, memory_bytes: .[0].HostConfig.Memory, nano_cpus: .[0].HostConfig.NanoCpus, pids_limit: .[0].HostConfig.PidsLimit, cap_drop: .[0].HostConfig.CapDrop, security_opt: .[0].HostConfig.SecurityOpt, user: .[0].Config.User, mounts: [.[0].Mounts[] | {type: .Type, destination: .Destination, rw: .RW}] | sort_by(.destination)}' <<< "$inspect"
+          jq '{network_mode: .[0].HostConfig.NetworkMode, readonly_rootfs: .[0].HostConfig.ReadonlyRootfs, memory_bytes: .[0].HostConfig.Memory, nano_cpus: .[0].HostConfig.NanoCpus, pids_limit: .[0].HostConfig.PidsLimit, cap_drop: .[0].HostConfig.CapDrop, security_opt: .[0].HostConfig.SecurityOpt, user: .[0].Config.User, mounts: [.[0].Mounts[] | {type: .Type, destination: .Destination, rw: .RW}] | sort_by(.destination), tmpfs: {path: "/tmp", options: .[0].HostConfig.Tmpfs["/tmp"]}}' <<< "$inspect"
           jq -e '
             .[0].HostConfig.NetworkMode == "none" and
             .[0].HostConfig.ReadonlyRootfs == true and
@@ -211,7 +211,15 @@ jobs:
             ([.[0].Mounts[] | select(.Type == "bind") | .Destination] | sort == ["/input", "/output"]) and
             ([.[0].Mounts[] | select(.Type == "bind" and .Destination == "/input") | .RW] == [false]) and
             ([.[0].Mounts[] | select(.Type == "bind" and .Destination == "/output") | .RW] == [true]) and
-            ([.[0].Mounts[] | select(.Destination == "/tmp" and .Type == "tmpfs") | .RW] == [true])
+            (.[0].HostConfig.Tmpfs as $tmpfs |
+              (($tmpfs | keys | sort) == ["/tmp"]) and
+              ($tmpfs["/tmp"] as $options |
+                (($options | split(",") | index("rw")) != null) and
+                (($options | split(",") | index("noexec")) != null) and
+                (($options | split(",") | index("nosuid")) != null) and
+                (($options | split(",") | any(.[]; . == "size=16m")))
+              )
+            )
           ' <<< "$inspect" >/dev/null
           echo 'configured_policy=PASS (none network; read-only root; 128MiB; one CPU configured; 32 PIDs; all capabilities dropped; no-new-privileges; input RO/output RW; non-root identity)'
 
