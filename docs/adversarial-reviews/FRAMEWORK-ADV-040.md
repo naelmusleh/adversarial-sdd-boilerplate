@@ -3,7 +3,7 @@ id: FRAMEWORK-ADV-040
 type: adversarial-review
 title: FW-TASK-030 temporary runtime workflow review
 status: approved
-version: 0.8
+version: 0.9
 created: 2026-10-25
 updated: 2026-10-26
 reviewed-artifact: .github/workflows/fw030-runtime-probe.yml
@@ -60,3 +60,7 @@ The owner-authorized retry ran in Verify Pipeline [40250816475](https://github.c
 ## Fresh owner checkpoint and follow-up review — PASS
 
 After the preceding retry failed on the missing BusyBox `httpd` applet, the owner instructed “proceed,” authorizing one bounded correction/review/retry cycle limited to replacing the control server implementation, reviewing the exact candidate, and retrying once. At exact commit `1d74fce5f4750ab2c395c76cea1ff34ce83b0475`, independent reviewer `/root/fw029_independent_review` returned PASS. The reviewer verified that the pinned image's BusyBox `nc` serves a syntactically valid HTTP response with a 30-byte body matching the positive-control marker; the positive client uses the dedicated internal network, while the adversarial workload and child remain on `--network=none`. Existing cleanup/status checks and prior policy controls remain intact. The workflow was not executed during review. Verify Pipeline [40253255605](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40253255605) passed all three standard jobs on the exact commit; optional probes were skipped on push. This approves only the one newly authorized synthetic retry and establishes no runtime support or isolation claim.
+
+## Authorized retry result — configured-policy assertion failure
+
+The one retry ran in Verify Pipeline [40253438150](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40253438150), against exact workflow tree `30e7d739e9ec97d0e8d9af2113521a0e21626987` (workflow blob from reviewed commit `1d74fce5f4750ab2c395c76cea1ff34ce83b0475`). The network positive control printed `PASS`, and `policy_cases=PASS` covered the synthetic workload and child negative-access checks. The probe then exited at the configured-policy `jq -e` assertion: `configured_policy=PASS` was not emitted, so one or more inspected Podman fields did not match the asserted policy. Later timeout/resource/interruption and cleanup-failure test cases did not run. The EXIT handler reported `final_cleanup=PASS`; Podman warned that SIGTERM did not stop `fw030-net-server` within 10 seconds and escalated to SIGKILL before confirming all containers, the network, and temporary files absent. The three standard CI jobs passed and FW-029 was skipped. These partial results do not pass G-FEAS or establish the full profile. This owner-authorized retry is exhausted; no further fix or review is authorized without a fresh owner checkpoint.
