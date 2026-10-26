@@ -252,7 +252,12 @@ class Fw031BudgetContractTests(unittest.TestCase):
             self.assertTrue(outcome["diagnostics"])
         rendered = json.dumps(contract.validate_budget_policy('{"secret-token-value":'), sort_keys=True)
         self.assertNotIn("secret-token-value", rendered)
-        for numeric in ("1e999", "1e-400", "0.1234567890123456789"):
+        for numeric in (
+            "1e999",
+            "1e-400",
+            "0.1234567890123456789",
+            "1e-999999999999999999999",
+        ):
             outcome = contract.validate_budget_policy('{"schema_version":"1.0","policy_id":' + numeric + '}')
             self.assertIn("fw031.policy.invalid_json", {item["code"] for item in outcome["diagnostics"]}, numeric)
 

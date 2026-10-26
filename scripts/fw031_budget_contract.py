@@ -77,7 +77,7 @@ def _parse(raw: bytes | str, kind: str) -> tuple[Any | None, list[dict[str, str]
             parse_constant=_reject_constant,
             parse_float=_parse_finite_float,
         )
-    except (UnicodeError, json.JSONDecodeError, ValueError, RecursionError):
+    except (UnicodeError, json.JSONDecodeError, InvalidOperation, ValueError, RecursionError):
         return None, [_diag(f"{label}.invalid_json", "$", "input is not valid strict JSON")]
     return value, []
 
