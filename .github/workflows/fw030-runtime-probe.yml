@@ -265,13 +265,18 @@ jobs:
           elapsed_seconds=$(( $(date +%s) - start_seconds ))
           timeout_state="$(podman inspect fw030-timeout)"
           printf 'timeout_process_exit=%s elapsed_seconds=%s\n' "$timeout_status" "$elapsed_seconds"
-          conmon_version="$(conmon --version)"
+          conmon_path="$(podman info --format '{{.Host.Conmon.Path}}')"
+          if [[ -z "$conmon_path" || ! -x "$conmon_path" ]]; then
+            echo 'Podman did not expose an executable selected conmon path; fail closed.' >&2
+            exit 23
+          fi
+          conmon_version="$("$conmon_path" --version)"
           printf 'conmon_version=%s\n' "$conmon_version"
           jq '{timeout_seconds: .[0].Config.Timeout, status: .[0].State.Status, running: .[0].State.Running, exit_code: .[0].State.ExitCode, oom_killed: .[0].State.OOMKilled, started_at: .[0].State.StartedAt, finished_at: .[0].State.FinishedAt}' <<< "$timeout_state"
-          case "$conmon_version" in
-            'conmon version 2.1.10'*) ;;
-            *) echo 'Unverified conmon timeout semantics; fail closed.' >&2; exit 23 ;;
-          esac
+          if [[ "$conmon_version" != 'conmon version 2.1.10' && "$conmon_version" != 'conmon version 2.1.10,'* ]]; then
+            echo 'Unverified Podman-selected conmon timeout semantics; fail closed.' >&2
+            exit 23
+          fi
           jq -e '.[0].Config.Timeout == 2 and .[0].State.StartedAt != "" and .[0].State.FinishedAt != "" and .[0].State.Running == false and .[0].State.Status == "exited" and .[0].State.ExitCode == -1 and .[0].State.OOMKilled == false' <<< "$timeout_state" >/dev/null
           if [[ "$timeout_status" -ne 255 || "$elapsed_seconds" -lt 2 || "$elapsed_seconds" -gt 10 ]]; then
             echo 'Runtime timeout did not produce the conmon 2.1.10 timeout result within bounds.' >&2
