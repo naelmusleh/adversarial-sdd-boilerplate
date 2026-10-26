@@ -3,7 +3,7 @@ id: FRAMEWORK-FEASIBILITY-011
 type: feasibility-register
 title: FW-TASK-030 isolated execution adapter feasibility
 status: draft
-version: 0.8
+version: 0.9
 created: 2026-10-25
 updated: 2026-10-25
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-038, FRAMEWORK-ADV-039, FRAMEWORK-ADV-040, DECISION-034, WORKFLOW-FEASIBILITY-001
@@ -65,6 +65,12 @@ Current state: plan review round 1 at exact commit `e7351e841eaaeed1a65b28ed95e2
 
 **Owner-authorized correction and workflow approval (2026-10-26):** Owner authorized one bounded correction and read-only review cycle. Workflow commit `bccc4764036c742770fea4ca87108ce3f57042b7` classifies only Podman existence status 0 as present and 1 as absent; other results fail cleanup, and post-removal verification applies the same classification. The fourth independent review passed; [FRAMEWORK-ADV-040](../adversarial-reviews/FRAMEWORK-ADV-040.md) records the exact revision and scope. Verify Pipeline [40248535982](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40248535982) passed all required checks on that exact SHA; optional probes were skipped on push. The workflow is approved only to run the already authorized synthetic disposable feasibility pilot. No runtime result or support claim is established until that pilot completes. This does not authorize application integration or production use.
 
+## Hosted pilot attempt — inconclusive setup failure
+
+The approved workflow was dispatched in Verify Pipeline run [40248740451](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40248740451) at branch head `148f12e2b5569b0d2fdfaa51da37f06d20f650a2`. The three standard CI jobs passed; the FW-030 runtime-probe job failed and FW-029 was skipped. Observed runner/runtime bootstrap data: GitHub-hosted `ubuntu-24.04`, Ubuntu 24.04.5, Linux kernel 6.17.0-1022-azure, Podman 4.9.3, rootless mode true, OCI runtime crun 1.14.1, overlay storage, and netavark networking. The run header reported runner image `20261012.334.1`, while the `ImageVersion` environment variable printed `20261023.334.3`; this identity mismatch is retained as observed and not reconciled. The pinned Alpine image pull succeeded and reported image ID `24ab38714e948bd49d24d566e97c1c104b63f85c2e642685e72393b37cfb9862`.
+
+The run failed before either positive-control client or isolated policy workload ran: the temporary network server had no address in the queried inspect field, so the workflow stopped with exit 32. Its cleanup handler reported `final_cleanup=PASS` and removed containers, network, and temporary files. This is a harness/setup failure, not evidence of denied network, an unsupported runtime, or a successful boundary case. FEAS-FW030-02–05 remain untested; FEAS-FW030-01 has only the observed rootless Podman bootstrap data above. G-FEAS remains blocked until the network-control setup is diagnosed, corrected, independently reviewed, and rerun under a fresh owner checkpoint.
+
 ## G-FEAS disposition
 
-Pending. G-FEAS can pass only for a bounded named runner/runtime profile after the positive and negative pilot evidence is complete, independent review finds no blocking issue, the limitations are explicit, and downstream dependency states are updated. Otherwise record the specific blocker and keep G-ARCH/G-IMPL blocked.
+Blocked pending owner checkpoint and a corrected pilot harness. G-FEAS can pass only for a bounded named runner/runtime profile after the positive and negative pilot evidence is complete, independent review finds no blocking issue, the limitations are explicit, and downstream dependency states are updated. Otherwise record the specific blocker and keep G-ARCH/G-IMPL blocked.
