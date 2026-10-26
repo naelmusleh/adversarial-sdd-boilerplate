@@ -3,7 +3,7 @@ id: FRAMEWORK-CX-003
 type: framework-cx
 title: FW-TASK-030 runner request and evidence interaction contract
 status: draft
-version: 0.3
+version: 0.4
 created: 2026-10-26
 updated: 2026-10-26
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-COVERAGE-003, FRAMEWORK-FEASIBILITY-011, FRAMEWORK-ADV-047, FRAMEWORK-ADV-048, DECISION-034, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001, WORKFLOW-CX-001
@@ -91,13 +91,13 @@ These examples are conceptual and non-executable. They specify the desired obser
 
 ## Full-scope critique checklist and finding register
 
-The independent critique must walk all six traces and all four state axes, using the following dimensions: status visibility; real-world match; operator control; consistency across repository/CLI/Actions/review; error prevention; recognition of exact revision and evidence; flexibility without bypass; recovery; help; content clarity; trust calibration; and cross-surface handoff. Static text review cannot establish runtime accessibility, screen-reader behavior, provider UI rendering, or device behavior; route those to applicable implementation checks.
+The independent critique must walk all six traces across every state axis defined above: request readiness, authorization, execution, cleanup, evidence, and review. Apply these dimensions to each relevant transition: status visibility; real-world match; operator control; consistency across repository/CLI/Actions/review; error prevention; recognition of exact revision and evidence; flexibility without bypass; recovery; help; content clarity; trust calibration; and cross-surface handoff. Static text review cannot establish runtime accessibility, screen-reader behavior, provider UI rendering, or device behavior; route those to applicable implementation checks.
 
 | Finding ID | Location / evidence | Severity | User/operator impact | Recommendation | Owner decision needed | Disposition / rerun evidence |
 | --- | --- | --- | --- | --- | --- | --- |
 | CX030-01 | v0.1 state table and CX-030-A preflight/authorization transition. | P2 | `READY` could be mistaken for permission to dispatch. | Separate readiness from one-run authorization and gate dispatch on both. | No. | Resolved in v0.2 with distinct `Request readiness` and `Authorization` axes; only READY + AUTHORIZED enables dispatch. Confirmed by full-scope review; see FRAMEWORK-ADV-049. |
 | CX030-02 | v0.1 Run axis and CX-030-E cleanup recovery. | P1 | Cleanup completion could overwrite a failed/cancelled execution outcome. | Separate terminal execution result from cleanup state and preserve both across recovery. | No. | Resolved in v0.2 with independent `Execution` and `Cleanup` axes; cleanup `CLEAN` does not change `FAILED`/`CANCELLED`. Confirmed by full-scope review; see FRAMEWORK-ADV-049. |
-| CX030-03 | v0.2 full-scope rerun checklist. | P2 | Stale axis count could omit authorization or cleanup states from critique. | Name all state axes in the full rerun scope. | No. | Resolved in v0.3: full-scope critique includes request readiness, authorization, execution, cleanup, evidence, and review. Pending review of correction. |
+| CX030-03 | v0.2 full-scope rerun checklist. | P2 | Stale axis count could omit authorization or cleanup states from critique. | Name all state axes in the full rerun scope. | No. | Corrected in v0.4: full-scope critique explicitly enumerates request readiness, authorization, execution, cleanup, evidence, and review for all six traces. Independent verification pending. |
 | CX030-04 | v0.2 CX-030-A authorization handoff. | P2 | Authorization could remain active after a non-revision request field changes. | Invalidate authorization on any change to the complete request summary and require preflight plus fresh authorization. | No. | Resolved in v0.3 by explicit whole-summary binding and invalidation. Pending review of correction. |
 
 ## Gate evidence and next action
