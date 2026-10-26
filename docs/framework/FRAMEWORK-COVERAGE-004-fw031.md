@@ -2,11 +2,11 @@
 id: FRAMEWORK-COVERAGE-004
 type: coverage-matrix
 title: FW-TASK-031 per-run limits and stop-condition journeys and surfaces
-status: draft
-version: 0.1
+status: approved
+version: 0.2
 created: 2026-10-26
 updated: 2026-10-26
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-ADV-053, DECISION-036, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-ADV-053, DECISION-036, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-ADV-054
 ---
 
 # FRAMEWORK-COVERAGE-004 — FW-TASK-031 per-run limits and stop-condition journeys and surfaces
@@ -67,6 +67,6 @@ Every in-scope journey covers at least one applicable failure category. All decl
 
 ## Coverage result and next step
 
-**Provisional G-COVERAGE finding:** The journey/state inventory covers FR-FW-038–040 and all six backlog acceptance criteria, including unavailable capabilities, cancellation uncertainty, partial-work recovery, authoritative meter failure, nested accounting, and override/reset attacks. Applicable, conditional, and excluded surfaces have explicit rationales. This finding awaits independent full-scope review and exact-revision verification.
+**G-COVERAGE result:** PASS within DECISION-036 and FR-FW-038–040 at exact candidate revision `8e570fff61472c8aa3dd108352d68909ba4b213d`. Independent full-scope review FRAMEWORK-ADV-054 found no material findings. Verify Pipeline run [40321566854](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40321566854) passed all three required jobs on that exact revision; optional FW-029/FW-030 probes were skipped. The review and CI evidence establish coverage of the declared journeys, states, surfaces, and failure/recovery cases only; blocked host and meter capabilities remain unchanged.
 
 **Next gate:** G-CX, using a nonvisual operator/reviewer interaction trace. Do not create an end-user prototype or claim a live host, enforcement, cost, or accessibility capability from this coverage inventory.
