@@ -2,8 +2,8 @@
 id: FRAMEWORK-FEASIBILITY-013
 type: feasibility-register
 title: FW-TASK-031 GitHub Actions hosted-runner capability probe
-status: draft
-version: 0.1
+status: approved
+version: 0.2
 created: 2026-10-26
 updated: 2026-10-26
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-ARCHITECTURE-005, FRAMEWORK-CONTRACT-031, DECISION-036, DECISION-037
@@ -42,6 +42,8 @@ The probe examined workflow and job metadata, logs, and timing for the successfu
 GitHub Actions provides a plausible boundary for workflow/job IDs, rerun attempts, elapsed timestamps, configurable job timeouts, and host-level cancellation. The current framework workflow does not capture a complete FW-031 capability record, configure a short time budget, count agent tool calls or internal retries, establish child-agent accounting, or measure monetary spend. A workflow-level timebox could be explored as a narrow advisory/control profile, but this probe does not adopt that profile or establish that it satisfies FW-TASK-031.
 
 **Result:** Evidence narrows several previous unknowns for workflow/job-level timing and cancellation surfaces. Tool calls and nested agent accounting remain unavailable in the current profile; resource metrics and termination for a future agent workload remain unknown; spend remains unknown. Slices B–D in FRAMEWORK-ARCHITECTURE-005 stay held. No threshold, budget policy, controller, or host profile is selected.
+
+**Independent review:** Reviewer `/root/fw029_independent_review` found no actionable findings at exact published candidate `934ee58f629af667341532eb6b95c8e1724e657e` on `codex/fw031-greq`. The reviewer confirmed that the claims stay at workflow/job level and do not transfer prior FW-029/FW-030 results into adoption evidence.
 
 **Next dependency:** Before implementation of advisory accounting, the owner must select whether the intended profile is limited to GitHub workflow/job level and define which counters may be treated as supported, advisory, or unavailable. Any process-tree enforcement or monetary spend remains separately blocked on a tested controller or authoritative meter.
 
