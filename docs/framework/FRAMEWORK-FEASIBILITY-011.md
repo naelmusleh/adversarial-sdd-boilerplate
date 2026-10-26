@@ -3,10 +3,10 @@ id: FRAMEWORK-FEASIBILITY-011
 type: feasibility-register
 title: FW-TASK-030 isolated execution adapter feasibility
 status: draft
-version: 0.3
+version: 0.4
 created: 2026-10-25
 updated: 2026-10-25
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-038, DECISION-034, WORKFLOW-FEASIBILITY-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-038, FRAMEWORK-ADV-039, DECISION-034, WORKFLOW-FEASIBILITY-001
 ---
 
 # FRAMEWORK-FEASIBILITY-011 — FW-TASK-030 isolated execution adapter feasibility
@@ -27,9 +27,9 @@ DECISION-034 approved the requirements scope only. G-REQ passed at `25896b1c3763
 | --- | --- | --- | --- |
 | Local macOS Docker Desktop | macOS arm64 and Docker CLI are present. The configured `desktop-linux` Docker socket was inaccessible in the normal shell and the daemon was not running when inspected with elevated read-only access. Podman CLI was not found. | Unknown / currently unavailable | Do not start the user's local daemon or treat the client binary as proof of an executable runtime. Revisit only if the owner provides an available local engine and approves its use. |
 | Self-hosted GitHub runner | Not tested; requires a maintained host and runner lifecycle. | Constrained; not selected for the pilot | GitHub warns self-hosted runners do not have the same ephemeral-clean-VM guarantee and may be persistently compromised by untrusted workflow code. Exclude from the first pilot. |
-| GitHub-hosted Ubuntu 24.04 + rootless Podman | Official runner image inventory lists Podman 4.9.3. No execution behavior has yet been observed in this repository's hosted run. | Candidate; unverified | Use exact runner and Podman versions observed during a disposable CI probe. Runner images move; results do not establish a permanent support promise. |
+| GitHub-hosted Ubuntu 24.04 + rootless Podman | Official runner image inventory lists Podman 4.9.3. No execution behavior has yet been observed in this repository's hosted run. A disposable candidate probe pins the linux/amd64 Alpine workload manifest to `sha256:dc92f017beea8e7f43263073d717f7bc011228c95d5312e440deb4d035bb4eec`. | Candidate; unverified | Use exact runner and Podman versions observed during a disposable CI probe. Runner images move; results do not establish a permanent support promise. |
 
-Sources: [GitHub Actions secure use](https://docs.github.com/en/actions/reference/security/secure-use) and [GitHub runner image inventory](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md). Source observations retrieved 2026-10-25. Docker's official [rootless mode documentation](https://docs.docker.com/engine/security/rootless/) describes rootless execution as mitigation, not complete separation; a rootless runtime is not itself proof that host paths or the kernel are inaccessible.
+Sources: [GitHub Actions secure use](https://docs.github.com/en/actions/reference/security/secure-use), [GitHub runner image inventory](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md), Docker's official [rootless mode documentation](https://docs.docker.com/engine/security/rootless/), and the Docker Official Image [Alpine manifest details](https://github.com/docker-library/repo-info/blob/master/repos/alpine/tag-details.md). Source observations retrieved 2026-10-25. Rootless execution is a mitigation, not complete separation; the pinned workload image digest fixes the linux/amd64 Alpine image bytes used by this probe.
 
 ## Threat model
 
@@ -55,7 +55,7 @@ The local host boundary remains the GitHub-hosted runner VM. The container bound
 4. Execute the positive and negative matrix against exact frozen inputs. Save only bounded result codes, identities/digests, and sanitized output. Do not make G-FEAS pass on plan review or package availability alone.
 5. Remove temporary workflow/fixture files after the run; run artifact validation and the exact-revision Verify Pipeline on the evidence record. Independently review the final record before deciding G-FEAS.
 
-Current state: plan review round 1 at exact commit `e7351e841eaaeed1a65b28ed95e2278fcec007be` returned NEEDS-CHANGES for two coverage gaps: explicit secret non-inheritance and a child-process boundary attempt. Both corrections in v0.2 were independently re-reviewed at exact commit `a70e989a47c54a69643ccee8e6a56e18c55d293d` and passed; see [FRAMEWORK-ADV-039](../adversarial-reviews/FRAMEWORK-ADV-039.md). This PASS establishes plan readiness only. No hosted workload has run, no workload image digest has been frozen for execution, and no isolation or supported-host claim is established. The temporary workflow must be drafted, frozen, and independently reviewed before execution. If the temporary hosted pilot cannot safely run without extra permissions or mutable dependencies, record that as a blocker instead of weakening the policy.
+Current state: plan review round 1 at exact commit `e7351e841eaaeed1a65b28ed95e2278fcec007be` returned NEEDS-CHANGES for two coverage gaps: explicit secret non-inheritance and a child-process boundary attempt. Both corrections in v0.2 were independently re-reviewed at exact commit `a70e989a47c54a69643ccee8e6a56e18c55d293d` and passed; see [FRAMEWORK-ADV-039](../adversarial-reviews/FRAMEWORK-ADV-039.md). This PASS establishes plan readiness only. The temporary reusable workflow candidate is `.github/workflows/fw030-runtime-probe.yml`, called only by the Verify Pipeline `workflow_dispatch` job on `refs/heads/codex/fw030-greq`; it has `permissions: {}`, no checkout, no third-party actions, no secrets, and no artifact upload. It pins the linux/amd64 Alpine image manifest digest above, with runner network used only to pull that fixed image before execution; the workload itself is run with `--network=none` and `--pull=never`. Its exact workflow revision requires independent read-only review before dispatch. No hosted workload has run and no supported-host/isolation claim is established. If the temporary hosted pilot cannot safely run without extra permissions or mutable dependencies, record that as a blocker instead of weakening the policy.
 
 ## G-FEAS disposition
 

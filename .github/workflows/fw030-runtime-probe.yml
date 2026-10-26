@@ -1,0 +1,219 @@
+name: FW-030 Rootless Runtime Probe
+
+on:
+  workflow_call:
+
+permissions: {}
+
+jobs:
+  rootless-policy-probe:
+    name: Rootless policy and boundary probes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions: {}
+    env:
+      FW030_SECRET_SENTINEL: synthetic-fw030-environment-only
+    steps:
+      - name: Probe pinned rootless runtime with synthetic input only
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          readonly image='docker.io/library/alpine@sha256:dc92f017beea8e7f43263073d717f7bc011228c95d5312e440deb4d035bb4eec'
+          readonly probe_dir="$(mktemp -d "${RUNNER_TEMP}/fw030.XXXXXX")"
+          readonly input_dir="${probe_dir}/input"
+          readonly output_dir="${probe_dir}/output"
+          readonly host_sentinel="${probe_dir}/host-sentinel"
+          readonly expected_sentinel='host-only-synthetic-marker-do-not-print'
+          readonly container_uid=1000
+          mkdir -m 700 "$input_dir" "$output_dir"
+          chmod 777 "$output_dir"
+          printf '%s' "$expected_sentinel" > "$host_sentinel"
+          chmod 600 "$host_sentinel"
+          ln -s "$host_sentinel" "${input_dir}/escape-link"
+          parent_path="/input/../../${host_sentinel#/}"
+
+          cleanup() {
+            local status=$?
+            trap - EXIT
+            podman rm -f fw030-policy fw030-timeout fw030-interrupt fw030-resource fw030-cleanup-failure >/dev/null 2>&1 || true
+            rm -rf "$probe_dir"
+            exit "$status"
+          }
+          trap cleanup EXIT
+
+          if [[ "$(uname -m)" != 'x86_64' ]]; then
+            echo 'Unsupported runner architecture; no fallback.' >&2
+            exit 20
+          fi
+          podman --version
+          printf 'runner_os=%s\n' "$(. /etc/os-release && printf '%s' "$PRETTY_NAME")"
+          printf 'runner_kernel=%s\n' "$(uname -sr)"
+          printf 'runner_image_version=%s\n' "${ImageVersion:-not-reported}"
+          printf 'runner_image_os=%s\n' "${ImageOS:-not-reported}"
+          rootless="$(podman info --format '{{.Host.Security.Rootless}}')"
+          if [[ "$rootless" != 'true' ]]; then
+            echo 'Podman is not rootless; fail closed.' >&2
+            exit 21
+          fi
+          printf 'podman_rootless=%s\n' "$rootless"
+          podman info --format '{{.Host.OCIRuntime.Name}} {{.Host.OCIRuntime.Version}}'
+
+          # Host networking is used only to fetch the fixed digest before any workload runs.
+          podman pull --platform linux/amd64 "$image"
+          podman image inspect --format 'image_id={{.Id}}' "$image"
+
+          policy_script="$(cat <<'SH'
+          set -eu
+          expected_uid="$3"
+          test "$(id -u)" = "$expected_uid"
+          test "${FW030_SECRET_SENTINEL-}" = ""
+          if cat "$1" >/dev/null 2>&1; then echo "host sentinel readable" >&2; exit 41; fi
+          if cat /input/escape-link >/dev/null 2>&1; then echo "symlink escaped" >&2; exit 42; fi
+          if cat "$2" >/dev/null 2>&1; then echo "parent path escaped" >&2; exit 43; fi
+          if touch /input/should-not-write 2>/dev/null; then echo "read-only input writable" >&2; exit 44; fi
+          if /bin/busybox wget -T 2 -qO- http://192.0.2.1/ >/dev/null 2>&1; then echo "network reachable" >&2; exit 45; fi
+          test ! -S /run/podman/podman.sock
+          test ! -S /var/run/docker.sock
+          printf "bounded synthetic output\n" > /output/result.txt
+          sh -eu -c 'if cat "$1" >/dev/null 2>&1; then exit 51; fi; if /bin/busybox wget -T 2 -qO- http://192.0.2.1/ >/dev/null 2>&1; then exit 52; fi' sh "$1"
+          printf "policy_cases=PASS\n"
+          SH
+          )"
+
+          # This tiny probe-only guard is not the framework adapter implementation.
+          run_allowlisted() {
+            local command=$1
+            shift
+            case "$command" in
+              sh) podman run --pull=never --name fw030-policy \
+                    --network=none --read-only --user "${container_uid}:${container_uid}" \
+                    --cap-drop=all --security-opt=no-new-privileges \
+                    --memory=128m --cpus=1 --pids-limit=32 \
+                    --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+                    --volume "${input_dir}:/input:ro" \
+                    --volume "${output_dir}:/output:rw" \
+                    "$image" sh -eu -c "$policy_script" sh "$host_sentinel" "$parent_path" "$container_uid" ;;
+              *) return 64 ;;
+            esac
+          }
+
+          run_allowlisted sh
+          test -s "${output_dir}/result.txt"
+          inspect="$(podman inspect fw030-policy)"
+          jq -e '
+            .[0].HostConfig.NetworkMode == "none" and
+            .[0].HostConfig.ReadonlyRootfs == true and
+            .[0].HostConfig.Memory == 134217728 and
+            .[0].HostConfig.PidsLimit == 32 and
+            .[0].Config.User != "0:0" and
+            ([.[0].Mounts[].Destination] | sort == ["/input", "/output"]) and
+            ([.[0].Mounts[] | select(.Destination == "/input") | .RW] == [false]) and
+            ([.[0].Mounts[] | select(.Destination == "/output") | .RW] == [true])
+          ' <<< "$inspect" >/dev/null
+          echo 'effective_policy=PASS (none network; read-only root; 128MiB; 1 CPU; 32 PIDs; input RO/output RW; non-root identity)'
+
+          set +e
+          run_allowlisted python -c 'print(1)'
+          denied_command_status=$?
+          set -e
+          if [[ "$denied_command_status" -ne 64 ]]; then
+            echo 'Denied command was not rejected by the probe guard.' >&2
+            exit 22
+          fi
+          echo 'denied_command=PASS'
+
+          start_seconds="$(date +%s)"
+          set +e
+          podman run --pull=never --name fw030-timeout --timeout 2 \
+            --network=none --read-only --user "${container_uid}:${container_uid}" \
+            --cap-drop=all --security-opt=no-new-privileges --memory=128m --cpus=1 --pids-limit=32 \
+            "$image" sleep 30 >/dev/null 2>&1
+          timeout_status=$?
+          set -e
+          elapsed_seconds=$(( $(date +%s) - start_seconds ))
+          if [[ "$timeout_status" -eq 0 || "$elapsed_seconds" -gt 10 ]]; then
+            echo 'Runtime timeout did not stop the bounded workload.' >&2
+            exit 23
+          fi
+          podman rm -f fw030-timeout >/dev/null
+          if podman container exists fw030-timeout; then
+            echo 'Timed-out container remains after cleanup.' >&2
+            exit 24
+          fi
+          printf 'timeout_status=nonzero elapsed_seconds=%s cleanup=PASS\n' "$elapsed_seconds"
+
+          set +e
+          podman run --pull=never --name fw030-resource --timeout 4 \
+            --network=none --read-only --user "${container_uid}:${container_uid}" \
+            --cap-drop=all --security-opt=no-new-privileges --memory=128m --cpus=1 --pids-limit=32 \
+            --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+            "$image" sh -c 'dd if=/dev/zero of=/tmp/overflow bs=1M count=32' >/dev/null 2>&1
+          resource_status=$?
+          set -e
+          if [[ "$resource_status" -eq 0 ]]; then
+            echo 'Bounded tmpfs resource exhaustion unexpectedly succeeded.' >&2
+            exit 28
+          fi
+          podman rm -f fw030-resource >/dev/null
+          if podman container exists fw030-resource; then
+            echo 'Resource-limited container remains after cleanup.' >&2
+            exit 29
+          fi
+          echo 'tmpfs_resource_ceiling=PASS (16MiB tmpfs rejected 32MiB synthetic write; container removed)'
+
+          podman run --pull=never --name fw030-interrupt -d \
+            --network=none --read-only --user "${container_uid}:${container_uid}" \
+            --cap-drop=all --security-opt=no-new-privileges --memory=128m --cpus=1 --pids-limit=32 \
+            "$image" sleep 30 >/dev/null
+          podman stop --time 1 fw030-interrupt >/dev/null
+          test "$(podman inspect --format '{{.State.Status}}' fw030-interrupt)" = 'exited'
+          podman rm fw030-interrupt >/dev/null
+          if podman container exists fw030-interrupt; then
+            echo 'Interrupted container remains after cleanup.' >&2
+            exit 25
+          fi
+          echo 'stop_signal_and_cleanup=PASS'
+
+          podman run --pull=never --name fw030-cleanup-failure -d \
+            --network=none --read-only --user "${container_uid}:${container_uid}" \
+            --cap-drop=all --security-opt=no-new-privileges --memory=128m --cpus=1 --pids-limit=32 \
+            "$image" sleep 30 >/dev/null
+          set +e
+          podman rm fw030-cleanup-failure >/dev/null 2>&1
+          cleanup_failure_status=$?
+          set -e
+          if [[ "$cleanup_failure_status" -eq 0 ]]; then
+            echo 'Runtime did not report refusal to remove a running container.' >&2
+            exit 30
+          fi
+          podman rm -f fw030-cleanup-failure >/dev/null
+          if podman container exists fw030-cleanup-failure; then
+            echo 'Cleanup recovery left the synthetic container behind.' >&2
+            exit 31
+          fi
+          echo 'cleanup_failure_and_recovery=PASS (non-force removal rejected running container; force cleanup removed it)'
+
+          set +e
+          podman rm fw030-intentionally-missing-container >/dev/null 2>&1
+          missing_cleanup_status=$?
+          set -e
+          if [[ "$missing_cleanup_status" -eq 0 ]]; then
+            echo 'Runtime failed to expose invalid cleanup target.' >&2
+            exit 26
+          fi
+          echo 'cleanup_failure_signal=PASS (runtime returned nonzero; synthetic nonexistent target only)'
+
+          podman rm fw030-policy >/dev/null
+          if podman container exists fw030-policy; then
+            echo 'Policy probe container remains after cleanup.' >&2
+            exit 27
+          fi
+          printf '%s\n' \
+            'FW-030 synthetic rootless runtime probe completed.' \
+            "source_sha=${GITHUB_SHA}" \
+            "workflow_run_id=${GITHUB_RUN_ID}" \
+            "workflow_run_attempt=${GITHUB_RUN_ATTEMPT}" \
+            'No source checkout, repository secrets, artifact upload, or host/runtime socket mount was used.' \
+            'This result is limited to the observed ephemeral runner, runtime, pinned image, and cases.' \
+            >> "$GITHUB_STEP_SUMMARY"

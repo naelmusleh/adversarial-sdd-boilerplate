@@ -91,3 +91,9 @@ jobs:
       id-token: write
       attestations: write
       artifact-metadata: write
+
+  fw030-rootless-runtime-probe:
+    name: FW-030 Rootless Runtime Probe
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/fw030-greq'
+    uses: ./.github/workflows/fw030-runtime-probe.yml
+    permissions: {}
