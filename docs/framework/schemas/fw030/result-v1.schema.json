@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:adversarial-sdd:fw030:result:1.0",
+  "title": "FW-030 host-neutral invocation result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "invocation_id", "request_sha256", "readiness_status", "states", "diagnostics"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "invocation_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+    "request_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+    "readiness_status": { "enum": ["invalid", "unsupported", "blocked", "prerequisites_valid"] },
+    "states": {
+      "type": "object", "additionalProperties": false,
+      "required": ["request_readiness", "authorization", "execution", "cleanup", "evidence", "review"],
+      "properties": {
+        "request_readiness": { "enum": ["invalid", "unsupported", "blocked", "prerequisites_valid"] },
+        "authorization": { "enum": ["not_requested", "not_authorized", "authorized"] },
+        "execution": { "enum": ["not_started", "running", "succeeded", "failed", "cancelled"] },
+        "cleanup": { "enum": ["not_applicable", "required", "in_progress", "complete", "failed", "unknown"] },
+        "evidence": { "enum": ["not_collected", "complete", "incomplete", "stale", "conflicted"] },
+        "review": { "enum": ["not_performed", "pending", "recorded"] }
+      }
+    },
+    "diagnostics": {
+      "type": "array", "maxItems": 32,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["code", "path", "message"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,127}$" },
+          "path": { "type": "string", "maxLength": 512 },
+          "message": { "type": "string", "minLength": 1, "maxLength": 512 }
+        }
+      }
+    }
+  }
+}

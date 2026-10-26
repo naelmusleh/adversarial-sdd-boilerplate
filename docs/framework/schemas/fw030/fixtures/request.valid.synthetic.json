@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "invocation_id": "c3dd2386-d2ce-4d4c-a102-4c1f42e26b19",
+  "source": {
+    "repository": "example.invalid/synthetic-fixture",
+    "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "tree_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "execution_context": {
+    "kind": "local",
+    "provider_context": null,
+    "absence_reason": "local_execution_has_no_provider_run"
+  },
+  "profile": {
+    "id": "synthetic-linux-profile",
+    "revision": "fixture-v1"
+  },
+  "workload": {
+    "image": "example.invalid/synthetic@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "argv": [
+      "/usr/bin/true"
+    ],
+    "executable": "/usr/bin/true",
+    "working_directory": "/workspace"
+  },
+  "policy": {
+    "sha256": "37a88ce3439c899746aa51eb0448f39b765091548d8bb9ae65c784b6d523aa4d",
+    "uid": 10001,
+    "gid": 10001,
+    "mounts": [
+      {
+        "kind": "input",
+        "source": "/synthetic/input",
+        "target": "/workspace/input",
+        "mode": "read_only"
+      },
+      {
+        "kind": "output",
+        "source": "/synthetic/output",
+        "target": "/workspace/output",
+        "mode": "write_only"
+      }
+    ],
+    "network": "disabled",
+    "secrets": "disabled",
+    "limits": {
+      "cpu_millis": 1000,
+      "memory_mb": 256,
+      "process_count": 32,
+      "disk_mb": 512,
+      "wall_seconds": 60
+    },
+    "cancellation": "terminate_then_kill_within_wall_limit",
+    "evidence": {
+      "mode": "allowlisted_redacted",
+      "max_output_bytes": 4096,
+      "case_ids": [
+        "SYNTHETIC-CASE-01"
+      ]
+    }
+  },
+  "required_capabilities": [
+    "filesystem.readonly-input",
+    "runtime.rootless"
+  ]
+}

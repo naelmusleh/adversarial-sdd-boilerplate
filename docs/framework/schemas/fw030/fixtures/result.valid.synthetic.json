@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "invocation_id": "c3dd2386-d2ce-4d4c-a102-4c1f42e26b19",
+  "request_sha256": "34797b0f4dba2904dcd070e5859b2bf58ccdb5d711976336be22ebff158a692f",
+  "readiness_status": "prerequisites_valid",
+  "states": {
+    "request_readiness": "prerequisites_valid",
+    "authorization": "not_requested",
+    "execution": "not_started",
+    "cleanup": "not_applicable",
+    "evidence": "not_collected",
+    "review": "not_performed"
+  },
+  "diagnostics": []
+}
