@@ -3,10 +3,10 @@ id: FRAMEWORK-CONTRACT-030
 type: framework-contract
 title: FW-030 host-neutral request/result contract
 status: draft
-version: 1.0
+version: 1.1
 created: 2026-10-25
-updated: 2026-10-25
-related-artifacts: FRAMEWORK-ARCHITECTURE-004, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-035
+updated: 2026-10-26
+related-artifacts: FRAMEWORK-ARCHITECTURE-004, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-051, DECISION-035
 ---
 
 # FRAMEWORK-CONTRACT-030 — FW-030 contract v1
