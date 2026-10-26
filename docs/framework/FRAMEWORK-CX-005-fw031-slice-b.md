@@ -3,7 +3,7 @@ id: FRAMEWORK-CX-005
 type: cx-contract
 title: FW-TASK-031 slice B operator and reviewer interaction contract
 status: draft
-version: 0.1
+version: 0.2
 created: 2026-10-26
 updated: 2026-10-26
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-013, FRAMEWORK-FEASIBILITY-014, FRAMEWORK-COVERAGE-005, DECISION-038, WORKFLOW-CX-001, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
@@ -47,7 +47,12 @@ The examples below use placeholder labels such as `<run-id>` and state names, no
 | Timeout | `configured`, `observed-timeout`, `other-outcome`, `unknown`; configuration is not an observed stop. |
 | Cancellation | `not-requested`, `requested`, `host-terminal`, `workload-termination-observed`, `failed`, `unknown`; each stage remains independently evidenced. |
 | Measurement | `directly-measured`, `unknown`, `unavailable`, `rejected-proxy`; a number requires direct scoped provenance. |
-| Retrieval/review | `authorized`, `denied`, `degraded`, `partial`, `reviewable`, `findings`, `pass-within-scope`, `blocked`; review does not grant authorization. |
+| Authorization / access | `not-requested`, `pending`, `authorized`, `denied`, `expired`, `unknown`; these describe authority to retrieve or request an action only. |
+| Retrieval / evidence | `not-started`, `complete`, `partial`, `degraded`, `unavailable`, `stale`, `conflicting`; these describe collection and source quality, independent of review. |
+| Reviewer disposition | `not-reviewed`, `findings`, `pass-within-scope`, `inconclusive`; applies only to the exact evidence subset actually reviewed. |
+| Owner / gate decision | `not-decided`, `pending`, `authorized`, `denied`, `in-progress`, `pass`, `blocked`; only the applicable accountable owner or gate record can set these states. They are not inferred from access, retrieval, or reviewer states. |
+
+**Combination rules:** Access denial prevents a new retrieval attempt but does not erase already captured evidence. `partial`, `degraded`, `unavailable`, `stale`, or `conflicting` evidence can coexist with `findings` or `inconclusive` review for the available subset; it cannot support a reviewer PASS for a claim requiring the missing portion. Reviewer `pass-within-scope` is not an owner authorization or gate PASS. Owner authorization is separate from gate state; only the canonical gate record determines gate disposition. CI success establishes only its configured checks for the exact revision.
 
 **Invariant:** Run identity binds the evidence; source-revision labels preserve provenance; configuration is distinct from runtime outcome; cancellation request is distinct from terminal host state and observed workload termination; missing measurements remain unknown; and neither a successful review nor CI run adopts a profile or enables implementation.
 
@@ -87,8 +92,8 @@ The interaction target is a conceptual text trace based on FRAMEWORK-COVERAGE-00
 
 | Finding ID | Location | Severity / impact | Disposition / owner-decision need |
 | --- | --- | --- | --- |
-| Pending independent review | Full contract and all six traces | Pending | No critique result is claimed until independent review and exact-revision CI complete. |
+| CX031B-01 | §3, state model and combination rules | P2 — access, collection, review, and gate states were combined on one axis, obscuring coexisting states and decision authority. | Resolved in v0.2: split into four independent axes with explicit combination/precedence rules. Full six-journey and state-transition rerun required; no owner decision needed. |
 
-**G-CX result:** Pending full-scope independent critique and exact-revision Verify Pipeline. No unresolved finding is waived by this draft.
+**G-CX result:** Pending full-scope independent rerun for CX031B-01 and exact-revision Verify Pipeline. No unresolved finding is waived by this draft.
 
 **Next gate:** G-ARCH after the interaction trace passes review and CI. Architecture must preserve conditional access/timeout and blocked workload termination; implementation still requires separate G-IMPL authorization.
