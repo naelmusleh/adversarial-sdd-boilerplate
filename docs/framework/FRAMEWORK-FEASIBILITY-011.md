@@ -3,7 +3,7 @@ id: FRAMEWORK-FEASIBILITY-011
 type: feasibility-register
 title: FW-TASK-030 isolated execution adapter feasibility
 status: draft
-version: 0.7
+version: 0.8
 created: 2026-10-25
 updated: 2026-10-25
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-038, FRAMEWORK-ADV-039, FRAMEWORK-ADV-040, DECISION-034, WORKFLOW-FEASIBILITY-001
@@ -63,7 +63,7 @@ Current state: plan review round 1 at exact commit `e7351e841eaaeed1a65b28ed95e2
 
 **G-FEAS owner checkpoint required (2026-10-26):** Owner authorized the third consecutive independent review. At exact workflow commit `cf2dbaee6983ba0981eba5dbb0db5b85a5628d7a` (identical workflow blob at `5dced2007f8b4a924aafd0bb5fba146fbb8b16a5`), reviewer `/root/fw029_independent_review` confirmed the earlier network, mount, outcome, and policy-reporting fixes, but found a remaining cleanup false-pass: Podman existence commands' query failures (for example exit 125) are treated as absence, so cleanup may claim success without proving absence. Finding and disposition are recorded in FRAMEWORK-ADV-040 v0.3. No workload was dispatched or run. Per the repository's owner checkpoint after more than two consecutive adversarial loops, FW-TASK-030 G-FEAS is blocked pending owner direction for any further correction/review cycle. No supported-host or isolation claim is established.
 
-**Owner-authorized correction checkpoint (2026-10-26):** Owner authorized one bounded correction and read-only review cycle. The workflow now treats only Podman existence status 0 as present and 1 as absent; other results fail cleanup, and the post-removal verification applies the same classification. The correction is pending exact-revision CI and independent review. No workload was run. This authorization does not authorize a further review loop or hosted probe dispatch.
+**Owner-authorized correction and workflow approval (2026-10-26):** Owner authorized one bounded correction and read-only review cycle. Workflow commit `bccc4764036c742770fea4ca87108ce3f57042b7` classifies only Podman existence status 0 as present and 1 as absent; other results fail cleanup, and post-removal verification applies the same classification. The fourth independent review passed; [FRAMEWORK-ADV-040](../adversarial-reviews/FRAMEWORK-ADV-040.md) records the exact revision and scope. Verify Pipeline [40248535982](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40248535982) passed all required checks on that exact SHA; optional probes were skipped on push. The workflow is approved only to run the already authorized synthetic disposable feasibility pilot. No runtime result or support claim is established until that pilot completes. This does not authorize application integration or production use.
 
 ## G-FEAS disposition
 

@@ -2,8 +2,8 @@
 id: FRAMEWORK-ADV-040
 type: adversarial-review
 title: FW-TASK-030 temporary runtime workflow review
-status: revision-required
-version: 0.4
+status: approved
+version: 0.5
 created: 2026-10-25
 updated: 2026-10-25
 reviewed-artifact: .github/workflows/fw030-runtime-probe.yml
@@ -42,4 +42,4 @@ Do not dispatch the workflow. The third review returned NEEDS-CHANGES. Per the r
 
 ## Owner authorization and fourth review candidate
 
-After the third review, the owner explicitly authorized one bounded correction and independent review cycle. The workflow now accepts only exit status 0 (resource present) or 1 (not found) from Podman container/network existence queries; all other statuses are recorded as cleanup failures. It repeats the same status classification after removal before claiming absence. This correction has not yet been independently reviewed or run. Review the exact new workflow commit before any dispatch. The prior owner checkpoint is limited to this correction and one read-only review; it does not authorize another review loop or hosted probe execution.
+After the third review, the owner explicitly authorized one bounded correction and independent review cycle. The workflow now accepts only exit status 0 (resource present) or 1 (not found) from Podman container/network existence queries; all other statuses are recorded as cleanup failures. It repeats the same status classification after removal before claiming absence. Independent reviewer `/root/fw029_independent_review` reviewed exact workflow commit `bccc4764036c742770fea4ca87108ce3f57042b7` and returned PASS. The reviewer confirmed statuses are classified as 0=present, 1=not found, and all other results fail cleanup; post-removal status checks use the same rules; temporary directory removal is checked; and prior findings remain corrected. Verify Pipeline [40248535982](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40248535982) passed on the exact workflow commit. This approves the workflow for the already authorized disposable pilot only; it does not itself establish runtime support or isolation.
