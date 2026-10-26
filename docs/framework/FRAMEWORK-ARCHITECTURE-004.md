@@ -3,7 +3,7 @@ id: FRAMEWORK-ARCHITECTURE-004
 type: framework-architecture
 title: FW-TASK-030 optional isolated command runner architecture
 status: draft
-version: 0.1
+version: 0.2
 created: 2026-10-26
 updated: 2026-10-26
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-034, FRAMEWORK-FEASIBILITY-011, FRAMEWORK-COVERAGE-003, FRAMEWORK-CX-003, FRAMEWORK-ADV-047, FRAMEWORK-ADV-048, FRAMEWORK-ADV-049, FRAMEWORK-GATE-CONTRACT-001, WORKFLOW-FEASIBILITY-001
@@ -56,7 +56,8 @@ At present, the architecture has no adopted runtime adapter. The hosted Podman p
 | Profile contract and capability declarations | Framework maintainers propose; owner approves support claims | Versioned source artifact; changing profile identity or guarantees requires review and new evidence. |
 | Invocation policy and authorization | Application/task owner for the specific invocation | Immutable digest for a run; no secrets by default; not persisted in logs beyond bounded non-secret fields. |
 | Runtime resources | Adapter owns resources it creates; host/provider remains responsible for underlying runner | Unique per-run names; cleanup attempts run on normal, failed, timed-out, and cancelled paths; uncertain absence blocks subsequent work and remains visible. |
-| Run/evidence result | Adapter/collector produce; provider hosts run status; reviewer assesses meaning | Exact source/run/profile/policy binding, bounded fields, redaction, and provider retention caveat. No durable evidence promise until separately specified. |
+| Invocation record | Adapter/collector produce execution and cleanup observations; provider may host execution status; reviewer assesses meaning in a separate review artifact | Exact source/invocation/profile/policy binding, bounded fields, redaction, and provider-retention caveat. No durable evidence promise until separately specified. |
+| Review record | Independent reviewer evaluates exact invocation evidence; authorized owner records gate decision separately | Never authored by the adapter. Findings and disposition bind to exact source/artifact/evidence digests; reviewer role does not grant gate-owner authority. |
 | Gate disposition and risk acceptance | Authorized owner, informed by independent review | Durable governance record; never inferred from adapter result or CI badge. |
 
 ## Proposed versioned contract
@@ -66,14 +67,15 @@ The wire representation should be JSON or another deterministic, schema-validate
 | Field group | Required content | Fail-closed rule |
 | --- | --- | --- |
 | Contract identity | Contract major/minor, profile ID and exact profile revision | Unknown incompatible major/profile blocks; minor-version compatibility must be explicit. |
-| Provenance | Repository identity, exact source SHA/ref, workflow/job/run attempt, policy digest | Missing or conflicting source/run association prevents launch or produces incomplete evidence. |
+| Invocation identity | Unique invocation ID, execution-context kind, repository identity and exact source identity (commit plus content digest when the tree differs), policy digest | Missing/ambiguous invocation ID, unverifiable source identity, or policy mismatch blocks launch or makes evidence incomplete. |
+| Provider context | For hosted/provider execution: provider, workflow, job, run and attempt IDs, event/ref, and run URL when available. For local execution: explicit `context_kind: local` and an explicit absence reason instead of fabricated provider fields. | Provider fields are conditional on execution context. If provider context is selected, missing required provider identifiers makes provenance incomplete. Empty strings or guessed IDs are never used to satisfy the schema. This is a contract shape only; local support is not thereby adopted. |
 | Workload | Immutable image reference/digest, exact argv array, working directory, allowed command identity | Mutable tags, shell-string ambiguity, unlisted command, or image mismatch blocks. |
 | Identity and filesystem | Numeric execution UID/GID; explicit input/output mounts and modes; ephemeral workspace | Root identity, undeclared host path, runtime socket, broad parent mount, writable source/input, or path escape blocks. |
 | Network and secrets | Network disabled by default; secret injection disabled by default; narrowly named exceptions only when owner-authorized | Unknown network mode or secret-bearing env/log exposure blocks. Secret exception requires separate documented scope and implementation control. |
 | Resource/time | CPU, memory, process, disk/tmpfs and wall-clock limits; cancellation policy | Missing or unenforced limit required by profile blocks; timeout/cancel does not imply cleanup. |
 | Audit/cleanup | Bounded case set, identifiers, redaction policy, teardown requirements | Missing cleanup result or unbounded/sensitive diagnostic prevents evidence completeness and gate pass. |
 
-The adapter result is a separate normalized record with distinct axes: request readiness, authorization, execution outcome, cleanup status, evidence completeness/freshness, and reviewer disposition. It preserves the terminal execution result through cleanup and forbids successful rollup when a required case is failed, skipped, unknown, stale, or mismatched. This conceptual contract is not an implemented interface/schema.
+The adapter emits an `InvocationResult` containing request/preflight status, a reference to supplied authorization (never an authorization decision), execution outcome, cleanup status, evidence completeness/freshness, case results, and bounded evidence references. It cannot create or grant authorization and never emits reviewer disposition. An independent reviewer creates a separate `ReviewRecord` bound to the exact invocation/result digests; the accountable owner creates or updates the separate gate disposition. A read-only report may project request readiness, authorization, execution, cleanup, evidence, and review as separate axes, but must preserve each source and authority. The invocation record preserves terminal execution outcome through cleanup and cannot roll up to successful execution when a required case is failed, skipped, unknown, stale, or mismatched. These are conceptual contracts, not implemented interfaces/schemas.
 
 ## Failure, timeout, cancellation, and recovery
 
@@ -145,6 +147,13 @@ Each unit remains a proposal until G-ARCH passes and the owner authorizes a G-IM
 | GARCH-01 — boundaries, identities, data, integration/failure, security/privacy, operations/recovery | Context/trust boundaries; data ownership; contract; failure/recovery; security and operational controls | Pending independent review |
 | GARCH-02 — ADRs, authority, alternatives, constraints, linked task scope/checks | Five ADRs identify alternatives, decision authority, consequences; implementation units map to requirements and dependencies | Pending independent review |
 | GARCH-03 — coherent handoff and no invented decisions | Runtime adoption is explicitly open and blocks runtime-backed implementation; no support/provider choice is inferred | Pending independent review |
+
+## G-ARCH finding register
+
+| Finding ID | Location / issue | Severity | Disposition |
+| --- | --- | --- | --- |
+| ARCH030-01 | v0.1 provenance required workflow/job/run fields despite the host-neutral/local context. | P2 | Corrected in v0.2: invocation identity is mandatory; provider workflow/run context is conditional with explicit local absence semantics. Full-scope review pending. |
+| ARCH030-02 | v0.1 adapter result mixed reviewer disposition with adapter-produced evidence. | P2 | Corrected in v0.2: adapter `InvocationResult`, independent `ReviewRecord`, and owner gate disposition are separate. Full-scope review pending. |
 
 ## Next action and limits
 
