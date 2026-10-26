@@ -2,8 +2,8 @@
 id: FRAMEWORK-COVERAGE-003
 type: coverage-matrix
 title: FW-TASK-030 isolated execution adapter journeys and surfaces
-status: draft
-version: 0.1
+status: approved
+version: 1.0
 created: 2026-10-26
 updated: 2026-10-26
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-011, FRAMEWORK-ADV-047, DECISION-034, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
@@ -62,19 +62,19 @@ The interaction under review is framework maintenance and synthetic feasibility 
 | COV-030-05 | AC-5 | J-030-06, P-01 | Runtime workflow did not execute the initializer; exact-revision Initializer Regression Gate passed. |
 | COV-030-06 | AC-6 | J-030-03, J-030-04, P-03, P-04 | Threat model and ADV-047 limit claims to observed defense-in-depth controls; no complete host-isolation claim. |
 
-## G-COVERAGE review preparation
+## G-COVERAGE review disposition
 
 | Criterion | Prepared evidence | Status |
 | --- | --- | --- |
-| GCOV-01 | Six journeys map each approved requirement and AC-1–6 to actors, preconditions, transitions, success/failure exits, recovery, and surfaces. | Prepared; independent review pending. |
-| GCOV-02 | All seven required failure categories have explicit applicability, outcomes, and recovery. | Prepared; independent review pending. |
-| GCOV-03 | Exact repository/CLI, hosted Actions, evidence/review, runtime environment, app UI, and unrelated stack surfaces are listed with applicability and rationale. | Prepared; independent review pending. |
+| GCOV-01 | Six journeys map each approved requirement and AC-1–6 to actors, preconditions, transitions, success/failure exits, recovery, and surfaces. | PASS; independent review FRAMEWORK-ADV-048. |
+| GCOV-02 | All seven required failure categories have explicit applicability, outcomes, and recovery. | PASS; independent review FRAMEWORK-ADV-048. |
+| GCOV-03 | Exact repository/CLI, hosted Actions, evidence/review, runtime environment, app UI, and unrelated stack surfaces are listed with applicability and rationale. | PASS; independent review FRAMEWORK-ADV-048. |
 
 ## Evidence, exclusions, and next action
 
 - **Evidence:** DECISION-034; FR-FW-035–037 and AC-1–6; FRAMEWORK-FEASIBILITY-011; FRAMEWORK-ADV-047; GATE-CATALOG-001; FRAMEWORK-GATE-CONTRACT-001 v1.0; WORKFLOW-CX-001.
 - **Exclusions:** No end-user UI, mobile app, reusable adapter implementation, app integration, production runtime adoption, release/deployment, self-hosted runner, general OS/container support, or full host isolation.
 - **Open interpretation:** Repository/CLI, GitHub Actions and pull-request review are treated as framework operation surfaces based on DECISION-034 and the approved non-product scope. The container is an execution environment, not a user platform. Independent review should flag a material scope conflict; do not convert this inference into an end-user/platform commitment.
-- **Gate result:** G-COVERAGE in progress; no pass is asserted before independent review of this exact artifact and exact-revision Verify Pipeline.
-- **Next action:** Independent review of GCOV-01–03 and the surface interpretation; if passed, prepare product-appropriate nonvisual G-CX evidence.
+- **Gate result:** G-COVERAGE passes for the approved, bounded framework-operation scope. Independent read-only review passed on exact candidate `724e44b0710a92bf55358919a94e2ac4363533fa`, reviewed blob `a6c296be3c51f95d110dea974964cd732029cc0d`, and exact-revision Verify Pipeline run `40263990259` passed all three required jobs. See FRAMEWORK-ADV-048 for criterion-level rationale.
+- **Next action:** G-CX product-appropriate nonvisual interaction trace and full-scope tool-neutral critique.
 - **Prohibited next work:** Implementation, application adoption, production use, or a general runtime-support claim before downstream gates and explicit contracts.
