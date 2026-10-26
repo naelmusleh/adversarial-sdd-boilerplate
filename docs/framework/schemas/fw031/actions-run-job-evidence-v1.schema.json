@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://adversarial-sdd.example/schemas/fw031/actions-run-job-evidence-v1.schema.json",
+  "title": "FW-031 GitHub Actions run/job evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "schema_version", "profile", "fixture_only", "source", "identity", "revisions", "timing", "timeout", "cancellation", "measurements", "limitations"],
+  "properties": {
+    "contract": {"type": "string", "const": "FRAMEWORK-CONTRACT-032"},
+    "schema_version": {"type": "string", "const": "1.0"},
+    "profile": {"type": "string", "const": "github-actions-run-job"},
+    "fixture_only": {"type": "boolean"},
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["acquisition_state", "repository_id", "repository_name", "workflow_id", "workflow_path", "workflow_ref", "source_ref", "observed_at", "response_revision", "response_digest"],
+      "properties": {
+        "acquisition_state": {"type": "string", "enum": ["complete", "partial", "denied", "unavailable"]},
+        "repository_id": {"type": ["integer", "null"], "minimum": 1},
+        "repository_name": {"type": ["string", "null"], "minLength": 1, "maxLength": 255},
+        "workflow_id": {"type": ["integer", "null"], "minimum": 1},
+        "workflow_path": {"type": ["string", "null"], "minLength": 1, "maxLength": 1024},
+        "workflow_ref": {"type": ["string", "null"], "minLength": 1, "maxLength": 1024},
+        "source_ref": {"type": ["string", "null"], "minLength": 1, "maxLength": 2048},
+        "observed_at": {"type": "string", "maxLength": 64},
+        "response_revision": {"type": ["string", "null"], "minLength": 1, "maxLength": 255},
+        "response_digest": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    },
+    "identity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "run_id", "run_attempt", "job_id", "job_name", "event_name"],
+      "properties": {
+        "state": {"type": "string", "enum": ["available", "partial", "unknown", "unavailable"]},
+        "run_id": {"type": ["integer", "null"], "minimum": 1},
+        "run_attempt": {"type": ["integer", "null"], "minimum": 1},
+        "job_id": {"type": ["integer", "null"], "minimum": 1},
+        "job_name": {"type": ["string", "null"], "maxLength": 255},
+        "event_name": {"type": ["string", "null"], "maxLength": 128}
+      }
+    },
+    "revisions": {
+      "type": "object", "additionalProperties": false,
+      "required": ["workflow", "triggering", "executed"],
+      "properties": {
+        "workflow": {"$ref": "#/definitions/revision"},
+        "triggering": {"$ref": "#/definitions/revision"},
+        "executed": {"$ref": "#/definitions/revision"}
+      }
+    },
+    "timing": {
+      "type": "object", "additionalProperties": false,
+      "required": ["run", "job"],
+      "properties": {
+        "run": {"$ref": "#/definitions/timing_interval"},
+        "job": {"$ref": "#/definitions/timing_interval"}
+      }
+    },
+    "timeout": {
+      "type": "object", "additionalProperties": false,
+      "required": ["configuration_state", "minutes", "configuration_revision", "configuration_source", "observed_state", "host_conclusion", "observation_source"],
+      "properties": {
+        "configuration_state": {"type": "string", "enum": ["configured", "not-configured", "unknown", "unavailable"]},
+        "minutes": {"type": ["number", "null"], "minimum": 0.000001},
+        "configuration_revision": {"type": ["string", "null"], "minLength": 1, "maxLength": 255},
+        "configuration_source": {"type": ["string", "null"], "minLength": 1, "maxLength": 2048},
+        "observed_state": {"type": "string", "enum": ["timed-out", "not-timed-out", "unknown", "unavailable"]},
+        "host_conclusion": {"type": "string", "enum": ["success", "failure", "cancelled", "skipped", "timed_out", "action_required", "unknown", "unavailable"]},
+        "observation_source": {"type": ["string", "null"], "minLength": 1, "maxLength": 2048}
+      }
+    },
+    "cancellation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["request_state", "requested_at", "request_source", "host_terminal_state", "terminal_source", "workload_state", "workload_observation"],
+      "properties": {
+        "request_state": {"type": "string", "enum": ["requested", "not-requested", "unknown", "unavailable"]},
+        "requested_at": {"type": ["string", "null"], "maxLength": 64},
+        "request_source": {"type": ["string", "null"], "minLength": 1, "maxLength": 2048},
+        "host_terminal_state": {"type": "string", "enum": ["completed", "cancelled", "timed_out", "failure", "unknown", "unavailable"]},
+        "terminal_source": {"type": ["string", "null"], "minLength": 1, "maxLength": 2048},
+        "workload_state": {"type": "string", "enum": ["confirmed", "not-observed", "unknown", "unavailable"]},
+        "workload_observation": {"type": ["string", "null"], "minLength": 1, "maxLength": 2048}
+      }
+    },
+    "measurements": {"type": "array", "maxItems": 64, "items": {"$ref": "#/definitions/measurement"}},
+    "limitations": {"type": "array", "maxItems": 32, "items": {"type": "string", "enum": ["identity-incomplete", "source-partial", "source-denied", "source-unavailable", "revision-unknown", "timing-unknown", "timeout-unknown", "cancellation-unknown", "workload-termination-unobserved", "metrics-unknown", "metrics-unavailable"]}}
+  },
+  "definitions": {
+    "revision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "value", "source"],
+      "properties": {
+        "state": {"type": "string", "enum": ["available", "unknown", "unavailable"]},
+        "value": {"type": ["string", "null"], "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"},
+        "source": {"type": ["string", "null"], "minLength": 1, "maxLength": 2048}
+      }
+    },
+    "timing_point": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "value", "source"],
+      "properties": {
+        "state": {"type": "string", "enum": ["available", "unknown", "unavailable"]},
+        "value": {"type": ["string", "null"], "maxLength": 64},
+        "source": {"type": ["string", "null"], "minLength": 1, "maxLength": 2048}
+      }
+    },
+    "timing_interval": {
+      "type": "object", "additionalProperties": false,
+      "required": ["run_id", "run_attempt", "job_id", "started_at", "completed_at"],
+      "properties": {
+        "run_id": {"type": ["integer", "null"], "minimum": 1},
+        "run_attempt": {"type": ["integer", "null"], "minimum": 1},
+        "job_id": {"type": ["integer", "null"], "minimum": 1},
+        "started_at": {"$ref": "#/definitions/timing_point"},
+        "completed_at": {"$ref": "#/definitions/timing_point"}
+      }
+    },
+    "measurement": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "state", "value", "unit", "source_kind", "source", "scope", "interval", "reason"],
+      "properties": {
+        "name": {"type": "string", "enum": ["tool_calls", "internal_retries", "nested_agents", "cpu_time", "memory_peak", "spend"]},
+        "state": {"type": "string", "enum": ["measured", "unknown", "unavailable"]},
+        "value": {"type": ["number", "null"], "minimum": 0},
+        "unit": {"type": ["string", "null"], "minLength": 1, "maxLength": 32},
+        "source_kind": {"type": ["string", "null"], "enum": ["direct-instrumentation", "authoritative-meter", "synthetic-fixture", "proxy", null]},
+        "source": {"type": ["string", "null"], "minLength": 1, "maxLength": 2048},
+        "scope": {"type": ["string", "null"], "enum": ["run", "run-job", "job", "workload", null]},
+        "interval": {"$ref": "#/definitions/optional_interval"},
+        "reason": {"type": ["string", "null"], "enum": ["not-observed", "access-denied", "source-unavailable", "not-instrumented", "unknown-provenance", null]}
+      }
+    },
+    "optional_interval": {
+      "type": ["object", "null"], "additionalProperties": false,
+      "required": ["started_at", "completed_at"],
+      "properties": {
+        "started_at": {"type": "string", "maxLength": 64},
+        "completed_at": {"type": "string", "maxLength": 64}
+      }
+    }
+  }
+}
