@@ -3,7 +3,7 @@ id: FRAMEWORK-CX-003
 type: framework-cx
 title: FW-TASK-030 runner request and evidence interaction contract
 status: draft
-version: 0.2
+version: 0.3
 created: 2026-10-26
 updated: 2026-10-26
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-COVERAGE-003, FRAMEWORK-FEASIBILITY-011, FRAMEWORK-ADV-047, FRAMEWORK-ADV-048, DECISION-034, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001, WORKFLOW-CX-001
@@ -50,7 +50,7 @@ These examples are conceptual and non-executable. They specify the desired obser
 1. Maintainer opens the FW-030 contract and sees its scope, supported-profile status, limitations, required policy fields, and explicit statement that no application secrets/source are allowed in this synthetic pilot.
 2. Maintainer supplies/selects a versioned profile and policy reference; the interface summarizes command, image digest, identity, mounts, network, secrets, resource limits, timeout, audit, cancellation, and cleanup settings without echoing secret material.
 3. A preflight summary binds the request to the exact source and workflow revision. Missing runtime/capability yields `UNSUPPORTED`; malformed or absent policy yields `BLOCKED`; neither presents a run button as actionable. `READY` explicitly means preflight passed but authorization has not been granted.
-4. Only after reviewing that exact summary does an accountable operator authorize one run. The interface then shows `Authorization: AUTHORIZED` and makes the single-run dispatch action available. Reauthorization is required for a different source or policy revision.
+4. Only after reviewing that exact summary does an accountable operator authorize one run. The interface then shows `Authorization: AUTHORIZED` and makes the single-run dispatch action available. Authorization binds to the complete displayed request summary; any change to any field—including source/workflow, profile, command, runtime/image, mounts, network, secrets policy, resource limits, timeout, or workload—invalidates it and returns authorization to `NOT_AUTHORIZED`. The changed request must pass preflight and receive fresh authorization before dispatch.
 5. To recover, maintainer edits a reviewed profile or provisions a supported environment, then repeats preflight. An unsupported result remains visible in history.
 
 **Observable response contract:** `Preflight: UNSUPPORTED — rootless Podman is unavailable for profile X. Authorization: NOT_AUTHORIZED. Execution: NOT_STARTED. No workload was started. Select a separately reviewed supported profile or provision the declared prerequisite.` Do not display `READY` on partial capability checks or conflate ready with authorized.
@@ -95,13 +95,15 @@ The independent critique must walk all six traces and all four state axes, using
 
 | Finding ID | Location / evidence | Severity | User/operator impact | Recommendation | Owner decision needed | Disposition / rerun evidence |
 | --- | --- | --- | --- | --- | --- | --- |
-| CX030-01 | v0.1 state table and CX-030-A preflight/authorization transition. | P2 | `READY` could be mistaken for permission to dispatch. | Separate readiness from one-run authorization and gate dispatch on both. | No. | Resolved in v0.2 with distinct `Request readiness` and `Authorization` axes; only READY + AUTHORIZED enables dispatch. Requires full-scope rerun. |
-| CX030-02 | v0.1 Run axis and CX-030-E cleanup recovery. | P1 | Cleanup completion could overwrite a failed/cancelled execution outcome. | Separate terminal execution result from cleanup state and preserve both across recovery. | No. | Resolved in v0.2 with independent `Execution` and `Cleanup` axes; cleanup `CLEAN` does not change `FAILED`/`CANCELLED`. Requires full-scope rerun. |
+| CX030-01 | v0.1 state table and CX-030-A preflight/authorization transition. | P2 | `READY` could be mistaken for permission to dispatch. | Separate readiness from one-run authorization and gate dispatch on both. | No. | Resolved in v0.2 with distinct `Request readiness` and `Authorization` axes; only READY + AUTHORIZED enables dispatch. Confirmed by full-scope review; see FRAMEWORK-ADV-049. |
+| CX030-02 | v0.1 Run axis and CX-030-E cleanup recovery. | P1 | Cleanup completion could overwrite a failed/cancelled execution outcome. | Separate terminal execution result from cleanup state and preserve both across recovery. | No. | Resolved in v0.2 with independent `Execution` and `Cleanup` axes; cleanup `CLEAN` does not change `FAILED`/`CANCELLED`. Confirmed by full-scope review; see FRAMEWORK-ADV-049. |
+| CX030-03 | v0.2 full-scope rerun checklist. | P2 | Stale axis count could omit authorization or cleanup states from critique. | Name all state axes in the full rerun scope. | No. | Resolved in v0.3: full-scope critique includes request readiness, authorization, execution, cleanup, evidence, and review. Pending review of correction. |
+| CX030-04 | v0.2 CX-030-A authorization handoff. | P2 | Authorization could remain active after a non-revision request field changes. | Invalidate authorization on any change to the complete request summary and require preflight plus fresh authorization. | No. | Resolved in v0.3 by explicit whole-summary binding and invalidation. Pending review of correction. |
 
 ## Gate evidence and next action
 
-- **GCX-01:** Freeze this target, six journey IDs, P-01–P-06 applicability from FRAMEWORK-COVERAGE-003, artifact blob, source commit, and exclusions. No visual target exists.
+- **GCX-01:** Freeze this target, six journey IDs, P-01–P-06 applicability from FRAMEWORK-COVERAGE-003, all six state axes (request readiness, authorization, execution, cleanup, evidence, review), artifact blob, source commit, and exclusions. No visual target exists.
 - **GCX-02:** Durable review record must identify `manual tool-neutral review`, evaluator, date, exact source and artifact blobs, full trace/state scope, evidence locations, method limitations, and findings. See linked adversarial review disposition once complete.
-- **GCX-03:** Resolve every blocking finding in a coherent revision and rerun the complete six-journey scope; retain stable IDs and fix evidence.
+- **GCX-03:** Resolve every blocking finding in a coherent revision and rerun the complete six-journey scope across all six state axes; retain stable IDs and fix evidence.
 - **Required closeout:** Independent full-scope review, artifact validation, and exact-revision Verify Pipeline. CI does not replace the interaction critique.
 - **Next gate if passed:** G-ARCH, which must still resolve architecture/trust/host boundary questions before implementation; no implementation is authorized by this artifact.
