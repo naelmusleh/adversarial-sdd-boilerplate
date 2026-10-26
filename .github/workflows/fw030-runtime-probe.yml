@@ -270,7 +270,8 @@ jobs:
             echo 'Podman did not expose an executable selected conmon path; fail closed.' >&2
             exit 23
           fi
-          conmon_version="$("$conmon_path" --version)"
+          conmon_version_output="$("$conmon_path" --version)"
+          conmon_version="${conmon_version_output%%$'\n'*}"
           printf 'conmon_version=%s\n' "$conmon_version"
           jq '{timeout_seconds: .[0].Config.Timeout, status: .[0].State.Status, running: .[0].State.Running, exit_code: .[0].State.ExitCode, oom_killed: .[0].State.OOMKilled, started_at: .[0].State.StartedAt, finished_at: .[0].State.FinishedAt}' <<< "$timeout_state"
           if [[ "$conmon_version" != 'conmon version 2.1.10' && "$conmon_version" != 'conmon version 2.1.10,'* ]]; then
