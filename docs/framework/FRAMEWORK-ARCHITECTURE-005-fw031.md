@@ -2,11 +2,11 @@
 id: FRAMEWORK-ARCHITECTURE-005
 type: framework-architecture
 title: FW-TASK-031 per-run limits and stop conditions architecture
-status: draft
-version: 0.1
+status: approved
+version: 0.2
 created: 2026-10-26
 updated: 2026-10-26
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-036, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-COVERAGE-004, FRAMEWORK-CX-004, FRAMEWORK-GATE-CONTRACT-001, WORKFLOW-FEASIBILITY-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-036, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-COVERAGE-004, FRAMEWORK-CX-004, FRAMEWORK-GATE-CONTRACT-001, WORKFLOW-FEASIBILITY-001, FRAMEWORK-ADV-056
 ---
 
 # FRAMEWORK-ARCHITECTURE-005 — FW-TASK-031 per-run limits and stop conditions architecture
@@ -127,6 +127,6 @@ No task IDs are assigned to slices B–D and no implementation unit is authorize
 - **GARCH-03 — dependencies and operations:** Every blocked or conditional dependency names the decision owner, evidence trigger, and held work; privacy/retention and recovery limits are explicit.
 - **GARCH-04 — task readiness:** Proposed pure validation work has deterministic scope and evidence; runtime, meter, cancellation, and production slices stay held pending owner choices and separate G-IMPL authorization.
 
-**Provisional G-ARCH finding:** The runtime-neutral contract and state flow are coherent for requirements-only planning, and deferred choices remain visible with owners, evidence triggers, and downstream holds. This architecture does not make the blocked capabilities feasible by assertion. Independent architecture review and exact-revision verification are required before a G-ARCH PASS.
+**G-ARCH disposition (2026-10-26): PASS within DECISION-036.** The independent reviewer `/root/fw029_independent_review` passed GARCH-01–04 for FRAMEWORK-ARCHITECTURE-005 v0.1, blob `42531bd836ba28aacc9f6fa663a3e9a1e88c564e`, at exact candidate `a07728f7e9f402eec1e372c87195e97c33699060`; FRAMEWORK-ADV-056 records the complete scope and no material findings. Verify Pipeline [40322683751](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40322683751) passed Metadata & Artifact Audit, Initializer Regression Gate, and TypeScript Static Code Analysis on that exact candidate; optional FW-029/FW-030 probes were skipped. Artifact validation reported 116 artifacts and `git diff --check` passed. This v0.2 update records that disposition without changing the reviewed architecture content.
 
-**Next action:** Full-scope independent architecture review, targeted correction if needed, and exact-revision Verify Pipeline. After G-ARCH PASS, ask the owner whether to authorize proposed slice A; do not begin implementation without that decision.
+**Next action:** Request a separate owner G-IMPL authorization for proposed slice A only. No implementation, runtime/provider/meter/threshold selection, process control, application use, or production readiness is authorized by this G-ARCH PASS.
