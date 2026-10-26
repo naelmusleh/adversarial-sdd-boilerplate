@@ -80,6 +80,7 @@ class Fw030ContractTests(unittest.TestCase):
             lambda value: value["execution_context"].update(provider_context={}),
             lambda value: value["workload"].update(argv=["/bin/other"]),
             lambda value: value["policy"].update(secrets="enabled"),
+            lambda value: value["policy"]["evidence"].update(case_ids=[]),
         ):
             request = copy.deepcopy(self.request)
             mutate(request)
@@ -96,6 +97,19 @@ class Fw030ContractTests(unittest.TestCase):
         self.assertEqual(result["readiness_status"], "invalid")
         self.assertTrue(validate_result(json.dumps(result))["valid"])
 
+    def test_missing_or_malformed_request_profile_fails_closed(self) -> None:
+        for mutation in (
+            lambda value: value.pop("profile"),
+            lambda value: value["profile"].update(revision=""),
+            lambda value: value["profile"].update(unreviewed_profile_field="private-profile-token"),
+        ):
+            request = copy.deepcopy(self.request)
+            mutation(request)
+            result = preflight_request(json.dumps(request), self.cases["profile_observation"])
+            self.assertEqual(result["readiness_status"], "invalid")
+            self.assertEqual(result["states"]["execution"], "not_started")
+            self.assertTrue(validate_result(json.dumps(result))["valid"])
+
     def test_malformed_json_duplicate_keys_and_parser_errors_do_not_echo_input(self) -> None:
         duplicate = validate_request('{"token-secret-value":"private","token-secret-value":"private"}')
         malformed = validate_request('{"token-secret-value":"private",}')
@@ -106,10 +120,52 @@ class Fw030ContractTests(unittest.TestCase):
             self.assertNotIn("private", rendered)
             self.assertNotIn("token-secret-value", rendered)
 
+    def test_schema_diagnostics_do_not_echo_unknown_property_names(self) -> None:
+        request = copy.deepcopy(self.request)
+        request["secret-value-must-not-appear-in-diagnostics"] = "private"
+        outcome = validate_request(json.dumps(request))
+        rendered = json.dumps(outcome)
+        self.assertFalse(outcome["valid"])
+        self.assertNotIn("secret-value-must-not-appear-in-diagnostics", rendered)
+        self.assertNotIn("private", rendered)
+
     def test_invalid_result_state_relationships_reject(self) -> None:
         result = preflight_request(self.request_json(), self.cases["profile_observation"])
         result["readiness_status"] = "blocked"
         self.assertFalse(validate_result(json.dumps(result))["valid"])
+
+        unauthorized_execution = preflight_request(self.request_json(), self.cases["profile_observation"])
+        unauthorized_execution["states"]["execution"] = "succeeded"
+        unauthorized_execution["case_results"] = [{"case_id": "SYNTHETIC-CASE-01", "outcome": "passed"}]
+        invalid = validate_result(json.dumps(unauthorized_execution))
+        self.assertIn("fw030.result.execution_unauthorized", {item["code"] for item in invalid["diagnostics"]})
+
+    def test_authorized_execution_requires_bound_reference_and_complete_passing_cases(self) -> None:
+        result = preflight_request(self.request_json(), self.cases["profile_observation"])
+        digest = result["request_sha256"]
+        result["states"]["authorization"] = "authorized"
+        result["authorization_reference"] = {
+            "record_id": "SYNTHETIC-AUTH-01",
+            "record_sha256": "e" * 64,
+            "authorized_request_sha256": digest,
+        }
+        result["states"]["execution"] = "succeeded"
+        result["case_results"] = [{"case_id": "SYNTHETIC-CASE-01", "outcome": "passed"}]
+        self.assertTrue(validate_result(json.dumps(result))["valid"])
+
+        result["case_results"] = []
+        incomplete = validate_result(json.dumps(result))
+        self.assertIn("fw030.result.success_cases_incomplete", {item["code"] for item in incomplete["diagnostics"]})
+
+        result["case_results"] = [{"case_id": "SYNTHETIC-CASE-01", "outcome": "passed"}]
+        result["authorization_reference"]["authorized_request_sha256"] = "f" * 64
+        mismatch = validate_result(json.dumps(result))
+        self.assertIn("fw030.result.authorization_reference_invalid", {item["code"] for item in mismatch["diagnostics"]})
+
+        result["authorization_reference"]["authorized_request_sha256"] = digest
+        result["states"]["evidence"] = "complete"
+        no_evidence_ref = validate_result(json.dumps(result))
+        self.assertIn("fw030.result.evidence_reference_missing", {item["code"] for item in no_evidence_ref["diagnostics"]})
 
     def test_validator_does_not_start_a_process(self) -> None:
         with patch.object(subprocess, "Popen", side_effect=AssertionError("process launch attempted")) as popen:

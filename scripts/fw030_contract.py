@@ -152,8 +152,9 @@ def _validate(value: Any, spec: Mapping[str, Any], root: Mapping[str, Any], path
             if field not in value:
                 issues.append(_diag("fw030.schema.invalid", f"{path}.{field}", "required property is missing"))
         if spec.get("additionalProperties") is False:
-            for field in sorted(set(value) - set(properties)):
-                issues.append(_diag("fw030.schema.invalid", f"{path}.{field}", "additional property is not allowed"))
+            if set(value) - set(properties):
+                # Caller-controlled property names may themselves contain sensitive data.
+                issues.append(_diag("fw030.schema.invalid", path, "additional property is not allowed"))
         for field, child_spec in properties.items():
             if field in value:
                 if not isinstance(child_spec, dict):
@@ -236,10 +237,37 @@ def validate_result(raw: bytes | str) -> dict[str, Any]:
     value, _, parse_issues = _parse(raw, "result")
     issues = parse_issues or _schema_issues(value, "result")
     if not issues and isinstance(value, dict):
-        if value["readiness_status"] != value["states"]["request_readiness"]:
+        states = value["states"]
+        authorization = states["authorization"]
+        execution = states["execution"]
+        reference = value["authorization_reference"]
+        if value["readiness_status"] != states["request_readiness"]:
             issues.append(_diag("fw030.result.state_mismatch", "$.states.request_readiness", "request readiness axis must match readiness_status"))
-        if value["states"]["authorization"] == "authorized" and value["readiness_status"] != "prerequisites_valid":
+        if authorization == "authorized" and value["readiness_status"] != "prerequisites_valid":
             issues.append(_diag("fw030.result.authorization_inconsistent", "$.states.authorization", "authorization cannot be marked before prerequisites are valid"))
+        if authorization == "authorized":
+            if not isinstance(reference, dict) or reference["authorized_request_sha256"] != value["request_sha256"]:
+                issues.append(_diag("fw030.result.authorization_reference_invalid", "$.authorization_reference", "authorization reference must bind the exact request digest"))
+        elif reference is not None:
+            issues.append(_diag("fw030.result.authorization_reference_invalid", "$.authorization_reference", "an authorization reference requires authorized state"))
+        if execution != "not_started" and (authorization != "authorized" or not isinstance(reference, dict)):
+            issues.append(_diag("fw030.result.execution_unauthorized", "$.states.execution", "execution requires a supplied request-bound authorization reference"))
+        if value["readiness_status"] != "prerequisites_valid" and execution != "not_started":
+            issues.append(_diag("fw030.result.execution_not_ready", "$.states.execution", "execution cannot start when request prerequisites are not valid"))
+        expected_cases = value["expected_case_ids"]
+        case_results = value["case_results"]
+        result_case_ids = [case["case_id"] for case in case_results]
+        if len(result_case_ids) != len(set(result_case_ids)) or not set(result_case_ids).issubset(expected_cases):
+            issues.append(_diag("fw030.result.case_set_invalid", "$.case_results", "case results must be unique members of the expected case set"))
+        if execution == "not_started" and case_results:
+            issues.append(_diag("fw030.result.case_before_execution", "$.case_results", "case outcomes cannot be recorded before execution starts"))
+        if execution == "succeeded" and (
+            set(result_case_ids) != set(expected_cases)
+            or any(case["outcome"] != "passed" for case in case_results)
+        ):
+            issues.append(_diag("fw030.result.success_cases_incomplete", "$.case_results", "successful execution requires every expected case to pass"))
+        if states["evidence"] == "complete" and not value["evidence_references"]:
+            issues.append(_diag("fw030.result.evidence_reference_missing", "$.evidence_references", "complete evidence requires at least one bounded evidence reference"))
     return {"valid": not issues, "diagnostics": issues[:_MAX_DIAGNOSTICS]}
 
 
@@ -281,6 +309,7 @@ def preflight_request(
     request, request_bytes, parse_issues = _parse(raw, "request")
     issues = parse_issues or _schema_issues(request, "request")
     request_id = request.get("invocation_id") if isinstance(request, dict) else None
+    expected_case_ids = request["policy"]["evidence"]["case_ids"] if not issues and isinstance(request, dict) else []
     if issues:
         status = "invalid"
     elif not _valid_synthetic_observation(profile_observation):
@@ -317,6 +346,10 @@ def preflight_request(
         "invocation_id": request_id if isinstance(request_id, str) and _INVOCATION_ID.fullmatch(request_id) else "00000000-0000-4000-8000-000000000000",
         "request_sha256": hashlib.sha256(request_bytes).hexdigest() if request_bytes is not None else None,
         "readiness_status": status,
+        "authorization_reference": None,
+        "expected_case_ids": expected_case_ids,
+        "case_results": [],
+        "evidence_references": [],
         "states": {
             "request_readiness": status,
             "authorization": "not_requested",

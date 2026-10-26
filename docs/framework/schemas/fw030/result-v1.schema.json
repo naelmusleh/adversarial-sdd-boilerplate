@@ -4,12 +4,47 @@
   "title": "FW-030 host-neutral invocation result v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "invocation_id", "request_sha256", "readiness_status", "states", "diagnostics"],
+  "required": ["schema_version", "invocation_id", "request_sha256", "readiness_status", "authorization_reference", "expected_case_ids", "case_results", "evidence_references", "states", "diagnostics"],
   "properties": {
     "schema_version": { "const": "1.0" },
     "invocation_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
     "request_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
     "readiness_status": { "enum": ["invalid", "unsupported", "blocked", "prerequisites_valid"] },
+    "authorization_reference": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["record_id", "record_sha256", "authorized_request_sha256"],
+      "properties": {
+        "record_id": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "record_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "authorized_request_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "expected_case_ids": { "type": "array", "uniqueItems": true, "maxItems": 128, "items": { "type": "string", "pattern": "^[A-Z0-9][A-Z0-9._-]{0,127}$" } },
+    "case_results": {
+      "type": "array", "maxItems": 128,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["case_id", "outcome"],
+        "properties": {
+          "case_id": { "type": "string", "pattern": "^[A-Z0-9][A-Z0-9._-]{0,127}$" },
+          "outcome": { "enum": ["passed", "failed", "skipped", "unknown"] }
+        }
+      }
+    },
+    "evidence_references": {
+      "type": "array", "maxItems": 128,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["evidence_id", "sha256", "media_type", "size_bytes"],
+        "properties": {
+          "evidence_id": { "type": "string", "pattern": "^[A-Z0-9][A-Z0-9._-]{0,127}$" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "media_type": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.+-]*/[a-z0-9][a-z0-9.+-]*$", "maxLength": 127 },
+          "size_bytes": { "type": "integer", "minimum": 0, "maximum": 10485760 }
+        }
+      }
+    },
     "states": {
       "type": "object", "additionalProperties": false,
       "required": ["request_readiness", "authorization", "execution", "cleanup", "evidence", "review"],
@@ -19,7 +54,7 @@
         "execution": { "enum": ["not_started", "running", "succeeded", "failed", "cancelled"] },
         "cleanup": { "enum": ["not_applicable", "required", "in_progress", "complete", "failed", "unknown"] },
         "evidence": { "enum": ["not_collected", "complete", "incomplete", "stale", "conflicted"] },
-        "review": { "enum": ["not_performed", "pending", "recorded"] }
+        "review": { "enum": ["not_performed", "pending"] }
       }
     },
     "diagnostics": {

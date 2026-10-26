@@ -3,6 +3,12 @@
   "invocation_id": "c3dd2386-d2ce-4d4c-a102-4c1f42e26b19",
   "request_sha256": "34797b0f4dba2904dcd070e5859b2bf58ccdb5d711976336be22ebff158a692f",
   "readiness_status": "prerequisites_valid",
+  "authorization_reference": null,
+  "expected_case_ids": [
+    "SYNTHETIC-CASE-01"
+  ],
+  "case_results": [],
+  "evidence_references": [],
   "states": {
     "request_readiness": "prerequisites_valid",
     "authorization": "not_requested",
