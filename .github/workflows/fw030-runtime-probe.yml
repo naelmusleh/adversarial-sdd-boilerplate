@@ -132,9 +132,16 @@ jobs:
           podman run --pull=never --detach --name fw030-net-server \
             --network "${network_name}:ip=${server_ip}" \
             "$image" sh -c '
+              stop_server() {
+                trap - TERM INT
+                exit 0
+              }
+              trap stop_server TERM INT
               while :; do
                 { printf "HTTP/1.1 200 OK\\r\\nContent-Length: 30\\r\\nConnection: close\\r\\n\\r\\nfw030-network-positive-control"; } |
-                  /bin/busybox nc -l -p 8080
+                  /bin/busybox nc -l -p 8080 &
+                listener_pid=$!
+                wait "$listener_pid" || true
               done
             ' >/dev/null
           if [[ "$(podman inspect --format '{{.State.Running}}' fw030-net-server)" != 'true' ]]; then
@@ -191,6 +198,7 @@ jobs:
           run_allowlisted sh
           test -s "${output_dir}/result.txt"
           inspect="$(podman inspect fw030-policy)"
+          jq '{network_mode: .[0].HostConfig.NetworkMode, readonly_rootfs: .[0].HostConfig.ReadonlyRootfs, memory_bytes: .[0].HostConfig.Memory, nano_cpus: .[0].HostConfig.NanoCpus, pids_limit: .[0].HostConfig.PidsLimit, cap_drop: .[0].HostConfig.CapDrop, security_opt: .[0].HostConfig.SecurityOpt, user: .[0].Config.User, mounts: [.[0].Mounts[] | {type: .Type, destination: .Destination, rw: .RW}] | sort_by(.destination)}' <<< "$inspect"
           jq -e '
             .[0].HostConfig.NetworkMode == "none" and
             .[0].HostConfig.ReadonlyRootfs == true and
@@ -200,9 +208,10 @@ jobs:
             ([.[0].HostConfig.CapDrop[] | ascii_downcase] | index("all") != null) and
             (any(.[0].HostConfig.SecurityOpt[]?; contains("no-new-privileges"))) and
             .[0].Config.User != "0:0" and
-            ([.[0].Mounts[].Destination] | sort == ["/input", "/output"]) and
-            ([.[0].Mounts[] | select(.Destination == "/input") | .RW] == [false]) and
-            ([.[0].Mounts[] | select(.Destination == "/output") | .RW] == [true])
+            ([.[0].Mounts[] | select(.Type == "bind") | .Destination] | sort == ["/input", "/output"]) and
+            ([.[0].Mounts[] | select(.Type == "bind" and .Destination == "/input") | .RW] == [false]) and
+            ([.[0].Mounts[] | select(.Type == "bind" and .Destination == "/output") | .RW] == [true]) and
+            ([.[0].Mounts[] | select(.Destination == "/tmp" and .Type == "tmpfs") | .RW] == [true])
           ' <<< "$inspect" >/dev/null
           echo 'configured_policy=PASS (none network; read-only root; 128MiB; one CPU configured; 32 PIDs; all capabilities dropped; no-new-privileges; input RO/output RW; non-root identity)'
 
