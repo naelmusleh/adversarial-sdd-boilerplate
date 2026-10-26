@@ -27,6 +27,7 @@ jobs:
           readonly host_sentinel="${probe_dir}/host-sentinel"
           readonly expected_sentinel='host-only-synthetic-marker-do-not-print'
           readonly network_name='fw030-positive-control'
+          readonly server_ip='10.253.30.10'
           readonly container_uid=1000
           mkdir -m 755 "$input_dir" "$server_dir"
           mkdir -m 777 "$output_dir"
@@ -129,14 +130,14 @@ jobs:
           podman image inspect --format 'image_id={{.Id}}' "$image"
 
           # Establish a real, reachable local endpoint as the network-denial positive control.
-          podman network create "$network_name" >/dev/null
+          podman network create --internal --subnet 10.253.30.0/24 "$network_name" >/dev/null
           podman run --pull=never --detach --name fw030-net-server \
-            --network "$network_name" --network-alias fw030-server \
+            --network "${network_name}:ip=${server_ip}" \
             --volume "${server_dir}:/srv:ro" "$image" \
             sh -c 'exec /bin/busybox httpd -f -p 8080 -h /srv' >/dev/null
-          server_ip="$(podman inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' fw030-net-server)"
-          if [[ -z "$server_ip" ]]; then
-            echo 'Positive-control server has no network address.' >&2
+          if [[ "$(podman inspect --format '{{.State.Running}}' fw030-net-server)" != 'true' ]]; then
+            echo 'Positive-control server did not remain running.' >&2
+            podman logs fw030-net-server >&2 || true
             exit 32
           fi
           positive_response="$(podman run --pull=never --rm --network "$network_name" "$image" \

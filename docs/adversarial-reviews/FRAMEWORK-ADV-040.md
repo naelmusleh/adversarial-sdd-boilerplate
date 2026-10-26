@@ -2,8 +2,8 @@
 id: FRAMEWORK-ADV-040
 type: adversarial-review
 title: FW-TASK-030 temporary runtime workflow review
-status: approved
-version: 0.5
+status: revision-required
+version: 0.6
 created: 2026-10-25
 updated: 2026-10-25
 reviewed-artifact: .github/workflows/fw030-runtime-probe.yml
@@ -43,3 +43,8 @@ Do not dispatch the workflow. The third review returned NEEDS-CHANGES. Per the r
 ## Owner authorization and fourth review candidate
 
 After the third review, the owner explicitly authorized one bounded correction and independent review cycle. The workflow now accepts only exit status 0 (resource present) or 1 (not found) from Podman container/network existence queries; all other statuses are recorded as cleanup failures. It repeats the same status classification after removal before claiming absence. Independent reviewer `/root/fw029_independent_review` reviewed exact workflow commit `bccc4764036c742770fea4ca87108ce3f57042b7` and returned PASS. The reviewer confirmed statuses are classified as 0=present, 1=not found, and all other results fail cleanup; post-removal status checks use the same rules; temporary directory removal is checked; and prior findings remain corrected. Verify Pipeline [40248535982](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40248535982) passed on the exact workflow commit. This approves the workflow for the already authorized disposable pilot only; it does not itself establish runtime support or isolation.
+
+
+## Network positive-control setup correction
+
+The owner authorized one additional bounded fix/review/pilot-retry cycle after the first hosted attempt failed before workload execution because the Podman compatibility inspect field returned no server address. The workflow now creates a temporary internal network with a declared synthetic subnet and assigns the server a fixed address with Podman's user-network IP option. It checks the server remains running and prints only that synthetic container's logs if startup fails. This removes dependence on the empty compatibility inspect field and limits the positive-control network's external access. The new exact revision requires independent review before the authorized retry; the prior PASS applies to the previous workflow revision only.

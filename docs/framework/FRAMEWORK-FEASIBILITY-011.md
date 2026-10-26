@@ -3,7 +3,7 @@ id: FRAMEWORK-FEASIBILITY-011
 type: feasibility-register
 title: FW-TASK-030 isolated execution adapter feasibility
 status: draft
-version: 0.9
+version: 1.0
 created: 2026-10-25
 updated: 2026-10-25
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-038, FRAMEWORK-ADV-039, FRAMEWORK-ADV-040, DECISION-034, WORKFLOW-FEASIBILITY-001
@@ -73,4 +73,7 @@ The run failed before either positive-control client or isolated policy workload
 
 ## G-FEAS disposition
 
-Blocked pending owner checkpoint and a corrected pilot harness. G-FEAS can pass only for a bounded named runner/runtime profile after the positive and negative pilot evidence is complete, independent review finds no blocking issue, the limitations are explicit, and downstream dependency states are updated. Otherwise record the specific blocker and keep G-ARCH/G-IMPL blocked.
+Pending the owner-authorized correction/review/retry cycle after an inconclusive harness setup failure. G-FEAS can pass only for a bounded named runner/runtime profile after the positive and negative pilot evidence is complete, independent review finds no blocking issue, the limitations are explicit, and downstream dependency states are updated. Otherwise record the specific blocker and keep G-ARCH/G-IMPL blocked.
+
+
+**Owner-authorized pilot retry correction (2026-10-26):** The owner authorized one bounded cycle to diagnose/correct the missing server address, obtain an independent workflow review, and retry the synthetic pilot. The workflow now assigns a fixed address on a temporary internal Podman network and checks the server's running state before the positive control. The change removes reliance on the empty `NetworkSettings.Networks` template output observed in run [40248740451](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40248740451). Official Podman documentation describes static IP assignment via the user-defined network's `ip` option and describes `--internal` as restricting external network access. The corrected workflow has not yet been independently reviewed or run. No runtime boundary claim follows from this change.
