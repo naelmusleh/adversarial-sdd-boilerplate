@@ -2,7 +2,7 @@
 id: FRAMEWORK-ARCHITECTURE-006
 type: framework-architecture
 title: FW-TASK-031 slice B GitHub Actions run/job evidence profile
-status: draft
+status: approved
 version: 0.1
 created: 2026-10-26
 updated: 2026-10-26
@@ -119,6 +119,6 @@ These are architecture proposals only. No IDs are committed to the application b
 
 ## G-ARCH disposition
 
-**Status:** Draft; pending independent architecture review and exact-revision Verify Pipeline.
+**G-ARCH result:** PASS within DECISION-038 and FR-FW-041–043 for FRAMEWORK-ARCHITECTURE-006 v0.1 at exact candidate `9e4e8bbefbd89a6392e6cc3917263971e115ea40`. Independent review [FRAMEWORK-ADV-063](../adversarial-reviews/FRAMEWORK-ADV-063.md) passed GARCH-01–03 with no findings. Verify Pipeline [40338717714](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40338717714) passed Metadata & Artifact Audit, Initializer Regression Gate, and TypeScript Static Code Analysis on that exact candidate; optional FW-029/FW-030 probes were skipped. The architecture freezes normalized contract boundaries and held work units only. It does not adopt a collection route/profile, grant permissions, configure timeouts, test cancellation, authorize implementation, or establish runtime/measurement claims.
 
-The architecture is intended to satisfy GARCH-01 through GARCH-03 by defining boundaries, identity and provenance invariants, data flow, failures/recovery, authority and alternatives, held task units, and verification evidence. A reviewer must confirm the task decomposition is ready without implying owner decisions have been made. G-ARCH PASS would authorize only progression to a separate G-IMPL authorization checkpoint for a proposed bounded unit; it would not authorize implementation or any profile adoption.
+**Next step:** An owner checkpoint is required before any proposed G-IMPL unit. Recommended first unit: FW031-IMPL-02, a pure profile evidence contract/schema, deterministic validator, and synthetic fixtures only, without network access or runtime integration. G-ARCH PASS does not authorize that work.
