@@ -48,7 +48,7 @@ def _reject_constant(_: str) -> None:
 
 def _parse_finite_float(value: str) -> float:
     number = float(value)
-    if not math.isfinite(number):
+    if not math.isfinite(number) or Decimal(str(number)) != Decimal(value):
         raise ValueError
     return number
 
@@ -224,6 +224,8 @@ def _policy_semantics(policy: Mapping[str, Any]) -> list[dict[str, str]]:
                 issues.append(_diag("fw031.policy.disabled_threshold", path, "an unrequested limit cannot carry active thresholds"))
             if limit["requested"] and warning is None and exhaustion is None:
                 issues.append(_diag("fw031.policy.missing_threshold", path, "a requested limit needs an explicit threshold"))
+            if limit["scope"] == "run-tree" and policy["nested_run_accounting"] != "aggregate-at-root":
+                issues.append(_diag("fw031.policy.scope_accounting", path, "run-tree limits require aggregate-at-root accounting"))
             capability = limit["capability"]
             source_kind = limit["measurement_source"]["kind"]
             if capability == "unavailable" and limit["requested"] and limit["unavailable_behavior"] not in {"block-run", "disable-limit"}:
@@ -233,6 +235,8 @@ def _policy_semantics(policy: Mapping[str, Any]) -> list[dict[str, str]]:
             if capability == "enforced" and limit["unavailable_behavior"] != "block-run":
                 issues.append(_diag("fw031.policy.enforced_fallback", path, "enforced limits must block when their measurement is unavailable"))
             if limit["kind"] == "spend":
+                if limit["scope"] != "run":
+                    issues.append(_diag("fw031.policy.spend_scope", path, "spend results are bound to one source run"))
                 if not re.fullmatch(r"[A-Z]{3}", limit["unit"]):
                     issues.append(_diag("fw031.policy.spend_currency", f"{path}.unit", "spend units must be an uppercase currency code"))
                 if limit["requested"] and source_kind not in {"host-meter", "provider-meter"}:
@@ -390,7 +394,40 @@ def _result_semantics(result: Mapping[str, Any], policy: Mapping[str, Any]) -> l
                 exhaustion = spend_limit["exhaustion_threshold"]
                 warning_reached |= warning is not None and amount >= Decimal(str(warning))
                 exhaustion_reached |= exhaustion is not None and amount >= Decimal(str(exhaustion))
+        missing_or_unavailable: list[tuple[Mapping[str, Any], str]] = []
+        for limit in policy["limits"]:
+            if not limit["requested"]:
+                continue
+            if limit["kind"] == "spend":
+                if spend["state"] == "unknown":
+                    missing_or_unavailable.append((limit, result["run_id"]))
+                continue
+            owners = [result["run_id"]] if limit["scope"] == "run-tree" else list(runs)
+            for owner in owners:
+                samples = [
+                    observation for observation in result["observations"]
+                    if observation["limit_id"] == limit["id"]
+                    and observation["accounting_owner_run_id"] == owner
+                ]
+                latest_sample = max(samples, key=lambda observation: observation["sequence"], default=None)
+                if latest_sample is None or latest_sample["state"] == "unavailable":
+                    missing_or_unavailable.append((limit, owner))
+        blocking_measurement = any(limit["capability"] == "enforced" for limit, _ in missing_or_unavailable)
+        uncertain_measurement = bool(missing_or_unavailable)
         state = result["stop_state"]
+        if blocking_measurement and not exhaustion_reached:
+            if state != "blocked" or result["execution_outcome"] != "blocked":
+                issues.append(_diag("fw031.result.enforced_measurement_missing", "$.stop_state", "missing enforced measurements must block the run outcome"))
+        elif state == "blocked":
+            issues.append(_diag("fw031.result.false_blocked", "$.stop_state", "blocked state requires a missing or unavailable enforced measurement"))
+        if result["execution_outcome"] == "blocked" and state != "blocked":
+            issues.append(_diag("fw031.result.false_blocked_outcome", "$.execution_outcome", "blocked outcome requires blocked stop state"))
+        if uncertain_measurement and not blocking_measurement and not warning_reached and not exhaustion_reached and state != "unknown":
+            issues.append(_diag("fw031.result.measurement_unknown_state", "$.stop_state", "missing or unavailable measurements must remain unknown"))
+        if state == "unknown" and (not uncertain_measurement or blocking_measurement or warning_reached or exhaustion_reached):
+            issues.append(_diag("fw031.result.false_unknown", "$.stop_state", "unknown state requires unresolved measurements without a stronger stop condition"))
+        if state == "clear" and (uncertain_measurement or blocking_measurement):
+            issues.append(_diag("fw031.result.false_clear", "$.stop_state", "clear state cannot hide missing or unavailable measurements"))
         if exhaustion_reached and state != "exhausted":
             issues.append(_diag("fw031.result.exhaustion_missing", "$.stop_state", "an exceeded exhaustion threshold must be recorded"))
         if warning_reached and state == "clear":
@@ -467,7 +504,8 @@ def validate_budget_result(raw: bytes | str, policy_raw: bytes | str) -> dict[st
 
 def _read(path: str) -> bytes:
     try:
-        return Path(path).read_bytes()
+        with Path(path).open("rb") as source:
+            return source.read(_MAX_INPUT_BYTES + 1)
     except OSError:
         return b""
 

@@ -49,8 +49,8 @@
         }
       }
     },
-    "stop_state": { "enum": ["clear", "warning", "exhausted"] },
-    "execution_outcome": { "enum": ["completed", "stop-requested", "terminated", "interrupted", "unknown"] },
+    "stop_state": { "enum": ["clear", "warning", "exhausted", "unknown", "blocked"] },
+    "execution_outcome": { "enum": ["completed", "stop-requested", "terminated", "interrupted", "unknown", "blocked"] },
     "cancellation": {
       "type": "object",
       "additionalProperties": false,

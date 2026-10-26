@@ -34,7 +34,7 @@ def _limit(
         "id": limit_id,
         "kind": kind,
         "unit": unit,
-        "scope": "run-tree" if kind == "retry-count" else "run",
+        "scope": "run",
         "requested": requested,
         "measurement_source": {"kind": source_kind, "id": source_id},
         "capability": capability,
@@ -110,6 +110,12 @@ def _result(policy: dict[str, Any]) -> dict[str, Any]:
         "observations": [
             _observation("00000000-0000-4000-8000-000000000010", "wall-time", ROOT_RUN, 1, 3, "seconds", "fixture-clock"),
             _observation("00000000-0000-4000-8000-000000000011", "retries", CHILD_RUN, 1, 1, "count", "fixture-coordinator"),
+            _observation("00000000-0000-4000-8000-000000000012", "wall-time", CHILD_RUN, 1, 4, "seconds", "fixture-clock"),
+            _observation("00000000-0000-4000-8000-000000000013", "retries", ROOT_RUN, 1, 1, "count", "fixture-coordinator"),
+            _observation("00000000-0000-4000-8000-000000000014", "tool-calls", ROOT_RUN, 1, 3, "count", "fixture-coordinator"),
+            _observation("00000000-0000-4000-8000-000000000015", "tool-calls", CHILD_RUN, 1, 2, "count", "fixture-coordinator"),
+            _observation("00000000-0000-4000-8000-000000000016", "memory", ROOT_RUN, 1, 128, "MiB", "fixture-controller"),
+            _observation("00000000-0000-4000-8000-000000000017", "memory", CHILD_RUN, 1, 256, "MiB", "fixture-controller"),
         ],
         "stop_state": "clear",
         "execution_outcome": "completed",
@@ -201,6 +207,22 @@ class Fw031BudgetContractTests(unittest.TestCase):
         disabled_threshold["limits"][0]["requested"] = False
         cases.append(contract.seal_policy(disabled_threshold))
 
+        incompatible_tree_scope = copy.deepcopy(base)
+        incompatible_tree_scope["limits"][1]["scope"] = "run-tree"
+        cases.append(contract.seal_policy(incompatible_tree_scope))
+
+        unsupported_spend_tree = copy.deepcopy(base)
+        unsupported_spend_tree["limits"][4].update(
+            requested=True,
+            scope="run-tree",
+            measurement_source={"kind": "provider-meter", "id": "fixture-meter"},
+            capability="advisory",
+            warning_threshold=2,
+            exhaustion_threshold=4,
+            unavailable_behavior="continue-advisory",
+        )
+        cases.append(contract.seal_policy(unsupported_spend_tree))
+
         for case in cases:
             with self.subTest(policy=case):
                 self.assertFalse(contract.validate_budget_policy(json.dumps(case))["valid"])
@@ -230,6 +252,9 @@ class Fw031BudgetContractTests(unittest.TestCase):
             self.assertTrue(outcome["diagnostics"])
         rendered = json.dumps(contract.validate_budget_policy('{"secret-token-value":'), sort_keys=True)
         self.assertNotIn("secret-token-value", rendered)
+        for numeric in ("1e999", "1e-400", "0.1234567890123456789"):
+            outcome = contract.validate_budget_policy('{"schema_version":"1.0","policy_id":' + numeric + '}')
+            self.assertIn("fw031.policy.invalid_json", {item["code"] for item in outcome["diagnostics"]}, numeric)
 
     def test_result_requires_exact_policy_and_source_revision_binding(self) -> None:
         policy = _policy()
@@ -274,27 +299,72 @@ class Fw031BudgetContractTests(unittest.TestCase):
 
     def test_nested_aggregation_is_root_owned_and_unavailable_accounting_cannot_claim_children(self) -> None:
         policy = _policy(nested_run_accounting="aggregate-at-root")
+        policy["limits"][1]["scope"] = "run-tree"
+        policy = contract.seal_policy(policy)
         result = _result(policy)
         result["observations"][1]["accounting_owner_run_id"] = CHILD_RUN
         self.assertIn("fw031.result.aggregate_owner", {d["code"] for d in _validate_result(result, policy)["diagnostics"]})
-        result["observations"][1]["accounting_owner_run_id"] = ROOT_RUN
+        result["observations"] = [
+            _observation(f"00000000-0000-4000-8000-0000000000{index:02d}", limit_id, ROOT_RUN, 1, amount, unit, source)
+            for index, (limit_id, amount, unit, source) in enumerate(
+                (("wall-time", 7, "seconds", "fixture-clock"), ("retries", 4, "count", "fixture-coordinator"),
+                 ("tool-calls", 5, "count", "fixture-coordinator"), ("memory", 256, "MiB", "fixture-controller")),
+                start=20,
+            )
+        ]
+        result["stop_state"] = "exhausted"
+        result["execution_outcome"] = "stop-requested"
+        result["cancellation"]["state"] = "requested"
         self.assertTrue(_validate_result(result, policy)["valid"])
 
         unavailable_policy = _policy(nested_run_accounting="unavailable")
         unavailable_result = _result(unavailable_policy)
         self.assertIn("fw031.result.accounting_unavailable", {d["code"] for d in _validate_result(unavailable_result, unavailable_policy)["diagnostics"]})
         unavailable_result["runs"] = [{"run_id": ROOT_RUN, "parent_run_id": None}]
-        for observation in unavailable_result["observations"]:
-            observation["accounting_owner_run_id"] = ROOT_RUN
+        unavailable_result["observations"] = [
+            observation for observation in unavailable_result["observations"]
+            if observation["accounting_owner_run_id"] == ROOT_RUN
+        ]
         self.assertTrue(_validate_result(unavailable_result, unavailable_policy)["valid"])
 
     def test_unavailable_measurements_are_unknown_and_not_numeric(self) -> None:
         policy = _policy()
         result = _result(policy)
         result["observations"][0].update(state="unavailable", value=None, unavailable_reason="source-error")
+        result["stop_state"] = "unknown"
         self.assertTrue(_validate_result(result, policy)["valid"])
+        result["stop_state"] = "clear"
+        self.assertIn("fw031.result.false_clear", {d["code"] for d in _validate_result(result, policy)["diagnostics"]})
         result["observations"][0]["value"] = 3
         self.assertIn("fw031.result.observation_state", {d["code"] for d in _validate_result(result, policy)["diagnostics"]})
+
+    def test_missing_or_unavailable_enforced_measurement_blocks_recorded_run(self) -> None:
+        policy = _policy()
+        policy["limits"][0].update(
+            capability="enforced",
+            measurement_source={"kind": "coordinator", "id": "fixture-clock"},
+            unavailable_behavior="block-run",
+        )
+        policy = contract.seal_policy(policy)
+        for mode in ("missing", "unavailable"):
+            result = _result(policy)
+            if mode == "missing":
+                result["observations"] = [item for item in result["observations"] if item["limit_id"] != "wall-time"]
+            else:
+                for item in result["observations"]:
+                    if item["limit_id"] == "wall-time":
+                        item.update(state="unavailable", value=None, unavailable_reason="source-error")
+            result["stop_state"] = "blocked"
+            result["execution_outcome"] = "blocked"
+            self.assertTrue(_validate_result(result, policy)["valid"], mode)
+
+            result["stop_state"] = "clear"
+            result["execution_outcome"] = "completed"
+            self.assertIn(
+                "fw031.result.enforced_measurement_missing",
+                {d["code"] for d in _validate_result(result, policy)["diagnostics"]},
+                mode,
+            )
 
     def test_warning_exhaustion_and_completed_outcome_are_consistent(self) -> None:
         policy = _policy()
@@ -448,6 +518,12 @@ class Fw031BudgetContractTests(unittest.TestCase):
             self.assertTrue(output["valid"])
             self.assertEqual(output["validation_scope"], "structure-and-declared-invariants-only")
             self.assertEqual(json.loads(path.read_text(encoding="utf-8")), original)
+            path.write_bytes(b" " * (contract._MAX_INPUT_BYTES * 4))
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                self.assertEqual(contract.main(["policy", str(path)]), 1)
+            diagnostics = json.loads(stdout.getvalue())["diagnostics"]
+            self.assertIn("fw031.policy.size_limit", {item["code"] for item in diagnostics})
 
 
 if __name__ == "__main__":
