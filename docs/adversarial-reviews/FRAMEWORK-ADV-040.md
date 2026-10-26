@@ -2,12 +2,12 @@
 id: FRAMEWORK-ADV-040
 type: adversarial-review
 title: FW-TASK-030 temporary runtime workflow review
-status: revision-required
-version: 0.6
+status: approved
+version: 0.7
 created: 2026-10-25
-updated: 2026-10-25
+updated: 2026-10-26
 reviewed-artifact: .github/workflows/fw030-runtime-probe.yml
-reviewed-version: candidate at 7eee540696564326976a04cd6c5fc9e3dea00128
+reviewed-version: c8b7298d1b274e0d1f488dc9f3ede40b632df7c9
 related-artifacts: FRAMEWORK-FEASIBILITY-011, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-039, DECISION-034
 ---
 
@@ -47,4 +47,8 @@ After the third review, the owner explicitly authorized one bounded correction a
 
 ## Network positive-control setup correction
 
-The owner authorized one additional bounded fix/review/pilot-retry cycle after the first hosted attempt failed before workload execution because the Podman compatibility inspect field returned no server address. The workflow now creates a temporary internal network with a declared synthetic subnet and assigns the server a fixed address with Podman's user-network IP option. It checks the server remains running and prints only that synthetic container's logs if startup fails. This removes dependence on the empty compatibility inspect field and limits the positive-control network's external access. The new exact revision requires independent review before the authorized retry; the prior PASS applies to the previous workflow revision only.
+The owner authorized one additional bounded fix/review/pilot-retry cycle after the first hosted attempt failed before workload execution because the Podman compatibility inspect field returned no server address. The workflow now creates a temporary internal network with a declared synthetic subnet and assigns the server a fixed address with Podman's user-network IP option. It checks the server remains running and prints only that synthetic container's logs if startup fails. This removes dependence on the empty compatibility inspect field and limits the positive-control network's external access.
+
+## Authorized retry review — PASS
+
+Independent reviewer `/root/fw029_independent_review` inspected exact workflow revision `c8b7298d1b274e0d1f488dc9f3ede40b632df7c9` read-only and returned PASS. The reviewer confirmed the positive-control client can reach the server at the fixed address on the temporary internal network, the server-running check precedes the control, and the isolated policy workload and child process still probe the same endpoint while attached only to `--network=none`. Prior cleanup checks and other reviewed controls remain intact. No workflow was executed as part of this review. Verify Pipeline [40250529316](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40250529316) passed on the exact workflow revision. This review approves only the already authorized single synthetic retry; it does not establish runtime support or isolation.
