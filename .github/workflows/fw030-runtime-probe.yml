@@ -23,11 +23,15 @@ jobs:
           readonly probe_dir="$(mktemp -d "${RUNNER_TEMP}/fw030.XXXXXX")"
           readonly input_dir="${probe_dir}/input"
           readonly output_dir="${probe_dir}/output"
+          readonly server_dir="${probe_dir}/server"
           readonly host_sentinel="${probe_dir}/host-sentinel"
           readonly expected_sentinel='host-only-synthetic-marker-do-not-print'
+          readonly network_name='fw030-positive-control'
           readonly container_uid=1000
-          mkdir -m 700 "$input_dir" "$output_dir"
-          chmod 777 "$output_dir"
+          mkdir -m 755 "$input_dir" "$server_dir"
+          mkdir -m 777 "$output_dir"
+          printf '%s\n' 'readable-synthetic-fixture' > "${input_dir}/fixture.txt"
+          printf '%s\n' 'fw030-network-positive-control' > "${server_dir}/index.html"
           printf '%s' "$expected_sentinel" > "$host_sentinel"
           chmod 600 "$host_sentinel"
           ln -s "$host_sentinel" "${input_dir}/escape-link"
@@ -36,7 +40,8 @@ jobs:
           cleanup() {
             local status=$?
             trap - EXIT
-            podman rm -f fw030-policy fw030-timeout fw030-interrupt fw030-resource fw030-cleanup-failure >/dev/null 2>&1 || true
+            podman rm -f fw030-policy fw030-timeout fw030-interrupt fw030-resource fw030-cleanup-failure fw030-net-server >/dev/null 2>&1 || true
+            podman network rm "$network_name" >/dev/null 2>&1 || true
             rm -rf "$probe_dir"
             exit "$status"
           }
@@ -57,26 +62,47 @@ jobs:
             exit 21
           fi
           printf 'podman_rootless=%s\n' "$rootless"
-          podman info --format '{{.Host.OCIRuntime.Name}} {{.Host.OCIRuntime.Version}}'
+          podman info --format 'oci_runtime={{.Host.OCIRuntime.Name}} version={{.Host.OCIRuntime.Version}} storage_backend={{.Store.GraphDriverName}} network_backend={{.Host.NetworkBackend}}'
 
           # Host networking is used only to fetch the fixed digest before any workload runs.
           podman pull --platform linux/amd64 "$image"
           podman image inspect --format 'image_id={{.Id}}' "$image"
 
+          # Establish a real, reachable local endpoint as the network-denial positive control.
+          podman network create "$network_name" >/dev/null
+          podman run --pull=never --detach --name fw030-net-server \
+            --network "$network_name" --network-alias fw030-server \
+            --volume "${server_dir}:/srv:ro" "$image" \
+            sh -c 'exec /bin/busybox httpd -f -p 8080 -h /srv' >/dev/null
+          server_ip="$(podman inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' fw030-net-server)"
+          if [[ -z "$server_ip" ]]; then
+            echo 'Positive-control server has no network address.' >&2
+            exit 32
+          fi
+          positive_response="$(podman run --pull=never --rm --network "$network_name" "$image" \
+            sh -c '/bin/busybox wget -T 3 -qO- "$1"' sh "http://${server_ip}:8080/")"
+          if [[ "$positive_response" != 'fw030-network-positive-control' ]]; then
+            echo 'Network positive control failed to reach the local synthetic endpoint.' >&2
+            exit 33
+          fi
+          echo 'network_positive_control=PASS (reachable local synthetic endpoint)'
+
           policy_script="$(cat <<'SH'
           set -eu
-          expected_uid="$3"
+          expected_uid="$4"
+          endpoint="$5"
           test "$(id -u)" = "$expected_uid"
+          test "$(cat /input/fixture.txt)" = 'readable-synthetic-fixture'
           test "${FW030_SECRET_SENTINEL-}" = ""
           if cat "$1" >/dev/null 2>&1; then echo "host sentinel readable" >&2; exit 41; fi
           if cat /input/escape-link >/dev/null 2>&1; then echo "symlink escaped" >&2; exit 42; fi
           if cat "$2" >/dev/null 2>&1; then echo "parent path escaped" >&2; exit 43; fi
           if touch /input/should-not-write 2>/dev/null; then echo "read-only input writable" >&2; exit 44; fi
-          if /bin/busybox wget -T 2 -qO- http://192.0.2.1/ >/dev/null 2>&1; then echo "network reachable" >&2; exit 45; fi
+          if /bin/busybox wget -T 2 -qO- "$endpoint" >/dev/null 2>&1; then echo "network reachable" >&2; exit 45; fi
           test ! -S /run/podman/podman.sock
           test ! -S /var/run/docker.sock
           printf "bounded synthetic output\n" > /output/result.txt
-          sh -eu -c 'if cat "$1" >/dev/null 2>&1; then exit 51; fi; if /bin/busybox wget -T 2 -qO- http://192.0.2.1/ >/dev/null 2>&1; then exit 52; fi' sh "$1"
+          sh -eu -c 'if cat "$1" >/dev/null 2>&1; then exit 51; fi; if /bin/busybox wget -T 2 -qO- "$2" >/dev/null 2>&1; then exit 52; fi' sh "$1" "$3"
           printf "policy_cases=PASS\n"
           SH
           )"
@@ -93,11 +119,12 @@ jobs:
                     --tmpfs /tmp:rw,noexec,nosuid,size=16m \
                     --volume "${input_dir}:/input:ro" \
                     --volume "${output_dir}:/output:rw" \
-                    "$image" sh -eu -c "$policy_script" sh "$host_sentinel" "$parent_path" "$container_uid" ;;
+                    "$image" sh -eu -c "$policy_script" sh "$host_sentinel" "$parent_path" "$endpoint" "$container_uid" "$endpoint" ;;
               *) return 64 ;;
             esac
           }
 
+          endpoint="http://${server_ip}:8080/"
           run_allowlisted sh
           test -s "${output_dir}/result.txt"
           inspect="$(podman inspect fw030-policy)"
@@ -105,13 +132,16 @@ jobs:
             .[0].HostConfig.NetworkMode == "none" and
             .[0].HostConfig.ReadonlyRootfs == true and
             .[0].HostConfig.Memory == 134217728 and
+            .[0].HostConfig.NanoCpus == 1000000000 and
             .[0].HostConfig.PidsLimit == 32 and
+            ([.[0].HostConfig.CapDrop[] | ascii_downcase] | index("all") != null) and
+            (any(.[0].HostConfig.SecurityOpt[]?; contains("no-new-privileges"))) and
             .[0].Config.User != "0:0" and
             ([.[0].Mounts[].Destination] | sort == ["/input", "/output"]) and
             ([.[0].Mounts[] | select(.Destination == "/input") | .RW] == [false]) and
             ([.[0].Mounts[] | select(.Destination == "/output") | .RW] == [true])
           ' <<< "$inspect" >/dev/null
-          echo 'effective_policy=PASS (none network; read-only root; 128MiB; 1 CPU; 32 PIDs; input RO/output RW; non-root identity)'
+          echo 'configured_policy=PASS (none network; read-only root; 128MiB; one CPU configured; 32 PIDs; all capabilities dropped; no-new-privileges; input RO/output RW; non-root identity)'
 
           set +e
           run_allowlisted python -c 'print(1)'
@@ -121,7 +151,7 @@ jobs:
             echo 'Denied command was not rejected by the probe guard.' >&2
             exit 22
           fi
-          echo 'denied_command=PASS'
+          echo 'probe_guard_denied_command=PASS (harness only; not adapter evidence)'
 
           start_seconds="$(date +%s)"
           set +e
@@ -132,35 +162,41 @@ jobs:
           timeout_status=$?
           set -e
           elapsed_seconds=$(( $(date +%s) - start_seconds ))
-          if [[ "$timeout_status" -eq 0 || "$elapsed_seconds" -gt 10 ]]; then
-            echo 'Runtime timeout did not stop the bounded workload.' >&2
+          timeout_state="$(podman inspect fw030-timeout)"
+          jq -e '.[0].State.StartedAt != "" and .[0].State.Running == false and .[0].State.ExitCode == 137' <<< "$timeout_state" >/dev/null
+          if [[ "$timeout_status" -ne 137 || "$elapsed_seconds" -gt 10 ]]; then
+            echo 'Runtime timeout did not produce the expected started-container SIGKILL result.' >&2
             exit 23
           fi
-          podman rm -f fw030-timeout >/dev/null
+          podman rm fw030-timeout >/dev/null
           if podman container exists fw030-timeout; then
             echo 'Timed-out container remains after cleanup.' >&2
             exit 24
           fi
-          printf 'timeout_status=nonzero elapsed_seconds=%s cleanup=PASS\n' "$elapsed_seconds"
+          printf 'timeout=PASS (container started, exit=137, elapsed_seconds=%s, cleanup=PASS)\n' "$elapsed_seconds"
 
           set +e
-          podman run --pull=never --name fw030-resource --timeout 4 \
+          podman run --pull=never --name fw030-resource --timeout 30 \
             --network=none --read-only --user "${container_uid}:${container_uid}" \
             --cap-drop=all --security-opt=no-new-privileges --memory=128m --cpus=1 --pids-limit=32 \
             --tmpfs /tmp:rw,noexec,nosuid,size=16m \
-            "$image" sh -c 'dd if=/dev/zero of=/tmp/overflow bs=1M count=32' >/dev/null 2>&1
+            --volume "${output_dir}:/output:rw" \
+            "$image" sh -c 'printf started > /output/resource-started; dd if=/dev/zero of=/tmp/overflow bs=1M count=32 2>/output/resource-error; status=$?; cat /output/resource-error; exit "$status"' \
+            >"${output_dir}/resource-stdout" 2>"${output_dir}/resource-stderr"
           resource_status=$?
           set -e
-          if [[ "$resource_status" -eq 0 ]]; then
-            echo 'Bounded tmpfs resource exhaustion unexpectedly succeeded.' >&2
+          if [[ "$resource_status" -ne 1 || ! -s "${output_dir}/resource-started" ]] || ! grep -Fq 'No space left on device' "${output_dir}/resource-error"; then
+            echo 'Resource test did not reach the expected tmpfs ENOSPC result.' >&2
+            cat "${output_dir}/resource-stderr" >&2 || true
+            cat "${output_dir}/resource-error" >&2 || true
             exit 28
           fi
-          podman rm -f fw030-resource >/dev/null
+          podman rm fw030-resource >/dev/null
           if podman container exists fw030-resource; then
             echo 'Resource-limited container remains after cleanup.' >&2
             exit 29
           fi
-          echo 'tmpfs_resource_ceiling=PASS (16MiB tmpfs rejected 32MiB synthetic write; container removed)'
+          echo 'tmpfs_resource_ceiling=PASS (started synthetic write; exact ENOSPC diagnostic; container removed)'
 
           podman run --pull=never --name fw030-interrupt -d \
             --network=none --read-only --user "${container_uid}:${container_uid}" \
@@ -179,12 +215,14 @@ jobs:
             --network=none --read-only --user "${container_uid}:${container_uid}" \
             --cap-drop=all --security-opt=no-new-privileges --memory=128m --cpus=1 --pids-limit=32 \
             "$image" sleep 30 >/dev/null
+          test "$(podman inspect --format '{{.State.Running}}' fw030-cleanup-failure)" = 'true'
           set +e
-          podman rm fw030-cleanup-failure >/dev/null 2>&1
+          podman rm fw030-cleanup-failure 2>"${output_dir}/cleanup-error"
           cleanup_failure_status=$?
           set -e
-          if [[ "$cleanup_failure_status" -eq 0 ]]; then
-            echo 'Runtime did not report refusal to remove a running container.' >&2
+          if [[ "$cleanup_failure_status" -eq 0 ]] || ! grep -Eiq '(running|stopped container|use -f)' "${output_dir}/cleanup-error"; then
+            echo 'Runtime did not specifically refuse removal of the verified running container.' >&2
+            cat "${output_dir}/cleanup-error" >&2 || true
             exit 30
           fi
           podman rm -f fw030-cleanup-failure >/dev/null
@@ -192,17 +230,18 @@ jobs:
             echo 'Cleanup recovery left the synthetic container behind.' >&2
             exit 31
           fi
-          echo 'cleanup_failure_and_recovery=PASS (non-force removal rejected running container; force cleanup removed it)'
+          echo 'cleanup_failure_and_recovery=PASS (verified running target refused; force cleanup removed it)'
 
           set +e
-          podman rm fw030-intentionally-missing-container >/dev/null 2>&1
+          podman rm fw030-intentionally-missing-container >/dev/null 2>"${output_dir}/missing-cleanup-error"
           missing_cleanup_status=$?
           set -e
-          if [[ "$missing_cleanup_status" -eq 0 ]]; then
-            echo 'Runtime failed to expose invalid cleanup target.' >&2
+          if [[ "$missing_cleanup_status" -eq 0 ]] || ! grep -Eiq '(no such container|not found|does not exist)' "${output_dir}/missing-cleanup-error"; then
+            echo 'Runtime did not expose the specific missing-container cleanup error.' >&2
+            cat "${output_dir}/missing-cleanup-error" >&2 || true
             exit 26
           fi
-          echo 'cleanup_failure_signal=PASS (runtime returned nonzero; synthetic nonexistent target only)'
+          echo 'missing_cleanup_target=PASS (specific not-found response)'
 
           podman rm fw030-policy >/dev/null
           if podman container exists fw030-policy; then
