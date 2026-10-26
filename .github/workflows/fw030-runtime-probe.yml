@@ -264,7 +264,10 @@ jobs:
           set -e
           elapsed_seconds=$(( $(date +%s) - start_seconds ))
           timeout_state="$(podman inspect fw030-timeout)"
+          printf 'timeout_process_exit=%s elapsed_seconds=%s\n' "$timeout_status" "$elapsed_seconds"
+          jq '{status: .[0].State.Status, running: .[0].State.Running, exit_code: .[0].State.ExitCode, started_at: .[0].State.StartedAt, finished_at: .[0].State.FinishedAt}' <<< "$timeout_state"
           jq -e '.[0].State.StartedAt != "" and .[0].State.Running == false and .[0].State.ExitCode == 137' <<< "$timeout_state" >/dev/null
+          echo 'timeout_state=PASS (started, stopped, SIGKILL exit state observed)'
           if [[ "$timeout_status" -ne 137 || "$elapsed_seconds" -gt 10 ]]; then
             echo 'Runtime timeout did not produce the expected started-container SIGKILL result.' >&2
             exit 23
