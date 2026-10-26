@@ -3,7 +3,7 @@ id: FRAMEWORK-FEASIBILITY-011
 type: feasibility-register
 title: FW-TASK-030 isolated execution adapter feasibility
 status: draft
-version: 0.6
+version: 0.7
 created: 2026-10-25
 updated: 2026-10-25
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-038, FRAMEWORK-ADV-039, FRAMEWORK-ADV-040, DECISION-034, WORKFLOW-FEASIBILITY-001
@@ -62,6 +62,8 @@ Current state: plan review round 1 at exact commit `e7351e841eaaeed1a65b28ed95e2
 **G-FEAS cleanup correction checkpoint (2026-10-25):** Independent follow-up review of exact commit `9632a055a914f4b9e37aea9eb7561eaeac803807` confirmed the prior network, mount, expected-outcome, and policy-reporting corrections, but found the exit trap could ignore container/network deletion failures and did not verify the temporary directory was removed. Commit `cf2dbaee6983ba0981eba5dbb0db5b85a5628d7a` adds explicit cleanup failure reporting and verifies named containers, network, and temporary-file absence. Local artifact validation passed for 93 artifacts; YAML parsing and embedded-shell syntax checks passed. Verify Pipeline [40247869013](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40247869013) passed on that exact SHA; optional FW-030 and FW-029 probe jobs were skipped because the event was a push.
 
 **G-FEAS owner checkpoint required (2026-10-26):** Owner authorized the third consecutive independent review. At exact workflow commit `cf2dbaee6983ba0981eba5dbb0db5b85a5628d7a` (identical workflow blob at `5dced2007f8b4a924aafd0bb5fba146fbb8b16a5`), reviewer `/root/fw029_independent_review` confirmed the earlier network, mount, outcome, and policy-reporting fixes, but found a remaining cleanup false-pass: Podman existence commands' query failures (for example exit 125) are treated as absence, so cleanup may claim success without proving absence. Finding and disposition are recorded in FRAMEWORK-ADV-040 v0.3. No workload was dispatched or run. Per the repository's owner checkpoint after more than two consecutive adversarial loops, FW-TASK-030 G-FEAS is blocked pending owner direction for any further correction/review cycle. No supported-host or isolation claim is established.
+
+**Owner-authorized correction checkpoint (2026-10-26):** Owner authorized one bounded correction and read-only review cycle. The workflow now treats only Podman existence status 0 as present and 1 as absent; other results fail cleanup, and the post-removal verification applies the same classification. The correction is pending exact-revision CI and independent review. No workload was run. This authorization does not authorize a further review loop or hosted probe dispatch.
 
 ## G-FEAS disposition
 

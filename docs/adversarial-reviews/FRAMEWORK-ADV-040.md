@@ -3,7 +3,7 @@ id: FRAMEWORK-ADV-040
 type: adversarial-review
 title: FW-TASK-030 temporary runtime workflow review
 status: revision-required
-version: 0.3
+version: 0.4
 created: 2026-10-25
 updated: 2026-10-25
 reviewed-artifact: .github/workflows/fw030-runtime-probe.yml
@@ -39,3 +39,7 @@ Owner authorized a third consecutive independent review. Reviewer `/root/fw029_i
 ## Disposition
 
 Do not dispatch the workflow. The third review returned NEEDS-CHANGES. Per the repository's limit on more than two consecutive adversarial loops, further correction/review work requires a new owner checkpoint. The task is recorded blocked in the backlog. No hosted probe ran, and no G-FEAS pass, runtime support, or isolation claim is established.
+
+## Owner authorization and fourth review candidate
+
+After the third review, the owner explicitly authorized one bounded correction and independent review cycle. The workflow now accepts only exit status 0 (resource present) or 1 (not found) from Podman container/network existence queries; all other statuses are recorded as cleanup failures. It repeats the same status classification after removal before claiming absence. This correction has not yet been independently reviewed or run. Review the exact new workflow commit before any dispatch. The prior owner checkpoint is limited to this correction and one read-only review; it does not authorize another review loop or hosted probe execution.

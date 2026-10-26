@@ -41,27 +41,56 @@ jobs:
             local status=$?
             local cleanup_failed=0
             local container_name
+            local exists_status
             trap - EXIT
             for container_name in fw030-policy fw030-timeout fw030-interrupt fw030-resource fw030-cleanup-failure fw030-net-server; do
-              if podman container exists "$container_name"; then
+              set +e
+              podman container exists "$container_name"
+              exists_status=$?
+              set -e
+              if [[ "$exists_status" -eq 0 ]]; then
                 if ! podman rm -f "$container_name" >/dev/null; then
                   printf 'cleanup failed to remove container: %s\n' "$container_name" >&2
                   cleanup_failed=1
                 fi
+              elif [[ "$exists_status" -ne 1 ]]; then
+                printf 'cleanup could not determine container state: %s (exit=%s)\n' "$container_name" "$exists_status" >&2
+                cleanup_failed=1
               fi
-              if podman container exists "$container_name"; then
+              set +e
+              podman container exists "$container_name"
+              exists_status=$?
+              set -e
+              if [[ "$exists_status" -eq 0 ]]; then
                 printf 'cleanup left container present: %s\n' "$container_name" >&2
+                cleanup_failed=1
+              elif [[ "$exists_status" -ne 1 ]]; then
+                printf 'cleanup could not verify container absence: %s (exit=%s)\n' "$container_name" "$exists_status" >&2
                 cleanup_failed=1
               fi
             done
-            if podman network exists "$network_name"; then
+            set +e
+            podman network exists "$network_name"
+            exists_status=$?
+            set -e
+            if [[ "$exists_status" -eq 0 ]]; then
               if ! podman network rm "$network_name" >/dev/null; then
                 printf 'cleanup failed to remove network: %s\n' "$network_name" >&2
                 cleanup_failed=1
               fi
+            elif [[ "$exists_status" -ne 1 ]]; then
+              printf 'cleanup could not determine network state: %s (exit=%s)\n' "$network_name" "$exists_status" >&2
+              cleanup_failed=1
             fi
-            if podman network exists "$network_name"; then
+            set +e
+            podman network exists "$network_name"
+            exists_status=$?
+            set -e
+            if [[ "$exists_status" -eq 0 ]]; then
               printf 'cleanup left network present: %s\n' "$network_name" >&2
+              cleanup_failed=1
+            elif [[ "$exists_status" -ne 1 ]]; then
+              printf 'cleanup could not verify network absence: %s (exit=%s)\n' "$network_name" "$exists_status" >&2
               cleanup_failed=1
             fi
             if ! rm -rf "$probe_dir" || [[ -e "$probe_dir" ]]; then
