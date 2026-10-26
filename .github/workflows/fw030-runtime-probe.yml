@@ -198,14 +198,16 @@ jobs:
           run_allowlisted sh
           test -s "${output_dir}/result.txt"
           inspect="$(podman inspect fw030-policy)"
-          jq '{network_mode: .[0].HostConfig.NetworkMode, readonly_rootfs: .[0].HostConfig.ReadonlyRootfs, memory_bytes: .[0].HostConfig.Memory, nano_cpus: .[0].HostConfig.NanoCpus, pids_limit: .[0].HostConfig.PidsLimit, cap_drop: .[0].HostConfig.CapDrop, security_opt: .[0].HostConfig.SecurityOpt, user: .[0].Config.User, mounts: [.[0].Mounts[] | {type: .Type, destination: .Destination, rw: .RW}] | sort_by(.destination), tmpfs: {path: "/tmp", options: .[0].HostConfig.Tmpfs["/tmp"]}}' <<< "$inspect"
+          jq '{network_mode: .[0].HostConfig.NetworkMode, readonly_rootfs: .[0].HostConfig.ReadonlyRootfs, memory_bytes: .[0].HostConfig.Memory, nano_cpus: .[0].HostConfig.NanoCpus, pids_limit: .[0].HostConfig.PidsLimit, cap_drop: .[0].HostConfig.CapDrop, effective_caps: .[0].EffectiveCaps, bounding_caps: .[0].BoundingCaps, security_opt: .[0].HostConfig.SecurityOpt, user: .[0].Config.User, mounts: [.[0].Mounts[] | {type: .Type, destination: .Destination, rw: .RW}] | sort_by(.destination), tmpfs: {path: "/tmp", options: .[0].HostConfig.Tmpfs["/tmp"]}}' <<< "$inspect"
           jq -e '
             .[0].HostConfig.NetworkMode == "none" and
             .[0].HostConfig.ReadonlyRootfs == true and
             .[0].HostConfig.Memory == 134217728 and
             .[0].HostConfig.NanoCpus == 1000000000 and
             .[0].HostConfig.PidsLimit == 32 and
-            ([.[0].HostConfig.CapDrop[] | ascii_downcase] | index("all") != null) and
+            ((.[0].HostConfig.CapDrop | type == "array" and length > 0)) and
+            ((.[0].EffectiveCaps | type == "array" and length == 0)) and
+            ((.[0].BoundingCaps | type == "array" and length == 0)) and
             (any(.[0].HostConfig.SecurityOpt[]?; contains("no-new-privileges"))) and
             .[0].Config.User != "0:0" and
             ([.[0].Mounts[] | select(.Type == "bind") | .Destination] | sort == ["/input", "/output"]) and
