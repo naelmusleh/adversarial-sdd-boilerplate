@@ -3,7 +3,7 @@ id: FRAMEWORK-ADV-040
 type: adversarial-review
 title: FW-TASK-030 temporary runtime workflow review
 status: revision-required
-version: 0.2
+version: 0.3
 created: 2026-10-25
 updated: 2026-10-25
 reviewed-artifact: .github/workflows/fw030-runtime-probe.yml
@@ -32,6 +32,10 @@ The reviewer also requested labeling the command rejection as a probe-harness gu
 
 At exact commit `9632a055a914f4b9e37aea9eb7561eaeac803807`, the independent reviewer confirmed that findings 1–4 above are corrected and that command rejection is labeled as harness-only evidence. The reviewer identified one remaining cleanup false-pass: the exit handler ignored container/network removal failures and did not verify the temporary directory was absent. A corrective patch now makes cleanup failures observable, checks all named containers and the network are absent, and verifies temporary-file removal. This candidate has not yet been reviewed.
 
+## Third review — NEEDS-CHANGES
+
+Owner authorized a third consecutive independent review. Reviewer `/root/fw029_independent_review` inspected the workflow at `cf2dbaee6983ba0981eba5dbb0db5b85a5628d7a` (same workflow blob at doc-only HEAD `5dced2007f8b4a924aafd0bb5fba146fbb8b16a5`). Earlier network, mount-readability, outcome-classification, and policy-reporting findings remain corrected. One cleanup false-pass remains: `podman container exists` and `podman network exists` checks treat every nonzero result as absence. Podman differentiates not-found (exit 1) from query/storage/backend errors (exit 125); the latter could therefore incorrectly produce `final_cleanup=PASS`. The reviewer requires accepting only documented presence/absence exit statuses and treating other statuses as cleanup failures. No workflow was dispatched or executed.
+
 ## Disposition
 
-Do not dispatch either reviewed candidate. The latest correction is pending an exact-revision independent review. This review remains `revision-required`; no hosted probe ran, and no G-FEAS pass, runtime support, or isolation claim is established.
+Do not dispatch the workflow. The third review returned NEEDS-CHANGES. Per the repository's limit on more than two consecutive adversarial loops, further correction/review work requires a new owner checkpoint. The task is recorded blocked in the backlog. No hosted probe ran, and no G-FEAS pass, runtime support, or isolation claim is established.
