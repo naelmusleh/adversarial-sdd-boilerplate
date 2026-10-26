@@ -2,7 +2,7 @@
 id: FRAMEWORK-CX-005
 type: cx-contract
 title: FW-TASK-031 slice B operator and reviewer interaction contract
-status: draft
+status: approved
 version: 0.3
 created: 2026-10-26
 updated: 2026-10-26
@@ -95,6 +95,6 @@ The interaction target is a conceptual text trace based on FRAMEWORK-COVERAGE-00
 | --- | --- | --- | --- |
 | CX031B-01 | §3, state model and combination rules | P2 — first v0.1 combined access, collection, review, and gate states; v0.2 still combined owner authorization (`authorized`/`denied`) with gate disposition (`in-progress`/`pass`/`blocked`), which can coexist and have separate authority. | Resolved in v0.3: access, retrieval, reviewer disposition, owner authorization, and gate disposition are independent axes. Combination rules specify action scope and evidence criteria. Full six-journey/state-transition rerun required; no owner decision needed. |
 
-**G-CX result:** Pending full-scope independent rerun for CX031B-01 and exact-revision Verify Pipeline. Two consecutive review rounds identified this state-separation issue. The owner explicitly directed, “keep going and use all the checkpoints you need until you are done,” authorizing continuation through the required checkpoint and review cycle. No finding is waived by this draft.
+**G-CX result:** PASS within DECISION-038 and FR-FW-041–043 for FRAMEWORK-CX-005 v0.3 at exact candidate `36f5819bae349c377359f801e7d5f57756ab26c5`. The third full-scope independent review [FRAMEWORK-ADV-062](../adversarial-reviews/FRAMEWORK-ADV-062.md) passed GCX-01–03 and confirmed CX031B-01 resolved across all six journeys. Verify Pipeline [40338048562](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40338048562) passed Metadata & Artifact Audit, Initializer Regression Gate, and TypeScript Static Code Analysis on the exact candidate; optional FW-029/FW-030 probes were skipped. The critique establishes only that this conceptual nonvisual interaction contract is complete and bounded. It does not establish implementation, live API/runtime behavior, workload termination, actual measurements/spend, visual/accessibility behavior, profile adoption, or application capability.
 
-**Next gate:** G-ARCH after the interaction trace passes review and CI. Architecture must preserve conditional access/timeout and blocked workload termination; implementation still requires separate G-IMPL authorization.
+**Next gate:** G-ARCH. Architecture must preserve conditional access/timeout and blocked workload termination; implementation still requires separate G-IMPL authorization.
