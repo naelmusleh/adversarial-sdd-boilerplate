@@ -3,7 +3,7 @@ id: FRAMEWORK-FEASIBILITY-011
 type: feasibility-register
 title: FW-TASK-030 isolated execution adapter feasibility
 status: draft
-version: 2.6
+version: 2.7
 created: 2026-10-25
 updated: 2026-10-26
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-038, FRAMEWORK-ADV-039, FRAMEWORK-ADV-040, FRAMEWORK-ADV-041, FRAMEWORK-ADV-042, FRAMEWORK-ADV-043, FRAMEWORK-ADV-044, FRAMEWORK-ADV-045, FRAMEWORK-ADV-046, DECISION-034, WORKFLOW-FEASIBILITY-001
@@ -123,3 +123,7 @@ The local network positive control and workload `policy_cases` passed. Sanitized
 **Authorized correction/review/CI result:** Workflow correction is commit `feab369bbb49980d9eb84099b226c7570bf767fd`, SHA-256 `46b393f1657c46d965dfeadb7856bd70210b87da0065a35b542449734d6797d3`. Independent reviewer `/root/fw029_independent_review` passed the exact commit. Standard push-triggered Verify Pipeline [40262323556](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40262323556) passed all three required jobs on that exact SHA; optional probes were skipped for the push event.
 
 **Single authorized retry result:** Manual Verify Pipeline [40262340681](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40262340681), attempt 1, was dispatched while standard CI was still running, then canceled before standard CI completed. The FW-030 job began on `feab369bbb49980d9eb84099b226c7570bf767fd`, reported Podman 4.9.3 and Ubuntu 24.04.5, then was canceled during bootstrap; the log contains no image pull, workload launch, conmon path/version, or timeout observation. The cleanup trap reported containers, network, and temporary files absent. This is an incomplete attempt, not runtime evidence. The authorized one-retry allowance is exhausted; stop without another dispatch or correction. G-FEAS remains blocked. The ordering error and cancellation are retained as part of the audit trail.
+
+**Fresh owner checkpoint (2026-10-26):** The owner instruction “keep going” authorizes one fresh, bounded retry cycle, with no workflow code change. Reuse only the already reviewed workflow payload at SHA-256 `46b393f1657c46d965dfeadb7856bd70210b87da0065a35b542449734d6797d3`; require passing Verify Pipeline and independent read-only review on the exact dispatch revision before running it. The retry must run to completion; any failure or interruption ends this checkpoint. No further corrections or retries, application integration, real data, secrets, production use, or complete host-isolation claim are in scope. G-FEAS remains blocked until completed evidence is reviewed.
+
+**Fresh cycle status:** Checkpoint recorded; exact-revision review, CI, and retry pending.
