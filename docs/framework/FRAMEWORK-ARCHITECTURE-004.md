@@ -2,11 +2,11 @@
 id: FRAMEWORK-ARCHITECTURE-004
 type: framework-architecture
 title: FW-TASK-030 optional isolated command runner architecture
-status: draft
-version: 0.2
+status: approved
+version: 1.0
 created: 2026-10-26
 updated: 2026-10-26
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-034, FRAMEWORK-FEASIBILITY-011, FRAMEWORK-COVERAGE-003, FRAMEWORK-CX-003, FRAMEWORK-ADV-047, FRAMEWORK-ADV-048, FRAMEWORK-ADV-049, FRAMEWORK-GATE-CONTRACT-001, WORKFLOW-FEASIBILITY-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-034, FRAMEWORK-FEASIBILITY-011, FRAMEWORK-COVERAGE-003, FRAMEWORK-CX-003, FRAMEWORK-ADV-047, FRAMEWORK-ADV-048, FRAMEWORK-ADV-049, FRAMEWORK-ADV-050, FRAMEWORK-GATE-CONTRACT-001, WORKFLOW-FEASIBILITY-001
 ---
 
 # FRAMEWORK-ARCHITECTURE-004 — FW-TASK-030 optional isolated command runner architecture
@@ -144,17 +144,17 @@ Each unit remains a proposal until G-ARCH passes and the owner authorizes a G-IM
 
 | Criterion | Prepared evidence | Status |
 | --- | --- | --- |
-| GARCH-01 — boundaries, identities, data, integration/failure, security/privacy, operations/recovery | Context/trust boundaries; data ownership; contract; failure/recovery; security and operational controls | Pending independent review |
-| GARCH-02 — ADRs, authority, alternatives, constraints, linked task scope/checks | Five ADRs identify alternatives, decision authority, consequences; implementation units map to requirements and dependencies | Pending independent review |
-| GARCH-03 — coherent handoff and no invented decisions | Runtime adoption is explicitly open and blocks runtime-backed implementation; no support/provider choice is inferred | Pending independent review |
+| GARCH-01 — boundaries, identities, data, integration/failure, security/privacy, operations/recovery | Context/trust boundaries; data ownership; contract; failure/recovery; security and operational controls | PASS — FRAMEWORK-ADV-050 |
+| GARCH-02 — ADRs, authority, alternatives, constraints, linked task scope/checks | Five ADRs identify alternatives, decision authority, consequences; implementation units map to requirements and dependencies | PASS — FRAMEWORK-ADV-050 |
+| GARCH-03 — coherent handoff and no invented decisions | Runtime adoption is explicitly open and blocks runtime-backed implementation; no support/provider choice is inferred | PASS — FRAMEWORK-ADV-050 |
 
 ## G-ARCH finding register
 
 | Finding ID | Location / issue | Severity | Disposition |
 | --- | --- | --- | --- |
-| ARCH030-01 | v0.1 provenance required workflow/job/run fields despite the host-neutral/local context. | P2 | Corrected in v0.2: invocation identity is mandatory; provider workflow/run context is conditional with explicit local absence semantics. Full-scope review pending. |
-| ARCH030-02 | v0.1 adapter result mixed reviewer disposition with adapter-produced evidence. | P2 | Corrected in v0.2: adapter `InvocationResult`, independent `ReviewRecord`, and owner gate disposition are separate. Full-scope review pending. |
+| ARCH030-01 | v0.1 provenance required workflow/job/run fields despite the host-neutral/local context. | P2 | Resolved in v0.2. Independent GARCH-02 review confirmed mandatory neutral invocation identity, conditional provider workflow/run context, and explicit local absence semantics (FRAMEWORK-ADV-050). |
+| ARCH030-02 | v0.1 adapter result mixed reviewer disposition with adapter-produced evidence. | P2 | Resolved in v0.2. Independent GARCH-02 review confirmed separate adapter `InvocationResult`, independent `ReviewRecord`, and owner gate disposition (FRAMEWORK-ADV-050). |
 
 ## Next action and limits
 
-Request independent full-scope architecture/security review of this exact artifact, run structural validation, then exact-revision Verify Pipeline. Disposition every finding and rerun affected scope before recording G-ARCH. No runtime profile, provider, implementation, app adoption, production use, or deployment is selected or authorized here.
+G-ARCH passes for the approved scope based on independent review in FRAMEWORK-ADV-050 of exact artifact blob `371e58eca446c075d46a2d22944215406c24e2fa` at source `020f4ef3185cb3a418f744e4b8f2521df8e78ec8` and exact-revision Verify Pipeline run `40265528089`. ARCH030-01/02 are resolved. No runtime profile, provider, implementation, app adoption, production use, or deployment is selected or authorized here.
