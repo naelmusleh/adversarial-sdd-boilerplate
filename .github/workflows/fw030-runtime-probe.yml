@@ -39,10 +39,41 @@ jobs:
 
           cleanup() {
             local status=$?
+            local cleanup_failed=0
+            local container_name
             trap - EXIT
-            podman rm -f fw030-policy fw030-timeout fw030-interrupt fw030-resource fw030-cleanup-failure fw030-net-server >/dev/null 2>&1 || true
-            podman network rm "$network_name" >/dev/null 2>&1 || true
-            rm -rf "$probe_dir"
+            for container_name in fw030-policy fw030-timeout fw030-interrupt fw030-resource fw030-cleanup-failure fw030-net-server; do
+              if podman container exists "$container_name"; then
+                if ! podman rm -f "$container_name" >/dev/null; then
+                  printf 'cleanup failed to remove container: %s\n' "$container_name" >&2
+                  cleanup_failed=1
+                fi
+              fi
+              if podman container exists "$container_name"; then
+                printf 'cleanup left container present: %s\n' "$container_name" >&2
+                cleanup_failed=1
+              fi
+            done
+            if podman network exists "$network_name"; then
+              if ! podman network rm "$network_name" >/dev/null; then
+                printf 'cleanup failed to remove network: %s\n' "$network_name" >&2
+                cleanup_failed=1
+              fi
+            fi
+            if podman network exists "$network_name"; then
+              printf 'cleanup left network present: %s\n' "$network_name" >&2
+              cleanup_failed=1
+            fi
+            if ! rm -rf "$probe_dir" || [[ -e "$probe_dir" ]]; then
+              printf 'cleanup left temporary files present: %s\n' "$probe_dir" >&2
+              cleanup_failed=1
+            fi
+            if [[ "$cleanup_failed" -ne 0 && "$status" -eq 0 ]]; then
+              status=34
+            fi
+            if [[ "$cleanup_failed" -eq 0 ]]; then
+              echo 'final_cleanup=PASS (containers, network, and temporary files absent)'
+            fi
             exit "$status"
           }
           trap cleanup EXIT

@@ -3,7 +3,7 @@ id: FRAMEWORK-ADV-040
 type: adversarial-review
 title: FW-TASK-030 temporary runtime workflow review
 status: revision-required
-version: 0.1
+version: 0.2
 created: 2026-10-25
 updated: 2026-10-25
 reviewed-artifact: .github/workflows/fw030-runtime-probe.yml
@@ -28,6 +28,10 @@ The reviewer found the permissions, caller/ref restriction, lack of checkout/sec
 
 The reviewer also requested labeling the command rejection as a probe-harness guard, not adapter evidence. The result `probe_guard_denied_command` is not evidence that a framework adapter exists.
 
+## Follow-up on corrected candidate
+
+At exact commit `9632a055a914f4b9e37aea9eb7561eaeac803807`, the independent reviewer confirmed that findings 1–4 above are corrected and that command rejection is labeled as harness-only evidence. The reviewer identified one remaining cleanup false-pass: the exit handler ignored container/network removal failures and did not verify the temporary directory was absent. A corrective patch now makes cleanup failures observable, checks all named containers and the network are absent, and verifies temporary-file removal. This candidate has not yet been reviewed.
+
 ## Disposition
 
-Do not dispatch the reviewed candidate. Corrections are being made in FRAMEWORK-FEASIBILITY-011 v0.5 and the FW-TASK-030 backlog checkpoint. This review remains `needs-changes`; a new independent review must inspect the corrected exact workflow revision before any manual dispatch. No G-FEAS pass, runtime support, or isolation claim is established.
+Do not dispatch either reviewed candidate. The latest correction is pending an exact-revision independent review. This review remains `revision-required`; no hosted probe ran, and no G-FEAS pass, runtime support, or isolation claim is established.
