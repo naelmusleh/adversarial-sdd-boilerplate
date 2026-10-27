@@ -241,7 +241,8 @@ def _project_record(
         raise CollectionError("job-identity-incomplete")
     run_source = source_ref
     job_source = _safe_text(job.get("_collector_source_url"), token, 2048) or source_ref
-    run_timing = _interval(run_id, attempt, None, run.get("run_started_at"), run.get("updated_at"), run_source, token)
+    run_finished_at = run.get("updated_at") if run.get("status") == "completed" else None
+    run_timing = _interval(run_id, attempt, None, run.get("run_started_at"), run_finished_at, run_source, token)
     job_timing = _interval(run_id, attempt, job_id, job.get("started_at"), job.get("completed_at"), job_source, token)
     conclusion = job.get("conclusion")
     valid_conclusions = {"success", "failure", "cancelled", "skipped", "timed_out", "action_required"}
@@ -292,7 +293,8 @@ def _project_record(
         "revisions": revisions, "timing": {"run": run_timing, "job": job_timing},
         "timeout": {"configuration_state": "unknown", "minutes": None, "configuration_revision": None,
                     "configuration_source": None, "observed_state": observed_timeout,
-                    "host_conclusion": host_conclusion, "observation_source": job_source},
+                    "host_conclusion": host_conclusion,
+                    "observation_source": job_source if host_conclusion not in {"unknown", "unavailable"} else None},
         "cancellation": {"request_state": "unknown", "requested_at": None, "request_source": None,
                          "host_terminal_state": terminal, "terminal_source": job_source if terminal != "unknown" else None,
                          "workload_state": "unknown", "workload_observation": None},

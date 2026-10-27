@@ -32,7 +32,7 @@ class Response:
 def run_record(attempt=2):
     return {"id": 55, "run_attempt": attempt, "workflow_id": 9,
             "repository": {"id": 7, "full_name": "owner/repo"},
-            "path": ".github/workflows/ci.yml@main", "event": "push",
+            "path": ".github/workflows/ci.yml@main", "event": "push", "status": "completed",
             "head_sha": "a" * 40, "run_started_at": "2026-10-27T10:00:00Z",
             "updated_at": "2026-10-27T10:01:00Z", "conclusion": "success"}
 
@@ -73,6 +73,21 @@ class CollectorTests(unittest.TestCase):
         result = ActionsApi(opener=lambda *_args, **_kwargs: responses.pop(0)).collect("owner/repo", 55, 2)
         self.assertEqual(result["collection_state"], "partial")
         self.assertEqual(result["records"], [])
+
+    def test_running_jobs_do_not_claim_run_completion_time_or_host_outcome(self):
+        run = run_record()
+        run["status"] = "in_progress"
+        run["conclusion"] = None
+        job = job_record()
+        job["status"] = "in_progress"
+        job["conclusion"] = None
+        responses = [Response(run), Response({"total_count": 1, "jobs": [job]})]
+        result = ActionsApi(opener=lambda *_args, **_kwargs: responses.pop(0)).collect("owner/repo", 55, 2)
+        record = result["records"][0]
+        self.assertEqual(record["timing"]["run"]["completed_at"]["state"], "unknown")
+        self.assertEqual(record["timeout"]["host_conclusion"], "unknown")
+        self.assertIsNone(record["timeout"]["observation_source"])
+        self.assertTrue(validate_actions_evidence(json.dumps(record))["valid"])
 
     def test_returned_repository_must_match_requested_repository(self):
         response = run_record()
