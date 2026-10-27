@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import json
 import unittest
+import urllib.request
 from email.message import Message
 from urllib.error import HTTPError
 from io import BytesIO
 
-from scripts.fw031_actions_collector import ActionsApi, CollectionError
+from scripts.fw031_actions_collector import ActionsApi, CollectionError, _RejectRedirects
 from scripts.fw031_actions_evidence import validate_actions_evidence
 
 
@@ -62,6 +63,9 @@ class CollectorTests(unittest.TestCase):
         self.assertTrue(validate_actions_evidence(json.dumps(result["records"][0]))["valid"])
         self.assertEqual(result["records"][0]["cancellation"]["workload_state"], "unknown")
         self.assertEqual(result["records"][0]["measurements"][-1]["state"], "unknown")
+        self.assertEqual(result["records"][0]["source"]["acquisition_state"], "partial")
+        self.assertIsNone(result["records"][0]["source"]["workflow_ref"])
+        self.assertIn("workflow_ref-unavailable", result["limitations"])
 
     def test_attempt_endpoint_binding_is_used_when_job_payload_omits_attempt(self):
         responses = [Response(run_record(3)), Response({"total_count": 1, "jobs": [job_record()]})]
@@ -114,6 +118,11 @@ class CollectorTests(unittest.TestCase):
         self.assertEqual(payload["id"], 55)
         self.assertEqual(count[0], 2)
 
+    def test_redirect_handler_refuses_cross_host_redirects(self):
+        handler = _RejectRedirects()
+        request = urllib.request.Request("https://api.github.com/path", headers={"Authorization": "Bearer secret"})
+        self.assertIsNone(handler.redirect_request(request, None, 302, "Found", {}, "https://attacker.example/"))
+
     def test_token_and_server_error_body_never_escape(self):
         def opener(request, timeout):
             raise HTTPError(request.full_url, 403, "secret-token private body", {}, BytesIO(b"secret-token"))
@@ -128,6 +137,10 @@ class CollectorTests(unittest.TestCase):
             ActionsApi(base_url="http://api.github.com")
         with self.assertRaises(ValueError):
             ActionsApi(base_url="https://api.github.com.attacker.example")
+        with self.assertRaises(ValueError):
+            ActionsApi(base_url="https://api.github.com/unexpected/path")
+        with self.assertRaises(ValueError):
+            ActionsApi().collect("../repo", 1, 1)
         with self.assertRaises(ValueError):
             ActionsApi(max_pages=6)
         with self.assertRaises(ValueError):

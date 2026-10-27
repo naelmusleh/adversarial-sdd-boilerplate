@@ -11,6 +11,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from urllib.request import HTTPRedirectHandler, build_opener
 from datetime import datetime, timezone
 from typing import Any, Callable
 
@@ -20,6 +21,14 @@ _MAX_PAGES = 5
 _MAX_RETRIES = 3
 _RETRYABLE = {429, 500, 502, 503, 504}
 _SHA = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
+class _RejectRedirects(HTTPRedirectHandler):
+    """Never forward a caller credential to a redirect target."""
+
+    def redirect_request(self, request, response, code, message, headers, new_url):
+        return None
+
+
+_DEFAULT_OPENER = build_opener(_RejectRedirects()).open
 _SECRET_PATTERNS = (
     re.compile(r"(?i)\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\b"),
     re.compile(r"(?i)\bBearer\s+\S+"),
@@ -54,14 +63,16 @@ class ActionsApi:
         if not 0 < timeout <= 30:
             raise ValueError("request timeout must be between 0 and 30 seconds")
         parsed_base = urllib.parse.urlsplit(base_url)
-        if parsed_base.scheme != "https" or parsed_base.netloc != "api.github.com" or parsed_base.username or parsed_base.password:
+        if (parsed_base.scheme != "https" or parsed_base.netloc != "api.github.com"
+                or parsed_base.username or parsed_base.password or parsed_base.path not in {"", "/"}
+                or parsed_base.query or parsed_base.fragment):
             raise ValueError("only the GitHub API HTTPS origin is supported")
         self._token = token
         self._base_url = base_url.rstrip("/")
         self._max_pages = max_pages
         self._max_retries = max_retries
         self._timeout = timeout
-        self._opener = opener or urllib.request.urlopen
+        self._opener = opener or _DEFAULT_OPENER
         self._sleep = sleeper
 
     def get_json(self, path: str, query: dict[str, str] | None = None) -> tuple[dict[str, Any], bytes, str | None]:
@@ -103,7 +114,9 @@ class ActionsApi:
         raise CollectionError("network-unavailable")
 
     def collect(self, repository: str, run_id: int, run_attempt: int) -> dict[str, Any]:
-        if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository) or any(
+            segment in {".", ".."} for segment in repository.split("/")
+        ):
             raise ValueError("repository must be owner/name")
         if run_id < 1 or run_attempt < 1:
             raise ValueError("run and attempt identifiers must be positive")
