@@ -116,10 +116,11 @@
     },
     "measurement": {
       "type": "object", "additionalProperties": false,
-      "required": ["name", "state", "value", "unit", "source_kind", "source", "scope", "interval", "reason"],
+      "required": ["name", "state", "binding", "value", "unit", "source_kind", "source", "scope", "interval", "reason"],
       "properties": {
         "name": {"type": "string", "enum": ["tool_calls", "internal_retries", "nested_agents", "cpu_time", "memory_peak", "spend"]},
         "state": {"type": "string", "enum": ["measured", "unknown", "unavailable"]},
+        "binding": {"$ref": "#/definitions/measurement_binding"},
         "value": {"type": ["number", "null"], "minimum": 0},
         "unit": {"type": ["string", "null"], "minLength": 1, "maxLength": 32},
         "source_kind": {"type": ["string", "null"], "enum": ["direct-instrumentation", "authoritative-meter", "synthetic-fixture", "proxy", null]},
@@ -135,6 +136,15 @@
       "properties": {
         "started_at": {"type": "string", "maxLength": 64},
         "completed_at": {"type": "string", "maxLength": 64}
+      }
+    },
+    "measurement_binding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["run_id", "run_attempt", "job_id"],
+      "properties": {
+        "run_id": {"type": ["integer", "null"], "minimum": 1},
+        "run_attempt": {"type": ["integer", "null"], "minimum": 1},
+        "job_id": {"type": ["integer", "null"], "minimum": 1}
       }
     }
   }

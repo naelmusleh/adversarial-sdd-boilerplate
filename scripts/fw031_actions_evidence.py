@@ -178,7 +178,16 @@ def _semantics(record: Mapping[str, Any]) -> list[dict[str, str]]:
         if metric["name"] in names:
             issues.append(_issue("duplicate_measurement", path, "measurement names must be unique"))
         names.add(metric["name"])
+        metric_binding = metric["binding"]
+        metric_tuple = (metric_binding["run_id"], metric_binding["run_attempt"], metric_binding["job_id"])
+        binding_values = sum(item is not None for item in metric_tuple)
+        if 0 < binding_values < 3:
+            issues.append(_issue("measurement_binding", f"{path}.binding", "measurement identity binding must be complete or entirely unavailable"))
+        elif binding_values == 3 and (state != "available" or metric_tuple != identity_tuple):
+            issues.append(_issue("measurement_binding", f"{path}.binding", "measurement must bind to the exact record run/attempt/job"))
         if metric["state"] == "measured":
+            if binding_values != 3 or state != "available" or metric_tuple != identity_tuple:
+                issues.append(_issue("measurement_binding", f"{path}.binding", "measured values require the exact complete record identity"))
             if any(metric[key] is None for key in ("value", "unit", "source_kind", "source", "scope", "interval")) or metric["reason"] is not None:
                 issues.append(_issue("measurement_provenance", path, "measured values require complete provenance and no unavailable reason"))
             if metric["source_kind"] == "synthetic-fixture" and not record["fixture_only"]:

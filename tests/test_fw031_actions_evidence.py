@@ -174,7 +174,7 @@ class ActionsEvidenceContractTests(unittest.TestCase):
 
     def test_proxy_metric_is_rejected_even_with_numeric_value(self) -> None:
         record = _fixture()
-        record["measurements"] = [{"name": "tool_calls", "state": "measured", "value": 3, "unit": "calls", "source_kind": "proxy", "source": "synthetic-fixture:steps-count", "scope": "job", "interval": {"started_at": "2026-10-26T14:00:05Z", "completed_at": "2026-10-26T14:04:55Z"}, "reason": None}]
+        record["measurements"] = [{"name": "tool_calls", "state": "measured", "binding": {"run_id": RUN_ID, "run_attempt": ATTEMPT, "job_id": JOB_ID}, "value": 3, "unit": "calls", "source_kind": "proxy", "source": "synthetic-fixture:steps-count", "scope": "job", "interval": {"started_at": "2026-10-26T14:00:05Z", "completed_at": "2026-10-26T14:04:55Z"}, "reason": None}]
         result = _validate(record)
         self.assertFalse(result["valid"])
         self.assertIn("fw031.actions_evidence.measurement_proxy", {item["code"] for item in result["diagnostics"]})
@@ -182,37 +182,44 @@ class ActionsEvidenceContractTests(unittest.TestCase):
     def test_synthetic_provenance_cannot_be_mislabeled_as_observed(self) -> None:
         record = _fixture()
         record["fixture_only"] = False
-        record["measurements"] = [{"name": "cpu_time", "state": "measured", "value": 1.5, "unit": "seconds", "source_kind": "synthetic-fixture", "source": "synthetic-fixture:invented", "scope": "job", "interval": None, "reason": None}]
+        record["measurements"] = [{"name": "cpu_time", "state": "measured", "binding": {"run_id": RUN_ID, "run_attempt": ATTEMPT, "job_id": JOB_ID}, "value": 1.5, "unit": "seconds", "source_kind": "synthetic-fixture", "source": "synthetic-fixture:invented", "scope": "job", "interval": None, "reason": None}]
         result = _validate(record)
         self.assertFalse(result["valid"])
         self.assertIn("fw031.actions_evidence.synthetic_claim", {item["code"] for item in result["diagnostics"]})
 
     def test_unknown_measurement_cannot_be_treated_as_zero(self) -> None:
         record = _fixture()
-        record["measurements"] = [{"name": "spend", "state": "unknown", "value": 0, "unit": None, "source_kind": None, "source": None, "scope": None, "interval": None, "reason": "not-observed"}]
+        record["measurements"] = [{"name": "spend", "state": "unknown", "binding": {"run_id": RUN_ID, "run_attempt": ATTEMPT, "job_id": JOB_ID}, "value": 0, "unit": None, "source_kind": None, "source": None, "scope": None, "interval": None, "reason": "not-observed"}]
         result = _validate(record)
         self.assertFalse(result["valid"])
 
     def test_synthetic_metric_provenance_is_structural_only_and_bound_to_fixture(self) -> None:
         record = _fixture()
         record["measurements"] = [
-            {"name": "tool_calls", "state": "measured", "value": 4, "unit": "calls", "source_kind": "synthetic-fixture", "source": "synthetic-fixture:invented-counter", "scope": "job", "interval": {"started_at": "2026-10-26T14:00:05Z", "completed_at": "2026-10-26T14:04:55Z"}, "reason": None},
-            {"name": "spend", "state": "measured", "value": 1.25, "unit": "USD", "source_kind": "synthetic-fixture", "source": "synthetic-fixture:invented-meter", "scope": "run", "interval": {"started_at": "2026-10-26T14:00:00Z", "completed_at": "2026-10-26T14:05:00Z"}, "reason": None},
+            {"name": "tool_calls", "state": "measured", "binding": {"run_id": RUN_ID, "run_attempt": ATTEMPT, "job_id": JOB_ID}, "value": 4, "unit": "calls", "source_kind": "synthetic-fixture", "source": "synthetic-fixture:invented-counter", "scope": "job", "interval": {"started_at": "2026-10-26T14:00:05Z", "completed_at": "2026-10-26T14:04:55Z"}, "reason": None},
+            {"name": "spend", "state": "measured", "binding": {"run_id": RUN_ID, "run_attempt": ATTEMPT, "job_id": JOB_ID}, "value": 1.25, "unit": "USD", "source_kind": "synthetic-fixture", "source": "synthetic-fixture:invented-meter", "scope": "run", "interval": {"started_at": "2026-10-26T14:00:00Z", "completed_at": "2026-10-26T14:05:00Z"}, "reason": None},
         ]
         result = _validate(record)
         self.assertTrue(result["valid"], result["diagnostics"])
         self.assertTrue(record["fixture_only"])
 
+    def test_measurement_cannot_cross_run_attempt_or_job(self) -> None:
+        record = _fixture()
+        record["measurements"] = [{"name": "tool_calls", "state": "measured", "binding": {"run_id": RUN_ID, "run_attempt": ATTEMPT - 1, "job_id": JOB_ID}, "value": 4, "unit": "calls", "source_kind": "synthetic-fixture", "source": "synthetic-fixture:invented-counter", "scope": "job", "interval": {"started_at": "2026-10-26T14:00:05Z", "completed_at": "2026-10-26T14:04:55Z"}, "reason": None}]
+        result = _validate(record)
+        self.assertFalse(result["valid"])
+        self.assertIn("fw031.actions_evidence.measurement_binding", {item["code"] for item in result["diagnostics"]})
+
     def test_spend_cannot_use_generic_instrumentation_as_meter(self) -> None:
         record = _fixture()
-        record["measurements"] = [{"name": "spend", "state": "measured", "value": 1, "unit": "USD", "source_kind": "direct-instrumentation", "source": "synthetic-fixture:counter", "scope": "run", "interval": {"started_at": "2026-10-26T14:00:00Z", "completed_at": "2026-10-26T14:05:00Z"}, "reason": None}]
+        record["measurements"] = [{"name": "spend", "state": "measured", "binding": {"run_id": RUN_ID, "run_attempt": ATTEMPT, "job_id": JOB_ID}, "value": 1, "unit": "USD", "source_kind": "direct-instrumentation", "source": "synthetic-fixture:counter", "scope": "run", "interval": {"started_at": "2026-10-26T14:00:00Z", "completed_at": "2026-10-26T14:05:00Z"}, "reason": None}]
         result = _validate(record)
         self.assertFalse(result["valid"])
         self.assertIn("fw031.actions_evidence.spend_source", {item["code"] for item in result["diagnostics"]})
 
     def test_duplicate_measurements_are_rejected(self) -> None:
         record = _fixture()
-        unknown = {"name": "spend", "state": "unknown", "value": None, "unit": None, "source_kind": None, "source": None, "scope": None, "interval": None, "reason": "not-observed"}
+        unknown = {"name": "spend", "state": "unknown", "binding": {"run_id": RUN_ID, "run_attempt": ATTEMPT, "job_id": JOB_ID}, "value": None, "unit": None, "source_kind": None, "source": None, "scope": None, "interval": None, "reason": "not-observed"}
         record["measurements"] = [copy.deepcopy(unknown), copy.deepcopy(unknown)]
         result = _validate(record)
         self.assertFalse(result["valid"])
