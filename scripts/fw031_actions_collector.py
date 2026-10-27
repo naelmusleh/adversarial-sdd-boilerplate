@@ -53,7 +53,8 @@ class ActionsApi:
             raise ValueError("collection bounds exceed the reviewed maximum")
         if not 0 < timeout <= 30:
             raise ValueError("request timeout must be between 0 and 30 seconds")
-        if not base_url.startswith("https://api.github.com"):
+        parsed_base = urllib.parse.urlsplit(base_url)
+        if parsed_base.scheme != "https" or parsed_base.netloc != "api.github.com" or parsed_base.username or parsed_base.password:
             raise ValueError("only the GitHub API HTTPS origin is supported")
         self._token = token
         self._base_url = base_url.rstrip("/")
@@ -112,6 +113,10 @@ class ActionsApi:
         run, run_bytes, run_etag = self.get_json(run_path)
         if run.get("id") != run_id or run.get("run_attempt") != run_attempt:
             raise CollectionError("run-identity-mismatch")
+        run_repository = run.get("repository") if isinstance(run.get("repository"), dict) else {}
+        run_repository_name = run_repository.get("full_name")
+        if not isinstance(run_repository_name, str) or run_repository_name.casefold() != repository.casefold():
+            raise CollectionError("repository-identity-mismatch")
         jobs: list[dict[str, Any]] = []
         page_digests: list[bytes] = [run_bytes]
         etags = [run_etag] if run_etag else []
@@ -155,10 +160,8 @@ class ActionsApi:
         digest = "sha256:" + hashlib.sha256(b"\n".join(page_digests)).hexdigest()
         response_revision = ",".join(etags)[:255] or None
         observed_at = _now()
-        repository_id = run.get("repository", {}).get("id") if isinstance(run.get("repository"), dict) else None
-        repository_name = run.get("repository", {}).get("full_name") if isinstance(run.get("repository"), dict) else None
-        if not isinstance(repository_name, str):
-            repository_name = repository
+        repository_id = run_repository.get("id")
+        repository_name = run_repository_name
         workflow_id = run.get("workflow_id") if isinstance(run.get("workflow_id"), int) else None
         workflow_path = run.get("path") if isinstance(run.get("path"), str) else None
         workflow_ref = run.get("workflow_ref") if isinstance(run.get("workflow_ref"), str) else None

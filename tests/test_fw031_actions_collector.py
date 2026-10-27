@@ -74,6 +74,13 @@ class CollectorTests(unittest.TestCase):
         self.assertEqual(result["collection_state"], "partial")
         self.assertEqual(result["records"], [])
 
+    def test_returned_repository_must_match_requested_repository(self):
+        response = run_record()
+        response["repository"]["full_name"] = "other/repo"
+        with self.assertRaises(CollectionError) as caught:
+            ActionsApi(opener=lambda *_args, **_kwargs: Response(response)).collect("owner/repo", 55, 2)
+        self.assertEqual(caught.exception.code, "repository-identity-mismatch")
+
     def test_pagination_limit_is_bounded_and_reported_partial(self):
         responses = [Response(run_record()), Response({"total_count": 101, "jobs": [job_record()]})]
         result = ActionsApi(max_pages=1, opener=lambda *_args, **_kwargs: responses.pop(0)).collect("owner/repo", 55, 2)
@@ -104,6 +111,8 @@ class CollectorTests(unittest.TestCase):
     def test_invalid_origin_and_unbounded_settings_are_rejected(self):
         with self.assertRaises(ValueError):
             ActionsApi(base_url="http://api.github.com")
+        with self.assertRaises(ValueError):
+            ActionsApi(base_url="https://api.github.com.attacker.example")
         with self.assertRaises(ValueError):
             ActionsApi(max_pages=6)
         with self.assertRaises(ValueError):
