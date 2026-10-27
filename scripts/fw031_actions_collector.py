@@ -73,6 +73,8 @@ class ActionsApi:
         self._max_retries = max_retries
         self._timeout = timeout
         self._opener = opener or _DEFAULT_OPENER
+        # Any injected transport is a test seam; it can never produce observed evidence.
+        self._fixture_only = opener is not None
         self._sleep = sleeper
 
     def get_json(self, path: str, query: dict[str, str] | None = None) -> tuple[dict[str, Any], bytes, str | None]:
@@ -176,7 +178,10 @@ class ActionsApi:
         repository_id = run_repository.get("id")
         repository_name = run_repository_name
         workflow_id = run.get("workflow_id") if isinstance(run.get("workflow_id"), int) else None
-        workflow_path = run.get("path") if isinstance(run.get("path"), str) else None
+        raw_workflow_path = run.get("path") if isinstance(run.get("path"), str) else None
+        # REST `path` is encoded as `<workflow-path>@<ref>`. Preserve the path
+        # component; the ref suffix is not a fully qualified workflow_ref.
+        workflow_path = raw_workflow_path.rsplit("@", 1)[0] if raw_workflow_path and "@" in raw_workflow_path else raw_workflow_path
         workflow_ref = run.get("workflow_ref") if isinstance(run.get("workflow_ref"), str) else None
         source_ref = _API + run_path
         source_state = "complete" if all(x is not None for x in (repository_id, repository_name, workflow_id, workflow_path, workflow_ref)) and not partial else "partial"
@@ -185,7 +190,7 @@ class ActionsApi:
                 run, job, repository_id, repository_name, workflow_id, workflow_path,
                 workflow_ref, source_ref, observed_at, response_revision, digest,
                 source_state,
-                self._token,
+                self._token, self._fixture_only,
             )
             for job in jobs
         ]
@@ -246,7 +251,7 @@ def _project_record(
     run: dict[str, Any], job: dict[str, Any], repository_id: Any, repository_name: str,
     workflow_id: Any, workflow_path: Any, workflow_ref: Any, source_ref: str,
     observed_at: str, response_revision: str | None, response_digest: str,
-    acquisition_state: str, token: str | None,
+    acquisition_state: str, token: str | None, fixture_only: bool,
 ) -> dict[str, Any]:
     run_id, attempt, job_id = run["id"], run["run_attempt"], job.get("id")
     job_name = _safe_text(job.get("name"), token, 255)
@@ -290,7 +295,7 @@ def _project_record(
     limitations.append("cancellation-unknown")
     return {
         "contract": "FRAMEWORK-CONTRACT-032", "schema_version": "1.0",
-        "profile": "github-actions-run-job", "fixture_only": False,
+        "profile": "github-actions-run-job", "fixture_only": fixture_only,
         "source": {
             "acquisition_state": acquisition_state,
             "repository_id": repository_id if isinstance(repository_id, int) and repository_id > 0 else None,
