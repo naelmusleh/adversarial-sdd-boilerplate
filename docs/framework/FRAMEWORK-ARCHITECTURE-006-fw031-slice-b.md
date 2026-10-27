@@ -2,11 +2,11 @@
 id: FRAMEWORK-ARCHITECTURE-006
 type: framework-architecture
 title: FW-TASK-031 slice B GitHub Actions run/job evidence profile
-status: approved
-version: 0.1
+status: draft
+version: 0.2
 created: 2026-10-26
-updated: 2026-10-26
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-038, FRAMEWORK-FEASIBILITY-013, FRAMEWORK-FEASIBILITY-014, FRAMEWORK-COVERAGE-005, FRAMEWORK-CX-005, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-CONTRACT-031, FRAMEWORK-ADV-062, WORKFLOW-FEASIBILITY-001
+updated: 2026-10-27
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-038, DECISION-041, FRAMEWORK-FEASIBILITY-013, FRAMEWORK-FEASIBILITY-014, FRAMEWORK-COVERAGE-005, FRAMEWORK-CX-005, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-CONTRACT-031, FRAMEWORK-ADV-062, WORKFLOW-FEASIBILITY-001
 ---
 
 # FRAMEWORK-ARCHITECTURE-006 — FW-TASK-031 slice B GitHub Actions run/job evidence profile
@@ -121,4 +121,10 @@ These are architecture proposals only. No IDs are committed to the application b
 
 **G-ARCH result:** PASS within DECISION-038 and FR-FW-041–043 for FRAMEWORK-ARCHITECTURE-006 v0.1 at exact candidate `9e4e8bbefbd89a6392e6cc3917263971e115ea40`. Independent review [FRAMEWORK-ADV-063](../adversarial-reviews/FRAMEWORK-ADV-063.md) passed GARCH-01–03 with no findings. Verify Pipeline [40338717714](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40338717714) passed Metadata & Artifact Audit, Initializer Regression Gate, and TypeScript Static Code Analysis on that exact candidate; optional FW-029/FW-030 probes were skipped. The architecture freezes normalized contract boundaries and held work units only. It does not adopt a collection route/profile, grant permissions, configure timeouts, test cancellation, authorize implementation, or establish runtime/measurement claims.
 
-**Next step:** An owner checkpoint is required before any proposed G-IMPL unit. Recommended first unit: FW031-IMPL-02, a pure profile evidence contract/schema, deterministic validator, and synthetic fixtures only, without network access or runtime integration. G-ARCH PASS does not authorize that work.
+**Next step at v0.1:** An owner checkpoint was required before any proposed G-IMPL unit. The recommended first unit was FW031-IMPL-02, a pure profile evidence contract/schema, deterministic validator, and synthetic fixtures only, without network access or runtime integration. G-ARCH PASS did not authorize that work. Its subsequent execution is recorded in the backlog.
+
+## Owner disposition update — DECISION-041
+
+On 2026-10-27, the owner accepted completion of FW-TASK-031 at the advisory framework-contract boundary. FW031-IMPL-01 through FW031-IMPL-04 are recorded in the backlog as bounded implementation/observation units. The private Actions collector demonstrated access for one owner-supplied run, with unavailable workflow/revision fields and exact credential permissions still unknown. The cancellation experiment found that the parent and both child processes remained alive at cleanup start; cleanup then observed and terminated the synthetic children. This is not evidence that cancellation alone or GitHub Actions generally contains descendant processes.
+
+No direct source was selected for tool calls, internal retries, nested-agent accounting, CPU/memory, or monetary spend. Those fields remain unknown/unavailable, and no runtime profile, host, threshold, meter, or application adoption is selected. FW031-IMPL-05 remains deferred until a source-specific feasibility assessment and a new owner decision. This update records an owner-approved scope boundary; it does not add a G-IMPL capability or authorize application/production use, merge, or deployment.
