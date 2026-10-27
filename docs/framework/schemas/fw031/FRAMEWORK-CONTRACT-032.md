@@ -2,7 +2,7 @@
 id: FRAMEWORK-CONTRACT-032
 type: framework-contract
 title: FW-031 GitHub Actions run/job evidence contract
-status: draft
+status: active
 version: 1.0
 created: 2026-10-26
 updated: 2026-10-26
