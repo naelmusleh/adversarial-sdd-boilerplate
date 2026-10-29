@@ -1,0 +1,17 @@
+name: FW-030 Cycle 3 One-Time Synthetic Retry
+
+on:
+  push:
+    branches:
+      - codex/fw030-impl02
+    paths:
+      - scripts/fw030-cycle3-trigger.txt
+
+permissions: {}
+
+jobs:
+  synthetic-adapter-retry:
+    name: Single synthetic retry on Ubuntu 24.04
+    permissions:
+      contents: read
+    uses: ./.github/workflows/fw030-adapter-pilot.yml
