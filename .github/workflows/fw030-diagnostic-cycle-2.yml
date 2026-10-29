@@ -1,0 +1,28 @@
+name: FW-030 Diagnostic Cycle 2 Retry
+
+on:
+  push:
+    branches:
+      - codex/fw030-impl02
+    paths:
+      - .github/workflows/fw030-diagnostic-cycle-2.yml
+
+permissions: {}
+
+jobs:
+  bounded-diagnostic-retry:
+    name: Single synthetic retry on Ubuntu 24.04
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      FW030_SECRET_SENTINEL: synthetic-fw030-environment-only
+    steps:
+      - name: Check out exact pushed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Run one synthetic rootless adapter diagnostic
+        shell: bash
+        run: python3 scripts/fw030_podman_adapter.py --pilot
