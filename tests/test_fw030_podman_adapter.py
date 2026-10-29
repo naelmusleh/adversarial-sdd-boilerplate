@@ -222,5 +222,34 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertFalse(captured["shell"])
 
 
+    def test_runtime_error_hint_redacts_paths_and_credential_values(self) -> None:
+        hint = adapter._safe_runtime_error_hint(
+            "Error: permission denied at /home/runner/work/private/path token=synthetic-secret-value"
+        )
+        self.assertIn("<path>", hint)
+        self.assertIn("token=<redacted>", hint)
+        self.assertNotIn("/home/runner", hint)
+        self.assertNotIn("synthetic-secret-value", hint)
+        self.assertLessEqual(len(hint), 160)
+
+    def test_cleanup_diagnostic_preserves_first_error_and_redacts_workspace_path(self) -> None:
+        first = self.root / "input" / "fixture.txt"
+        second = self.root / "input" / "workload.sh"
+        failures: dict[str, object] = {}
+        adapter._record_cleanup_error(
+            failures, self.root, Path.unlink, str(first),
+            PermissionError(13, "permission denied", str(first)),
+        )
+        adapter._record_cleanup_error(
+            failures, self.root, Path.unlink, str(second),
+            PermissionError(13, "permission denied", str(second)),
+        )
+        self.assertEqual(failures["entry"], "input/fixture.txt")
+        self.assertEqual(failures["operation"], "unlink")
+        self.assertEqual(failures["errno"], 13)
+        self.assertNotIn(str(self.root), str(failures))
+        self.assertIn(failures["owner"], {"runner", "other"})
+
+
 if __name__ == "__main__":
     unittest.main()
