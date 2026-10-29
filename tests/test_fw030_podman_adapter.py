@@ -68,6 +68,19 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertEqual(calls, [])
         self.assertTrue(validate_result(json.dumps(result))["valid"])
 
+    def test_crun_runtime_version_is_normalized_and_raw_value_retained(self) -> None:
+        raw_version = "crun version 1.14.1\\ncommit: synthetic"
+        info = {"host": {"security": {"rootless": True}, "ociRuntime": {"name": "crun", "version": raw_version}}}
+        def runner(argv, timeout):
+            if argv == ["podman", "--version"]:
+                return subprocess.CompletedProcess(argv, 0, "podman version 4.9.3\\n", "")
+            if argv == ["podman", "info", "--format", "json"]:
+                return subprocess.CompletedProcess(argv, 0, json.dumps(info), "")
+            raise AssertionError("unexpected runtime observation command")
+        observation = adapter._profile_observation(runner, 10)
+        self.assertEqual(observation["oci_runtime_version"], "1.14.1")
+        self.assertEqual(observation["oci_runtime_version_raw"], raw_version)
+
     def test_unsupported_oci_runtime_is_recorded_without_running_workload(self) -> None:
         observed_runtime = {"podman": adapter.PODMAN_VERSION, "oci_runtime": "crun", "oci_runtime_version": "9.9.9"}
         observations: list[dict[str, str]] = []
