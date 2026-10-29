@@ -468,7 +468,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     env = dict(os.environ)
     root = Path(tempfile.mkdtemp(prefix="fw030-adapter.", dir=env.get("RUNNER_TEMP")))
     os.chmod(root, 0o700)
-    (root / "input").mkdir(mode=0o700)
+    # The container runs as a distinct unprivileged UID. Make only the synthetic
+    # input tree traversable/readable; the host-only sentinel remains under root.
+    (root / "input").mkdir(mode=0o755)
     (root / "output").mkdir(mode=0o700)
     sentinel = root / "host-sentinel.txt"
     sentinel.write_text("synthetic-host-only-value", encoding="utf-8")
@@ -483,6 +485,8 @@ test -z "${{FW030_SECRET_SENTINEL-}}"
 printf '[{{"case_id":"INPUT_READONLY","outcome":"passed"}},{{"case_id":"HOST_PATH_DENIED","outcome":"passed"}},{{"case_id":"NETWORK_DISABLED","outcome":"passed"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"passed"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"passed"}}]' > /output/cases.json
 '''
     (root / "input" / "workload.sh").write_text(script, encoding="utf-8")
+    os.chmod(root / "input" / "fixture.txt", 0o644)
+    os.chmod(root / "input" / "workload.sh", 0o644)
     env["FW030_PILOT_ROOT"] = str(root)
     try:
         raw, authorization = _pilot_request(env, root)
