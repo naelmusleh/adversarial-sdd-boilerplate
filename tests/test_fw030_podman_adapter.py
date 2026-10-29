@@ -82,7 +82,7 @@ class PodmanAdapterTests(unittest.TestCase):
             "NetworkMode": "none", "ReadonlyRootfs": True, "Memory": 128 * 1024 * 1024,
             "NanoCpus": 1_000_000_000, "PidsLimit": 32, "CapDrop": ["ALL"],
             "SecurityOpt": ["no-new-privileges"], "Tmpfs": {"/output": "rw,noexec,nosuid,size=16m,uid=1000,gid=1000,rprivate,nodev"},
-            "Binds": [f"{self.root}/input:/input:ro"]}}]
+            "Binds": [f"{self.root}/input:/input:ro"]}, "Mounts": [{"Type": "bind", "Source": str(self.root / "input"), "Destination": "/input", "RW": False}]}]
         existence_checks = iter([0, 1])
         def runner(argv, timeout):
             if argv[:2] == ["podman", "pull"]:
@@ -132,6 +132,37 @@ class PodmanAdapterTests(unittest.TestCase):
         with self.assertRaises(adapter.AdapterError) as caught:
             adapter._verify_container(inspect, request)
         self.assertEqual(caught.exception.code, "fw030.adapter.mount_observation_mismatch")
+
+    def test_malformed_case_output_becomes_failed_result_and_still_cleans_up(self) -> None:
+        inspect = [{"Config": {"User": "1000:1000", "Image": adapter.PINNED_IMAGE,
+                                "Cmd": self.request["workload"]["argv"], "WorkingDir": "/input"},
+                    "HostConfig": {"NetworkMode": "none", "ReadonlyRootfs": True,
+                                   "Memory": 128 * 1024 * 1024, "NanoCpus": 1_000_000_000,
+                                   "PidsLimit": 32, "CapDrop": ["ALL"],
+                                   "SecurityOpt": ["no-new-privileges"],
+                                   "Tmpfs": {"/output": "rw,noexec,nosuid,size=16m,uid=1000,gid=1000"},
+                                   "Binds": [f"{self.root}/input:/input:ro"]}, "Mounts": [{"Type": "bind", "Source": str(self.root / "input"), "Destination": "/input", "RW": False}]}]
+        existence_checks = iter([0, 1])
+        def runner(argv, timeout):
+            if argv[:2] == ["podman", "pull"] or argv[:2] == ["podman", "run"]:
+                return subprocess.CompletedProcess(argv, 0, "", "")
+            if argv[:2] == ["podman", "inspect"]:
+                return subprocess.CompletedProcess(argv, 0, json.dumps(inspect), "")
+            if argv[:2] == ["podman", "cp"]:
+                Path(argv[-1]).write_text('[{"case_id": [], "outcome": "passed"}]', encoding="utf-8")
+                return subprocess.CompletedProcess(argv, 0, "", "")
+            if argv[:3] == ["podman", "container", "exists"]:
+                return subprocess.CompletedProcess(argv, next(existence_checks), "", "")
+            if argv[:3] == ["podman", "rm", "--force"]:
+                return subprocess.CompletedProcess(argv, 0, "", "")
+            raise AssertionError("unexpected runtime command")
+        runtime = {"podman": adapter.PODMAN_VERSION, "oci_runtime": "crun", "oci_runtime_version": "1.14.1"}
+        with patch.object(adapter, "_host_facts", return_value={"os": "Ubuntu 24.04", "architecture": "x86_64", "image_header": "unknown", "image_env": "ubuntu24"}), patch.object(adapter, "_profile_observation", return_value=runtime):
+            result = adapter.run_request(self.raw, self.auth, self.env, runner)
+        self.assertEqual(result["states"]["execution"], "failed")
+        self.assertEqual(result["states"]["cleanup"], "complete")
+        self.assertIn("fw030.adapter.cases_invalid", {d["code"] for d in result["diagnostics"]})
+        self.assertTrue(validate_result(json.dumps(result))["valid"])
 
     def test_podman_subprocess_environment_excludes_host_secrets_and_user_config(self) -> None:
         captured: dict[str, object] = {}
