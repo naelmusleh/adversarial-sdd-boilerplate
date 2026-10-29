@@ -387,6 +387,18 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
                 ("no such file or directory", "missing_runtime_path"),
                 ("cannot set up namespace", "namespace_setup_failed"),
                 ("executable file not found", "executable_missing"),
+                ("creating container storage", "storage_setup_failed"),
+                ("error creating container", "container_setup_failed"),
+                ("failed to create container", "container_setup_failed"),
+                ("oci runtime create failed", "oci_runtime_create_failed"),
+                ("error during container create", "container_setup_failed"),
+                ("crun: error", "oci_runtime_error"),
+                ("newuidmap", "id_mapping_unavailable"),
+                ("newgidmap", "id_mapping_unavailable"),
+                ("no space left on device", "storage_exhausted"),
+                ("cannot re-exec process", "runtime_reexec_failed"),
+                ("unknown flag", "runtime_argument_rejected"),
+                ("cannot connect", "runtime_service_unavailable"),
             )
             error_class = next((label for marker, label in error_classes if marker in stderr), "unclassified")
             diagnostics.append(_diag("fw030.adapter.workload_failed", "$.states.execution", f"workload exited with status {ran.returncode}; runtime_error_class={error_class}; case results are unavailable"))
@@ -519,13 +531,25 @@ fi
         result = run_request(raw, authorization, env, observation_sink=observations.append)
     finally:
         temp_cleanup_errno: int | None = None
+        cleanup_failure: dict[str, str | int] = {}
+        def record_cleanup_error(function: Callable[..., Any], path: str, exc: OSError) -> None:
+            try:
+                relative = Path(path).relative_to(root).as_posix()
+            except ValueError:
+                relative = "outside_workspace"
+            cleanup_failure.update(operation=getattr(function, "__name__", "unknown"),
+                                   entry=relative, errno=exc.errno or 0)
         try:
-            shutil.rmtree(root)
+            shutil.rmtree(root, onexc=record_cleanup_error)
         except OSError as exc:
             temp_cleanup_errno = exc.errno
+            cleanup_failure.update(operation="rmtree", entry="workspace", errno=exc.errno or 0)
     if root.exists():
         result["states"]["cleanup"] = "failed"
-        detail = f"temporary pilot files remain after cleanup (errno={temp_cleanup_errno})"
+        operation = str(cleanup_failure.get("operation", "unknown"))
+        entry = str(cleanup_failure.get("entry", "unknown"))
+        errno = int(cleanup_failure.get("errno", temp_cleanup_errno or 0))
+        detail = f"temporary pilot cleanup failed (operation={operation}; entry={entry}; errno={errno})"
         result["diagnostics"].append(_diag("fw030.adapter.temp_cleanup_failed", "$.states.cleanup", detail))
     report = {
         "schema": "FW030-PILOT-REPORT-1.0",
