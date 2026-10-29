@@ -80,6 +80,20 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertIn("fw030.adapter.oci_runtime_mismatch", {d["code"] for d in result["diagnostics"]})
         self.assertTrue(validate_result(json.dumps(result))["valid"])
 
+    def test_pull_exception_reports_attempted_unknown(self) -> None:
+        runtime = {"podman": adapter.PODMAN_VERSION, "oci_runtime": "crun", "oci_runtime_version": "1.14.1"}
+        observations: list[dict[str, str]] = []
+        def runner(argv, timeout):
+            if argv[:2] == ["podman", "pull"]:
+                raise adapter.AdapterError("fw030.adapter.host_command_timeout", "synthetic timeout", "unsupported")
+            raise AssertionError("workload commands must not run after a failed image pull")
+        with patch.object(adapter, "_host_facts", return_value={"os": "Ubuntu 24.04", "architecture": "x86_64", "image_header": "unknown", "image_env": "ubuntu24"}), patch.object(adapter, "_profile_observation", return_value=runtime):
+            result = adapter.run_request(self.raw, self.auth, self.env, runner, observation_sink=observations.append)
+        self.assertEqual(result["states"]["execution"], "not_started")
+        self.assertTrue(observations[-1]["image_pull"].startswith("attempted_outcome_unknown;"))
+        self.assertIn("fw030.adapter.host_command_timeout", {d["code"] for d in result["diagnostics"]})
+        self.assertTrue(validate_result(json.dumps(result))["valid"])
+
     def test_rejects_unbound_authorization_before_workload(self) -> None:
         runtime = {"podman": adapter.PODMAN_VERSION, "oci_runtime": "crun", "oci_runtime_version": "1.14.1"}
         with patch.object(adapter, "_host_facts", return_value={"os": "Ubuntu 24.04", "architecture": "x86_64", "image_header": "unknown", "image_env": "ubuntu24"}), patch.object(adapter, "_profile_observation", return_value=runtime):
