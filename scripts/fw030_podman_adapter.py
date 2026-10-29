@@ -299,10 +299,10 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
         os.chmod(auth_file, 0o600)
         timeout = request["policy"]["limits"]["wall_seconds"]
         runtime = _profile_observation(run, min(timeout, 30))
-        if runtime["oci_runtime"] != OCI_RUNTIME or runtime["oci_runtime_version"] != OCI_RUNTIME_VERSION:
-            raise AdapterError("fw030.adapter.oci_runtime_mismatch", "OCI runtime identity does not match the observed profile", "unsupported")
         if observation_sink:
             observation_sink({**host, **runtime, "image_pull": "host registry access for exact pinned digest; workload network remains disabled"})
+        if runtime["oci_runtime"] != OCI_RUNTIME or runtime["oci_runtime_version"] != OCI_RUNTIME_VERSION:
+            raise AdapterError("fw030.adapter.oci_runtime_mismatch", "OCI runtime identity does not match the observed profile", "unsupported")
         pulled = run(["podman", "pull", "--authfile", str(auth_file), "--platform", "linux/amd64", "--quiet", PINNED_IMAGE], min(timeout, 120))
         if pulled.returncode != 0:
             raise AdapterError("fw030.adapter.image_unavailable", "the exact pinned workload image could not be retrieved")
