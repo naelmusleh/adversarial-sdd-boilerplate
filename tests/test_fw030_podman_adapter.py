@@ -122,7 +122,7 @@ class PodmanAdapterTests(unittest.TestCase):
                                 "Cmd": ["sh", "-eu", "/input/workload.sh"], "WorkingDir": "/input"}, "HostConfig": {
             "NetworkMode": "none", "ReadonlyRootfs": True, "Memory": 128 * 1024 * 1024,
             "NanoCpus": 1_000_000_000, "PidsLimit": 32, "CapDrop": ["ALL"],
-            "SecurityOpt": ["no-new-privileges"], "Tmpfs": {"/output": "rw,noexec,nosuid,size=16m,uid=1000,gid=1000,rprivate,nodev"},
+            "SecurityOpt": ["no-new-privileges"], "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777,rprivate,nodev"},
             "Binds": [f"{self.root}/input:/input:ro"]}, "Mounts": [{"Type": "bind", "Source": str(self.root / "input"), "Destination": "/input", "RW": False}]}]
         existence_checks = iter([0, 1])
         def runner(argv, timeout):
@@ -168,7 +168,7 @@ class PodmanAdapterTests(unittest.TestCase):
                                    "Memory": 128 * 1024 * 1024, "NanoCpus": 1_000_000_000,
                                    "PidsLimit": 32, "CapDrop": ["ALL"],
                                    "SecurityOpt": ["no-new-privileges"],
-                                   "Tmpfs": {"/output": "rw,noexec,nosuid,size=16m,uid=1000,gid=1000"},
+                                   "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777"},
                                    "Binds": ["/unexpected/input:/input:ro"]}}]
         with self.assertRaises(adapter.AdapterError) as caught:
             adapter._verify_container(inspect, request)
@@ -181,7 +181,7 @@ class PodmanAdapterTests(unittest.TestCase):
                                    "Memory": 128 * 1024 * 1024, "NanoCpus": 1_000_000_000,
                                    "PidsLimit": 32, "CapDrop": ["ALL"],
                                    "SecurityOpt": ["no-new-privileges"],
-                                   "Tmpfs": {"/output": "rw,noexec,nosuid,size=16m,uid=1000,gid=1000"},
+                                   "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777"},
                                    "Binds": [f"{self.root}/input:/input:ro"]}, "Mounts": [{"Type": "bind", "Source": str(self.root / "input"), "Destination": "/input", "RW": False}]}]
         existence_checks = iter([0, 1])
         def runner(argv, timeout):
