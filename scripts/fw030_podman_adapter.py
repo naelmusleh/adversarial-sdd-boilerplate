@@ -729,11 +729,11 @@ if [ "$(wc -c < /output/cases.json)" -gt 4096 ]; then
   cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"failed"}},{{"case_id":"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"}},{{"case_id":"CAPABILITIES_DROPPED","outcome":"'${{capabilities_dropped}}'"}}]'
   printf '%s' "$cases" > /output/cases.json 2>/dev/null || exit 70
 fi
-printf 'FW030_OUTPUT_V1\\n'
+printf 'FW030_OUTPUT_V1\n'
 cat /output/cases.json 2>/dev/null || exit 70
-printf '\\n'
+printf '\n'
 cat /output/tmpfs-mountinfo.txt 2>/dev/null || exit 70
-printf '\\n'
+printf '\n'
 '''
 
 

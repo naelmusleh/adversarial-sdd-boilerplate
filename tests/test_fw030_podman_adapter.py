@@ -134,8 +134,8 @@ class PodmanAdapterTests(unittest.TestCase):
             "SecurityOpt": ["no-new-privileges"], "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777,rprivate,nodev"},
             "Binds": [f"{self.root}/input:/input:ro"]}, "Mounts": [{"Type": "bind", "Source": str(self.root / "input"), "Destination": "/input", "RW": False}]}]
         workload_stdout = (
-            "FW030_OUTPUT_V1\\n" + json.dumps(cases, separators=(",", ":")) +
-            "\\n/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64\\n"
+            "FW030_OUTPUT_V1\n" + json.dumps(cases, separators=(",", ":")) +
+            "\n/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64\n"
         )
         existence_checks = iter([0, 1])
         def runner(argv, timeout):
@@ -330,16 +330,16 @@ class PodmanAdapterTests(unittest.TestCase):
     def test_workload_output_envelope_is_bounded_and_binds_tmpfs_evidence(self) -> None:
         cases = b'[{"case_id":"OUTPUT_BOUNDED","outcome":"passed"}]'
         mount = b"/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64"
-        valid = b"FW030_OUTPUT_V1\\n" + cases + b"\\n" + mount + b"\\n"
+        valid = b"FW030_OUTPUT_V1\n" + cases + b"\n" + mount + b"\n"
         self.assertEqual(adapter._parse_workload_output(valid.decode("ascii"), 4096, 16), cases)
         with self.assertRaises(adapter.AdapterError) as caught:
-            adapter._parse_workload_output((b"FW030_OUTPUT_V1\\n" + b"x" * 4097 + b"\\n" + mount).decode("ascii"), 4096, 16)
+            adapter._parse_workload_output((b"FW030_OUTPUT_V1\n" + b"x" * 4097 + b"\n" + mount).decode("ascii"), 4096, 16)
         self.assertEqual(caught.exception.code, "fw030.adapter.output_invalid")
         with self.assertRaises(adapter.AdapterError) as caught:
             adapter._parse_workload_output("unexpected", 4096, 16)
         self.assertEqual(caught.exception.code, "fw030.adapter.output_invalid")
         with self.assertRaises(adapter.AdapterError) as caught:
-            adapter._parse_workload_output((b"FW030_OUTPUT_V1\\n" + cases + b"\\n/output|ext4|rw|rw\\n").decode("ascii"), 4096, 16)
+            adapter._parse_workload_output((b"FW030_OUTPUT_V1\n" + cases + b"\n/output|ext4|rw|rw\n").decode("ascii"), 4096, 16)
         self.assertEqual(caught.exception.code, "fw030.adapter.tmpfs_observation_invalid")
 
     def test_malformed_case_output_becomes_failed_result_and_still_cleans_up(self) -> None:
@@ -352,8 +352,8 @@ class PodmanAdapterTests(unittest.TestCase):
                                    "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777"},
                                    "Binds": [f"{self.root}/input:/input:ro"]}, "Mounts": [{"Type": "bind", "Source": str(self.root / "input"), "Destination": "/input", "RW": False}]}]
         malformed_output = (
-            "FW030_OUTPUT_V1\\n[{\\"case_id\\":[],\\"outcome\\":\\"passed\\"}]" +
-            "\\n/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64\\n"
+            "FW030_OUTPUT_V1\n[{\"case_id\":[],\"outcome\":\"passed\"}]" +
+            "\n/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64\n"
         )
         existence_checks = iter([0, 1])
         def runner(argv, timeout):
