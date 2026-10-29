@@ -1,0 +1,1 @@
+DECISION-047: dispatch the single reviewed synthetic retry.
