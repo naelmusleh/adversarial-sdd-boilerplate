@@ -133,20 +133,18 @@ class PodmanAdapterTests(unittest.TestCase):
             "NanoCpus": 1_000_000_000, "PidsLimit": 32, "CapDrop": self.cap_drop,
             "SecurityOpt": ["no-new-privileges"], "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777,rprivate,nodev"},
             "Binds": [f"{self.root}/input:/input:ro"]}, "Mounts": [{"Type": "bind", "Source": str(self.root / "input"), "Destination": "/input", "RW": False}]}]
+        workload_stdout = (
+            "FW030_OUTPUT_V1\\n" + json.dumps(cases, separators=(",", ":")) +
+            "\\n/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64\\n"
+        )
         existence_checks = iter([0, 1])
         def runner(argv, timeout):
             if argv[:2] == ["podman", "pull"]:
                 return subprocess.CompletedProcess(argv, 0, "", "")
             if argv[:2] == ["podman", "run"]:
-                return subprocess.CompletedProcess(argv, 0, "", "")
+                return subprocess.CompletedProcess(argv, 0, workload_stdout, "")
             if argv[:2] == ["podman", "inspect"]:
                 return subprocess.CompletedProcess(argv, 0, json.dumps(inspect), "")
-            if argv[:2] == ["podman", "cp"]:
-                if argv[2].endswith("/output/cases.json"):
-                    Path(argv[-1]).write_text(json.dumps(cases), encoding="utf-8")
-                else:
-                    Path(argv[-1]).write_text("/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64", encoding="ascii")
-                return subprocess.CompletedProcess(argv, 0, "", "")
             if argv[:3] == ["podman", "container", "exists"]:
                 return subprocess.CompletedProcess(argv, next(existence_checks), "", "")
             if argv[:3] == ["podman", "rm", "--force"]:
@@ -296,6 +294,9 @@ class PodmanAdapterTests(unittest.TestCase):
         checked = subprocess.run(["sh", "-n"], input=script, text=True, capture_output=True, check=False)
         self.assertEqual(checked.returncode, 0, checked.stderr)
         self.assertIn("/proc/self/mountinfo", script)
+        self.assertIn("FW030_OUTPUT_V1", script)
+        self.assertIn("cat /output/cases.json", script)
+        self.assertIn("cat /output/tmpfs-mountinfo.txt", script)
         self.assertIn('"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"', script)
         self.assertIn("CapEff CapPrm CapInh CapBnd CapAmb", script)
         self.assertIn('"CAPABILITIES_DROPPED","outcome":"' + "'${capabilities_dropped}'" , script)
@@ -326,45 +327,20 @@ class PodmanAdapterTests(unittest.TestCase):
             adapter._verify_container(inspect, request)
         self.assertEqual(caught.exception.code, "fw030.adapter.mount_observation_mismatch")
 
-    def test_case_result_copy_failure_reports_only_redacted_runtime_hint(self) -> None:
-        inspect = [{"Config": {"User": "1000:1000", "Image": adapter.PINNED_IMAGE,
-                                "Cmd": self.request["workload"]["argv"], "WorkingDir": "/input"},
-                    "HostConfig": {"NetworkMode": "none", "ReadonlyRootfs": True,
-                                   "Memory": 128 * 1024 * 1024, "NanoCpus": 1_000_000_000,
-                                   "PidsLimit": 32, "CapDrop": self.cap_drop,
-                                   "SecurityOpt": ["no-new-privileges"],
-                                   "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777"},
-                                   "Binds": [f"{self.root}/input:/input:ro"]},
-                    "Mounts": [{"Type": "bind", "Source": str(self.root / "input"),
-                                "Destination": "/input", "RW": False}]}]
-        existence_checks = iter([0, 1])
-        def runner(argv, timeout):
-            if argv[:2] in (["podman", "pull"], ["podman", "run"]):
-                return subprocess.CompletedProcess(argv, 0, "", "")
-            if argv[:2] == ["podman", "inspect"]:
-                return subprocess.CompletedProcess(argv, 0, json.dumps(inspect), "")
-            if argv[:2] == ["podman", "cp"]:
-                return subprocess.CompletedProcess(
-                    argv, 125, "", "Error: permission denied at /runner/private/output/cases.json token=synthetic-secret"
-                )
-            if argv[:3] == ["podman", "container", "exists"]:
-                return subprocess.CompletedProcess(argv, next(existence_checks), "", "")
-            if argv[:3] == ["podman", "rm", "--force"]:
-                return subprocess.CompletedProcess(argv, 0, "", "")
-            raise AssertionError("unexpected runtime command")
-        runtime = {"podman": adapter.PODMAN_VERSION, "oci_runtime": "crun", "oci_runtime_version": "1.14.1"}
-        host = {"os": "Ubuntu 24.04", "architecture": "x86_64", "image_header": "unknown", "image_env": "ubuntu24"}
-        with patch.object(adapter, "_host_facts", return_value=host), patch.object(adapter, "_profile_observation", return_value=runtime):
-            result = adapter.run_request(self.raw, self.auth, self.env, runner)
-        diagnostic = next(item for item in result["diagnostics"] if item["code"] == "fw030.adapter.output_missing")
-        self.assertIn("runtime_exit=125", diagnostic["message"])
-        self.assertIn("permission denied", diagnostic["message"])
-        self.assertIn("<path>", diagnostic["message"])
-        self.assertNotIn(str(self.root), diagnostic["message"])
-        self.assertNotIn("synthetic-secret", diagnostic["message"])
-        self.assertEqual(result["case_results"], [])
-        self.assertEqual(result["states"]["cleanup"], "complete")
-        self.assertTrue(validate_result(json.dumps(result))["valid"])
+    def test_workload_output_envelope_is_bounded_and_binds_tmpfs_evidence(self) -> None:
+        cases = b'[{"case_id":"OUTPUT_BOUNDED","outcome":"passed"}]'
+        mount = b"/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64"
+        valid = b"FW030_OUTPUT_V1\\n" + cases + b"\\n" + mount + b"\\n"
+        self.assertEqual(adapter._parse_workload_output(valid.decode("ascii"), 4096, 16), cases)
+        with self.assertRaises(adapter.AdapterError) as caught:
+            adapter._parse_workload_output((b"FW030_OUTPUT_V1\\n" + b"x" * 4097 + b"\\n" + mount).decode("ascii"), 4096, 16)
+        self.assertEqual(caught.exception.code, "fw030.adapter.output_invalid")
+        with self.assertRaises(adapter.AdapterError) as caught:
+            adapter._parse_workload_output("unexpected", 4096, 16)
+        self.assertEqual(caught.exception.code, "fw030.adapter.output_invalid")
+        with self.assertRaises(adapter.AdapterError) as caught:
+            adapter._parse_workload_output((b"FW030_OUTPUT_V1\\n" + cases + b"\\n/output|ext4|rw|rw\\n").decode("ascii"), 4096, 16)
+        self.assertEqual(caught.exception.code, "fw030.adapter.tmpfs_observation_invalid")
 
     def test_malformed_case_output_becomes_failed_result_and_still_cleans_up(self) -> None:
         inspect = [{"Config": {"User": "1000:1000", "Image": adapter.PINNED_IMAGE,
@@ -375,18 +351,18 @@ class PodmanAdapterTests(unittest.TestCase):
                                    "SecurityOpt": ["no-new-privileges"],
                                    "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777"},
                                    "Binds": [f"{self.root}/input:/input:ro"]}, "Mounts": [{"Type": "bind", "Source": str(self.root / "input"), "Destination": "/input", "RW": False}]}]
+        malformed_output = (
+            "FW030_OUTPUT_V1\\n[{\\"case_id\\":[],\\"outcome\\":\\"passed\\"}]" +
+            "\\n/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64\\n"
+        )
         existence_checks = iter([0, 1])
         def runner(argv, timeout):
-            if argv[:2] == ["podman", "pull"] or argv[:2] == ["podman", "run"]:
+            if argv[:2] == ["podman", "pull"]:
                 return subprocess.CompletedProcess(argv, 0, "", "")
+            if argv[:2] == ["podman", "run"]:
+                return subprocess.CompletedProcess(argv, 0, malformed_output, "")
             if argv[:2] == ["podman", "inspect"]:
                 return subprocess.CompletedProcess(argv, 0, json.dumps(inspect), "")
-            if argv[:2] == ["podman", "cp"]:
-                if argv[2].endswith("/output/cases.json"):
-                    Path(argv[-1]).write_text('[{"case_id": [], "outcome": "passed"}]', encoding="utf-8")
-                else:
-                    Path(argv[-1]).write_text("/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,mode=1777", encoding="ascii")
-                return subprocess.CompletedProcess(argv, 0, "", "")
             if argv[:3] == ["podman", "container", "exists"]:
                 return subprocess.CompletedProcess(argv, next(existence_checks), "", "")
             if argv[:3] == ["podman", "rm", "--force"]:

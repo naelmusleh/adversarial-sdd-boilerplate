@@ -100,3 +100,8 @@ The owner authorized one bounded investigation of `fw030.adapter.output_missing`
 ## Cycle-6 diagnostic instrumentation candidate
 
 DECISION-048 authorizes a bounded investigation after `podman cp` failed retrieving `/output/cases.json`. Static inspection found that the adapter currently discards that command's exit status and stderr. The candidate adds only the return code and the existing bounded path/credential-redacted first-line hint to the failure diagnostic; a synthetic unit fixture covers redaction and cleanup state. It does not alter runtime policy or dispatch a workload. Independent review and exact-revision Verify Pipeline are required before a diagnostic run.
+
+
+## Cycle-6 diagnostic result and correction candidate
+
+The evidence-only run [40896580178](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40896580178) produced `fw030.adapter.output_missing`, `runtime_exit=125`, and the redacted message that `/output/cases.json` could not be found on the container. No case results were produced; cleanup completed. The adapter writes results to `/output` backed by the declared tmpfs, then calls `podman cp` after the foreground run returns. The proposed narrow correction streams a fixed, bounded envelope containing the case JSON and tmpfs mount evidence to stdout before the workload exits, while the tmpfs is available. The host strictly bounds and validates the envelope and cases. No writable host output mount or broader runtime is introduced. Independent review and exact CI are required; the single conditional synthetic retry is not dispatched unless review confirms the correction is supported.

@@ -366,6 +366,25 @@ def _effective_tmpfs_mount_matches(raw: bytes, disk_mb: int) -> bool:
     return required.issubset(options) and bool(options & size_options) and options.issubset(allowed)
 
 
+def _parse_workload_output(raw: str, max_case_bytes: int, disk_mb: int) -> bytes:
+    """Parse bounded synthetic evidence streamed while its tmpfs mount is still alive."""
+    try:
+        encoded = raw.encode("ascii", errors="strict")
+    except UnicodeError as exc:
+        raise AdapterError("fw030.adapter.output_invalid", "workload output was not bounded ASCII evidence") from exc
+    if len(encoded) > max_case_bytes + 4096 + 64:
+        raise AdapterError("fw030.adapter.output_invalid", "workload output exceeded the bounded evidence envelope")
+    lines = raw.splitlines()
+    if len(lines) != 3 or lines[0] != "FW030_OUTPUT_V1":
+        raise AdapterError("fw030.adapter.output_invalid", "workload output envelope was missing or malformed")
+    case_bytes, mount_bytes = lines[1].encode("ascii"), lines[2].encode("ascii")
+    if not case_bytes or len(case_bytes) > max_case_bytes:
+        raise AdapterError("fw030.adapter.output_invalid", "case evidence exceeded the declared output limit")
+    if len(mount_bytes) > 4096 or not _effective_tmpfs_mount_matches(mount_bytes, disk_mb):
+        raise AdapterError("fw030.adapter.tmpfs_observation_invalid", "effective output tmpfs evidence was missing or invalid")
+    return case_bytes
+
+
 def _cap_drop_matches(raw: Any) -> bool:
     return (isinstance(raw, list) and all(isinstance(item, str) for item in raw)
             and len(raw) == len(PODMAN_DEFAULT_CAPABILITIES)
@@ -550,24 +569,12 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
                                   (lambda value: observation_sink({"mount_observation": value})) if observation_sink else None)
             except (json.JSONDecodeError, TypeError):
                 raise AdapterError("fw030.adapter.inspect_invalid", "container policy inspection was not valid JSON")
-            copied = run(["podman", "cp", f"{container_name}:/output/cases.json", str(output_dir / "cases.json")], 15)
-            if copied.returncode != 0:
-                hint = _safe_runtime_error_hint(copied.stderr or "")
-                raise AdapterError(
-                    "fw030.adapter.output_missing",
-                    f"bounded case result retrieval failed (runtime_exit={copied.returncode}; stderr_hint={hint})",
-                )
-            mount_copy = run(["podman", "cp", f"{container_name}:/output/tmpfs-mountinfo.txt", str(root / "tmpfs-mountinfo.txt")], 15)
-            mountinfo_path = root / "tmpfs-mountinfo.txt"
-            if (mount_copy.returncode != 0 or mountinfo_path.is_symlink() or not mountinfo_path.is_file()
-                    or mountinfo_path.stat().st_size > 4096
-                    or not _effective_tmpfs_mount_matches(mountinfo_path.read_bytes(), limit["disk_mb"])):
-                raise AdapterError("fw030.adapter.tmpfs_observation_invalid", "effective output tmpfs mount evidence was missing or did not match the selected policy")
-            result_path = output_dir / "cases.json"
-            if result_path.is_symlink() or not result_path.is_file() or result_path.stat().st_size > min(MAX_OUTPUT_BYTES, request["policy"]["evidence"]["max_output_bytes"]):
-                raise AdapterError("fw030.adapter.output_invalid", "case result is not a bounded ordinary file")
+            case_bytes = _parse_workload_output(
+                ran.stdout or "", min(MAX_OUTPUT_BYTES, request["policy"]["evidence"]["max_output_bytes"]),
+                limit["disk_mb"],
+            )
             try:
-                parsed = _json_without_duplicates(result_path.read_bytes())
+                parsed = _json_without_duplicates(case_bytes)
                 if not isinstance(parsed, list) or any(not isinstance(item, dict) or set(item) != {"case_id", "outcome"} for item in parsed):
                     raise ValueError("shape")
                 if any(not isinstance(item["case_id"], str) or not isinstance(item["outcome"], str) for item in parsed):
@@ -722,6 +729,11 @@ if [ "$(wc -c < /output/cases.json)" -gt 4096 ]; then
   cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"failed"}},{{"case_id":"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"}},{{"case_id":"CAPABILITIES_DROPPED","outcome":"'${{capabilities_dropped}}'"}}]'
   printf '%s' "$cases" > /output/cases.json 2>/dev/null || exit 70
 fi
+printf 'FW030_OUTPUT_V1\\n'
+cat /output/cases.json 2>/dev/null || exit 70
+printf '\\n'
+cat /output/tmpfs-mountinfo.txt 2>/dev/null || exit 70
+printf '\\n'
 '''
 
 
