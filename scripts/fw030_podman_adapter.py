@@ -34,6 +34,10 @@ PODMAN_VERSION = "4.9.3"
 OCI_RUNTIME = "crun"
 OCI_RUNTIME_VERSION = "1.14.1"
 PINNED_IMAGE = "docker.io/library/alpine@sha256:dc92f017beea8e7f43263073d717f7bc011228c95d5312e440deb4d035bb4eec"
+PODMAN_DEFAULT_CAPABILITIES = frozenset({
+    "CAP_CHOWN", "CAP_DAC_OVERRIDE", "CAP_FOWNER", "CAP_FSETID", "CAP_KILL",
+    "CAP_NET_BIND_SERVICE", "CAP_SETFCAP", "CAP_SETGID", "CAP_SETPCAP", "CAP_SETUID", "CAP_SYS_CHROOT",
+})
 CAPABILITIES = {"runtime.rootless", "filesystem.readonly-input", "network.disabled", "secrets.disabled", "resources.limits", "evidence.bounded"}
 MAX_REQUEST_BYTES = 256 * 1024
 MAX_OUTPUT_BYTES = 1024 * 1024
@@ -320,6 +324,12 @@ def _effective_tmpfs_mount_matches(raw: bytes, disk_mb: int) -> bool:
     return required.issubset(options) and bool(options & size_options) and options.issubset(allowed)
 
 
+def _cap_drop_matches(raw: Any) -> bool:
+    return (isinstance(raw, list) and all(isinstance(item, str) for item in raw)
+            and len(raw) == len(PODMAN_DEFAULT_CAPABILITIES)
+            and set(raw) == PODMAN_DEFAULT_CAPABILITIES)
+
+
 def _verify_container(inspect: Any, request: Mapping[str, Any]) -> None:
     if not isinstance(inspect, list) or len(inspect) != 1 or not isinstance(inspect[0], dict):
         raise AdapterError("fw030.adapter.inspect_invalid", "runtime inspection did not return one expected container")
@@ -339,7 +349,7 @@ def _verify_container(inspect: Any, request: Mapping[str, Any]) -> None:
             or config.get("Cmd") != request["workload"]["argv"]
             or config.get("WorkingDir") != request["workload"]["working_directory"]
             or any(str(value).startswith("FW030_SECRET_SENTINEL=") for value in config.get("Env", []))
-            or "ALL" not in host.get("CapDrop", [])
+            or not _cap_drop_matches(host.get("CapDrop"))
             or host.get("CapAdd") not in (None, [])
             or host.get("Privileged") is True
             or host.get("Devices") not in (None, [])
@@ -547,7 +557,7 @@ def _pilot_request(env: Mapping[str, str], root: Path) -> tuple[bytes, dict[str,
         "limits": {"cpu_millis": 1000, "memory_mb": 128, "process_count": 32, "disk_mb": 16, "wall_seconds": 30},
         "cancellation": "terminate_then_kill_within_wall_limit",
         "evidence": {"mode": "allowlisted_redacted", "max_output_bytes": 4096,
-                     "case_ids": ["INPUT_READONLY", "HOST_PATH_DENIED", "NETWORK_DISABLED", "SECRETS_NOT_INJECTED", "OUTPUT_BOUNDED", "OUTPUT_TMPFS_EFFECTIVE"]},
+                     "case_ids": ["INPUT_READONLY", "HOST_PATH_DENIED", "NETWORK_DISABLED", "SECRETS_NOT_INJECTED", "OUTPUT_BOUNDED", "OUTPUT_TMPFS_EFFECTIVE", "CAPABILITIES_DROPPED"]},
     }
     canonical_policy = json.dumps(policy, sort_keys=True, separators=(",", ":")).encode("utf-8")
     policy["sha256"] = hashlib.sha256(canonical_policy).hexdigest()
@@ -591,13 +601,17 @@ fi
 secrets_disabled=failed
 if [ -z "${{FW030_SECRET_SENTINEL-}}" ]; then secrets_disabled=passed; fi
 output_bounded=passed
+capabilities_dropped=passed
+for field in CapEff CapPrm CapInh CapBnd CapAmb; do
+  if ! awk -v key="$field:" '$1 == key {{ found=1; if (tolower($2) !~ /^0+$/) bad=1 }} END {{ if (!found || bad) exit 1 }}' /proc/self/status; then capabilities_dropped=failed; fi
+done
 mount_row=$(awk '$5 == "/output" {{ for (i=1;i<=NF;i++) if ($i == "-") {{ print $5 "|" $(i+1) "|" $6 "|" $(i+3); exit }} }}' /proc/self/mountinfo)
 printf '%s' "$mount_row" > /output/tmpfs-mountinfo.txt 2>/dev/null || exit 70
-cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"'${{output_bounded}}'"}},{{"case_id":"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"}}]'
+cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"'${{output_bounded}}'"}},{{"case_id":"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"}},{{"case_id":"CAPABILITIES_DROPPED","outcome":"'${{capabilities_dropped}}'"}}]'
 printf '%s' "$cases" > /output/cases.json 2>/dev/null || exit 70
 if [ "$(wc -c < /output/cases.json)" -gt 4096 ]; then
   output_bounded=failed
-  cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"failed"}},{{"case_id":"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"}}]'
+  cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"failed"}},{{"case_id":"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"}},{{"case_id":"CAPABILITIES_DROPPED","outcome":"'${{capabilities_dropped}}'"}}]'
   printf '%s' "$cases" > /output/cases.json 2>/dev/null || exit 70
 fi
 '''

@@ -46,7 +46,8 @@ class PodmanAdapterTests(unittest.TestCase):
         self.request["policy"]["limits"] = {"cpu_millis": 1000, "memory_mb": 128, "process_count": 32, "disk_mb": 16, "wall_seconds": 30}
         self.request["policy"]["uid"] = 1000
         self.request["policy"]["gid"] = 1000
-        self.request["policy"]["evidence"]["case_ids"] = ["INPUT_READONLY", "HOST_PATH_DENIED", "NETWORK_DISABLED", "SECRETS_NOT_INJECTED", "OUTPUT_BOUNDED", "OUTPUT_TMPFS_EFFECTIVE"]
+        self.request["policy"]["evidence"]["case_ids"] = ["INPUT_READONLY", "HOST_PATH_DENIED", "NETWORK_DISABLED", "SECRETS_NOT_INJECTED", "OUTPUT_BOUNDED", "OUTPUT_TMPFS_EFFECTIVE", "CAPABILITIES_DROPPED"]
+        self.cap_drop = sorted(adapter.PODMAN_DEFAULT_CAPABILITIES)
         policy = dict(self.request["policy"])
         policy.pop("sha256")
         self.request["policy"]["sha256"] = hashlib.sha256(json.dumps(policy, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
@@ -129,7 +130,7 @@ class PodmanAdapterTests(unittest.TestCase):
         inspect = [{"Config": {"User": "1000:1000", "Image": adapter.PINNED_IMAGE,
                                 "Cmd": ["sh", "-eu", "/input/workload.sh"], "WorkingDir": "/input"}, "HostConfig": {
             "NetworkMode": "none", "ReadonlyRootfs": True, "Memory": 128 * 1024 * 1024,
-            "NanoCpus": 1_000_000_000, "PidsLimit": 32, "CapDrop": ["ALL"],
+            "NanoCpus": 1_000_000_000, "PidsLimit": 32, "CapDrop": self.cap_drop,
             "SecurityOpt": ["no-new-privileges"], "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777,rprivate,nodev"},
             "Binds": [f"{self.root}/input:/input:ro"]}, "Mounts": [{"Type": "bind", "Source": str(self.root / "input"), "Destination": "/input", "RW": False}]}]
         existence_checks = iter([0, 1])
@@ -177,7 +178,7 @@ class PodmanAdapterTests(unittest.TestCase):
                                 "Cmd": request["workload"]["argv"], "WorkingDir": "/input"},
                     "HostConfig": {"NetworkMode": "none", "ReadonlyRootfs": True,
                                    "Memory": 128 * 1024 * 1024, "NanoCpus": 1_000_000_000,
-                                   "PidsLimit": 32, "CapDrop": ["ALL"],
+                                   "PidsLimit": 32, "CapDrop": self.cap_drop,
                                    "SecurityOpt": ["no-new-privileges"],
                                    "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777"},
                                    "Binds": ["/unexpected/input:/input:ro"]}}]
@@ -213,6 +214,17 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertEqual(checked.returncode, 0, checked.stderr)
         self.assertIn("/proc/self/mountinfo", script)
         self.assertIn('"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"', script)
+        self.assertIn("CapEff CapPrm CapInh CapBnd CapAmb", script)
+        self.assertIn('"CAPABILITIES_DROPPED","outcome":"' + "'${capabilities_dropped}'" , script)
+
+    def test_cap_drop_matches_observed_podman_expansion_exactly(self) -> None:
+        observed = sorted(adapter.PODMAN_DEFAULT_CAPABILITIES)
+        self.assertTrue(adapter._cap_drop_matches(observed))
+        self.assertFalse(adapter._cap_drop_matches(["ALL"]))
+        self.assertFalse(adapter._cap_drop_matches(observed[:-1]))
+        self.assertFalse(adapter._cap_drop_matches(observed + ["CAP_SYS_ADMIN"]))
+        self.assertFalse(adapter._cap_drop_matches(observed[:-1] + [observed[0]]))
+        self.assertFalse(adapter._cap_drop_matches([{}]))
 
     def test_rejects_unreported_or_additional_effective_mounts(self) -> None:
         request = copy.deepcopy(self.request)
@@ -220,7 +232,7 @@ class PodmanAdapterTests(unittest.TestCase):
                                 "Cmd": request["workload"]["argv"], "WorkingDir": "/input"},
                     "HostConfig": {"NetworkMode": "none", "ReadonlyRootfs": True,
                                    "Memory": 128 * 1024 * 1024, "NanoCpus": 1_000_000_000,
-                                   "PidsLimit": 32, "CapDrop": ["ALL"],
+            "PidsLimit": 32, "CapDrop": self.cap_drop,
                                    "SecurityOpt": ["no-new-privileges"],
                                    "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777"},
                                    "Binds": [f"{self.root}/input:/input:ro"]},
@@ -236,7 +248,7 @@ class PodmanAdapterTests(unittest.TestCase):
                                 "Cmd": self.request["workload"]["argv"], "WorkingDir": "/input"},
                     "HostConfig": {"NetworkMode": "none", "ReadonlyRootfs": True,
                                    "Memory": 128 * 1024 * 1024, "NanoCpus": 1_000_000_000,
-                                   "PidsLimit": 32, "CapDrop": ["ALL"],
+                                   "PidsLimit": 32, "CapDrop": self.cap_drop,
                                    "SecurityOpt": ["no-new-privileges"],
                                    "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777"},
                                    "Binds": [f"{self.root}/input:/input:ro"]}, "Mounts": [{"Type": "bind", "Source": str(self.root / "input"), "Destination": "/input", "RW": False}]}]
