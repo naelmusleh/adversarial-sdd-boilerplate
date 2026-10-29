@@ -174,6 +174,9 @@ class PodmanAdapterTests(unittest.TestCase):
             adapter._run(["podman", "--version"], 5, env)
         child_env = captured["env"]
         self.assertNotIn("FW030_SECRET_SENTINEL", child_env)
+        self.assertNotIn("GITHUB_SHA", child_env)
+        self.assertNotIn("GITHUB_RUN_ID", child_env)
+        self.assertLessEqual(set(child_env), {"PATH", "HOME", "LANG", "LC_ALL", "XDG_RUNTIME_DIR", "TMPDIR"})
         self.assertEqual(child_env["HOME"], str(self.root / "podman-home"))
         self.assertFalse(captured["shell"])
 
