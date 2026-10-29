@@ -14,6 +14,7 @@ import platform
 import re
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
@@ -87,6 +88,57 @@ def _json_without_duplicates(raw: bytes) -> Any:
         return result
     return json.loads(raw.decode("utf-8", errors="strict"), object_pairs_hook=pairs,
                       parse_constant=lambda _: (_ for _ in ()).throw(ValueError("invalid constant")))
+
+
+def _safe_runtime_error_hint(stderr: str) -> str:
+    """Expose one bounded first-line hint with paths and credential-like values redacted."""
+    first = next((line.strip() for line in stderr.splitlines() if line.strip()), "")
+    if not first:
+        return "empty"
+    first = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", first)
+    first = re.sub(
+        r"(?i)\b(token|password|secret|authorization|authfile)(?:\s*[=:]\s*|\s+)(?:bearer\s+)?[^\s,;]+",
+        r"\1=<redacted>",
+        first,
+    )
+    first = re.sub(r"https?://[^\s]+", "<url>", first)
+    first = re.sub(r"(?<![A-Za-z0-9])/(?:[^\s,:;]+)", "<path>", first)
+    first = re.sub(r"(?i)(?:sha256:)?[0-9a-f]{32,64}", "<id>", first)
+    first = re.sub(r"\b[0-9a-f]{8}-[0-9a-f-]{27,}\b", "<id>", first, flags=re.I)
+    first = re.sub(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", "<ip>", first)
+    first = "".join(char if char.isprintable() else " " for char in first)
+    return first[:160] or "empty"
+
+
+def _record_cleanup_error(failure: dict[str, Any], root: Path,
+                          function: Callable[..., Any], path: str, exc: OSError) -> None:
+    """Keep the first bounded cleanup error; never expose absolute workspace paths or owner IDs."""
+    if failure:
+        return
+    try:
+        relative = Path(path).relative_to(root).as_posix()
+    except ValueError:
+        relative = "outside_workspace"
+    relative = re.sub(r"(?i)\b[0-9a-f]{16,}\b", "<id>", relative)[:160]
+    try:
+        info = os.lstat(path)
+        kind = ("symlink" if stat.S_ISLNK(info.st_mode) else
+                "directory" if stat.S_ISDIR(info.st_mode) else
+                "file" if stat.S_ISREG(info.st_mode) else "other")
+        mode = format(stat.S_IMODE(info.st_mode), "04o")
+        owner = "runner" if info.st_uid == os.getuid() else "other"
+        group = "runner" if info.st_gid == os.getgid() else "other"
+    except OSError:
+        kind, mode, owner, group = "unavailable", "unknown", "unknown", "unknown"
+    failure.update(
+        operation=getattr(function, "__name__", "unknown"),
+        entry=relative or ".",
+        errno=exc.errno or 0,
+        entry_kind=kind,
+        mode=mode,
+        owner=owner,
+        group=group,
+    )
 
 
 def _diag(code: str, path: str, message: str) -> dict[str, str]:
@@ -399,9 +451,15 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
                 ("cannot re-exec process", "runtime_reexec_failed"),
                 ("unknown flag", "runtime_argument_rejected"),
                 ("cannot connect", "runtime_service_unavailable"),
+                ("invalid mount option", "mount_option_rejected"),
+                ("unrecognized mount option", "mount_option_rejected"),
+                ("unknown option", "runtime_argument_rejected"),
+                ("resource limits are not supported", "resource_limit_unsupported"),
+                ("cgroup v1", "cgroup_profile_unsupported"),
             )
             error_class = next((label for marker, label in error_classes if marker in stderr), "unclassified")
-            diagnostics.append(_diag("fw030.adapter.workload_failed", "$.states.execution", f"workload exited with status {ran.returncode}; runtime_error_class={error_class}; case results are unavailable"))
+            hint = _safe_runtime_error_hint(ran.stderr or "")
+            diagnostics.append(_diag("fw030.adapter.workload_failed", "$.states.execution", f"workload exited with status {ran.returncode}; runtime_error_class={error_class}; stderr_hint={hint}; case results are unavailable"))
     except AdapterCancelled:
         execution = "cancelled"
         diagnostics.append(_diag("fw030.adapter.cancelled", "$.states.execution", "adapter received a cancellation signal"))
@@ -531,25 +589,24 @@ fi
         result = run_request(raw, authorization, env, observation_sink=observations.append)
     finally:
         temp_cleanup_errno: int | None = None
-        cleanup_failure: dict[str, str | int] = {}
+        cleanup_failure: dict[str, Any] = {}
         def record_cleanup_error(function: Callable[..., Any], path: str, exc: OSError) -> None:
-            try:
-                relative = Path(path).relative_to(root).as_posix()
-            except ValueError:
-                relative = "outside_workspace"
-            cleanup_failure.update(operation=getattr(function, "__name__", "unknown"),
-                                   entry=relative, errno=exc.errno or 0)
+            _record_cleanup_error(cleanup_failure, root, function, path, exc)
         try:
             shutil.rmtree(root, onexc=record_cleanup_error)
         except OSError as exc:
             temp_cleanup_errno = exc.errno
-            cleanup_failure.update(operation="rmtree", entry="workspace", errno=exc.errno or 0)
+            _record_cleanup_error(cleanup_failure, root, shutil.rmtree, str(root), exc)
     if root.exists():
         result["states"]["cleanup"] = "failed"
         operation = str(cleanup_failure.get("operation", "unknown"))
         entry = str(cleanup_failure.get("entry", "unknown"))
         errno = int(cleanup_failure.get("errno", temp_cleanup_errno or 0))
-        detail = f"temporary pilot cleanup failed (operation={operation}; entry={entry}; errno={errno})"
+        kind = str(cleanup_failure.get("entry_kind", "unknown"))
+        mode = str(cleanup_failure.get("mode", "unknown"))
+        owner = str(cleanup_failure.get("owner", "unknown"))
+        group = str(cleanup_failure.get("group", "unknown"))
+        detail = f"temporary pilot cleanup failed (first_operation={operation}; entry={entry}; errno={errno}; kind={kind}; mode={mode}; owner={owner}; group={group})"
         result["diagnostics"].append(_diag("fw030.adapter.temp_cleanup_failed", "$.states.cleanup", detail))
     report = {
         "schema": "FW030-PILOT-REPORT-1.0",
