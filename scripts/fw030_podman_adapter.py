@@ -305,8 +305,7 @@ def _verify_container(inspect: Any, request: Mapping[str, Any]) -> None:
     input_source = next(mount["source"] for mount in request["policy"]["mounts"] if mount["kind"] == "input")
     cpu_nano = limits["cpu_millis"] * 1_000_000
     tmpfs = set(host.get("Tmpfs", {}).get("/output", "").split(","))
-    required_tmpfs = {"rw", "noexec", "nosuid", f"size={limits['disk_mb']}m",
-                      f"uid={request['policy']['uid']}", f"gid={request['policy']['gid']}"}
+    required_tmpfs = {"rw", "noexec", "nosuid", "nodev", "mode=1777", f"size={limits['disk_mb']}m"}
     if (host.get("NetworkMode") != "none" or host.get("ReadonlyRootfs") is not True
             or host.get("Memory") != limits["memory_mb"] * 1024 * 1024
             or host.get("NanoCpus") != cpu_nano or host.get("PidsLimit") != limits["process_count"]
@@ -391,7 +390,7 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
             "--security-opt=no-new-privileges", f"--memory={limit['memory_mb']}m",
             f"--cpus={limit['cpu_millis'] / 1000:.3f}", f"--pids-limit={limit['process_count']}",
             f"--timeout={timeout}", f"--workdir={request['workload']['working_directory']}",
-            f"--tmpfs=/output:rw,noexec,nosuid,size={limit['disk_mb']}m,uid={request['policy']['uid']},gid={request['policy']['gid']}",
+            f"--tmpfs=/output:rw,noexec,nosuid,nodev,size={limit['disk_mb']}m,mode=1777",
             "--volume", f"{input_dir}:/input:ro", request["workload"]["image"],
             *request["workload"]["argv"],
         ]
@@ -587,6 +586,32 @@ fi
         raw, authorization = _pilot_request(env, root)
         observations: list[dict[str, str]] = []
         result = run_request(raw, authorization, env, observation_sink=observations.append)
+        image_state: subprocess.CompletedProcess[str] | None = None
+        try:
+            image_state = _run(["podman", "image", "exists", PINNED_IMAGE], 15, env)
+            if image_state.returncode == 0:
+                removed_image = _run(["podman", "image", "rm", PINNED_IMAGE], 30, env)
+                verified_absent = _run(["podman", "image", "exists", PINNED_IMAGE], 15, env)
+                if removed_image.returncode != 0 or verified_absent.returncode != 1:
+                    result["states"]["cleanup"] = "failed"
+                    hint = _safe_runtime_error_hint(removed_image.stderr or "")
+                    result["diagnostics"].append(_diag(
+                        "fw030.adapter.image_cleanup_failed", "$.states.cleanup",
+                        f"pinned synthetic image removal or absence verification failed; stderr_hint={hint}",
+                    ))
+            elif image_state.returncode != 1:
+                result["states"]["cleanup"] = "unknown"
+                hint = _safe_runtime_error_hint(image_state.stderr or "")
+                result["diagnostics"].append(_diag(
+                    "fw030.adapter.image_cleanup_unknown", "$.states.cleanup",
+                    f"pinned synthetic image presence could not be determined; stderr_hint={hint}",
+                ))
+        except AdapterError:
+            result["states"]["cleanup"] = "unknown"
+            result["diagnostics"].append(_diag(
+                "fw030.adapter.image_cleanup_unknown", "$.states.cleanup",
+                "pinned synthetic image cleanup command failed; resource absence is not established",
+            ))
     finally:
         temp_cleanup_errno: int | None = None
         cleanup_failure: dict[str, Any] = {}
