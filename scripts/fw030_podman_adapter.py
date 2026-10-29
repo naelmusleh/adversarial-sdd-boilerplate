@@ -21,7 +21,10 @@ import uuid
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
-from scripts.fw030_contract import validate_request, validate_result
+if __package__:
+    from .fw030_contract import validate_request, validate_result
+else:  # Direct script execution places scripts/ on sys.path.
+    from fw030_contract import validate_request, validate_result
 
 
 PROFILE_ID = "github-actions.ubuntu-24.04.rootless-podman"
