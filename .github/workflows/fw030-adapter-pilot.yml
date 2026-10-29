@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: {}
+    env:
+      FW030_SECRET_SENTINEL: synthetic-fw030-environment-only
     steps:
       # Same immutable checkout action used by Verify Pipeline.
       - name: Check out the exact caller revision
