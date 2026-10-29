@@ -102,4 +102,5 @@ jobs:
     name: FW-030 Adapter Synthetic Pilot
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/fw030-impl02'
     uses: ./.github/workflows/fw030-adapter-pilot.yml
-    permissions: {}
+    permissions:
+      contents: read
