@@ -480,7 +480,7 @@ set -u
 input_read=failed
 if [ "$(cat /input/fixture.txt 2>/dev/null)" = synthetic-fixture ]; then input_read=passed; fi
 input_readonly=failed
-if ! touch /input/forbidden-write 2>/dev/null; then input_readonly=passed; fi
+if [ "$input_read" = passed ] && ! touch /input/forbidden-write 2>/dev/null; then input_readonly=passed; fi
 host_denied=failed
 if ! cat "{sentinel}" >/dev/null 2>&1; then host_denied=passed; fi
 network_disabled=unknown
@@ -507,10 +507,15 @@ fi
         observations: list[dict[str, str]] = []
         result = run_request(raw, authorization, env, observation_sink=observations.append)
     finally:
-        shutil.rmtree(root, ignore_errors=True)
+        temp_cleanup_errno: int | None = None
+        try:
+            shutil.rmtree(root)
+        except OSError as exc:
+            temp_cleanup_errno = exc.errno
     if root.exists():
         result["states"]["cleanup"] = "failed"
-        result["diagnostics"].append(_diag("fw030.adapter.temp_cleanup_failed", "$.states.cleanup", "temporary pilot files remain after cleanup"))
+        detail = f"temporary pilot files remain after cleanup (errno={temp_cleanup_errno})"
+        result["diagnostics"].append(_diag("fw030.adapter.temp_cleanup_failed", "$.states.cleanup", detail))
     report = {
         "schema": "FW030-PILOT-REPORT-1.0",
         "source": {"repository": env.get("GITHUB_REPOSITORY"), "revision": env.get("GITHUB_SHA")},
