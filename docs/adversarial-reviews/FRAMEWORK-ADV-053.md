@@ -3,7 +3,7 @@ id: FRAMEWORK-ADV-053
 type: adversarial-review
 title: FW030-IMPL-02 initial independent code review
 status: in-review
-version: 1.3
+version: 1.4
 created: 2026-10-28
 updated: 2026-10-29
 related-artifacts: FRAMEWORK-ARCHITECTURE-004, FRAMEWORK-PROFILE-030-001, FRAMEWORK-CONTRACT-030, FRAMEWORK-BACKLOG-001, DECISION-043
@@ -50,3 +50,15 @@ Independent reviewer `/root/fw030_option_fix_review` identified that `_verify_co
 ## Cycle-3 retry disposition (2026-10-29)
 
 After the cycle-3 corrected adapter review passed, a one-time trigger workflow was independently reviewed at `8701f2f256230add2fe9e75e1fbc8ab2c9163d02`; exact adapter and workflow Verify Pipeline runs `40874914344`, `40874924272`, `40875188008`, and `40875194970` passed their required jobs. The authorized synthetic retry [40875354469](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40875354469) ran on source `a1d7b4364ec7ea8a90577b28ac760c4c3d5901c9`, reached container inspection, then returned `fw030.adapter.mount_observation_mismatch` before case results. Cleanup was reported `complete`. The trigger workflow and marker were removed immediately after the run. The single retry under DECISION-044 is consumed; no FW030-IMPL-02 pass is claimed. DECISION-046 is a separate owner checkpoint for one bounded sanitized bind-observation correction/review/CI/retry cycle.
+
+
+
+## Cycle-4 bind-observation disposition (2026-10-29)
+
+Under DECISION-046, candidate `73154a4887907265ae53a927e79afb983b74e38b` received NEEDS-CHANGES: the code allowed `rprivate` before the diagnostic had observed it. The corrected diagnostic-only candidate `db1719555e3c356f1bfe23b415ae97ee31fa4048` passed independent read-only review; it kept the policy strict to `ro` while emitting bounded summaries without host paths. Its Verify Pipeline [40884972685](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40884972685) passed all three required jobs. Temporary diagnostic workflow commit `6b23427089f300243906d1c2aeb971672282e8b3` passed independent review and exact Verify Pipeline [40885371281](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40885371281); the one-marker workflow was removed after use.
+
+Diagnostic run [40885552547](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40885552547) on source `cf17a9709a328d21996d7129a730e573714eba1c` produced no cases and cleanup complete. The sanitized report observed one HostConfig bind, source match true, destination `/input`, options `ro,rprivate`; one effective `bind`, source match true, destination `/input`, read-only true. Verify Pipeline [40885561837](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40885561837) passed all required checks. The report's allowlisted token summary did not explain why validation rejected the binding.
+
+The evidence-bounded correction candidate `e50b262cc5a6f9197572b811bef74d0ed3fde451` was independently reviewed PASS and its focused adapter suite passed (19 tests); Verify Pipeline [40885994850](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40885994850) passed all three required jobs. It accepted only option sets `ro` or `ro,rprivate`, with exact effective source/destination/read-only checks and negative cases.
+
+The single DECISION-046 retry [40886378843](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40886378843), on trigger source `27a2089488af90f04d69a41207208ea0e483672d`, again failed at `mount_observation_mismatch`, produced no cases, and reported cleanup complete. Its sanitized output repeated the expected source, `/input`, `ro,rprivate`, and effective read-only bind observations. Therefore FW030-IMPL-02 remains blocked. DECISION-046 is exhausted. DECISION-047 authorizes only a fresh bounded diagnostic cycle to identify the remaining rejection without exposing paths or raw arbitrary option values; no further policy changes or retry are permitted until that checkpoint's evidence, independent review, and exact CI requirements are met. No profile expansion, app data/secrets, production, merge, or deployment is claimed.
