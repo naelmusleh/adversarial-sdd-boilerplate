@@ -80,3 +80,8 @@ A second independent review of `7c6fc50ea3dcb29cfa2c1d214f44f9ae2107b58b` return
 ### Cycle-5 correction disposition
 
 Corrected candidate `bd85f9d6220e834b99171375837c372f759cbf79` passed independent read-only review. The reviewer confirmed that preflight rejects empty and blank mountinfo, locates the separator after the six mandatory fields, requires exactly three post-separator filesystem fields, and covers valid optional fields, nested mounts, malformed records, and trailing data. Exact Verify Pipeline run [40888950113](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40888950113) passed Metadata & Artifact Audit, Initializer Regression Gate, and TypeScript Static Code Analysis; optional pilot jobs were skipped on push. The focused mountinfo fixture passed locally. The single authorized synthetic retry remains pending a separately reviewed temporary trigger workflow and its exact-revision CI. No workload result or FW030-IMPL-02 pass is claimed.
+
+
+### Cycle-5 retry workflow checkpoint
+
+Temporary trigger workflow commit `80d54c11fdbad6f52fe7e9b6e809578406726087` passed independent read-only review. The reviewer confirmed the workflow triggers only on the dedicated marker path on `codex/fw030-impl02`, has no top-level permissions or secrets, gives its sole reusable-pilot job `contents: read`, and has no marker present in that commit. Exact Verify Pipeline [40889191310](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40889191310) passed all three required jobs; optional synthetic jobs were skipped. DECISION-047’s one retry is now authorized for dispatch by adding the dedicated marker. The workflow and marker must be removed after the run; no merge/deploy is in scope.
