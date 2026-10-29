@@ -53,16 +53,18 @@ Runner = Callable[[Sequence[str], int], subprocess.CompletedProcess[str]]
 
 def _run(argv: Sequence[str], timeout: int, env: Mapping[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     """Run a host-side Podman command without a shell and discard inherited secrets."""
-    base = os.environ
+    base = env or os.environ
+    root = Path(base.get("FW030_PILOT_ROOT", "/tmp"))
     safe_env = {
         "PATH": base.get("PATH", "/usr/bin:/bin"),
-        "HOME": base.get("HOME", "/tmp"),
+        "HOME": str(root / "podman-home"),
         "LANG": "C.UTF-8",
         "LC_ALL": "C.UTF-8",
     }
-    for name in ("XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS", "TMPDIR", "CONTAINERS_CONF", "CONTAINERS_STORAGE_CONF"):
+    for name in ("XDG_RUNTIME_DIR",):
         if base.get(name):
             safe_env[name] = base[name]
+    safe_env["TMPDIR"] = str(root / "podman-tmp")
     if env:
         safe_env.update(env)
     try:
@@ -160,9 +162,13 @@ def _check_request(raw: bytes, env: Mapping[str, str]) -> tuple[dict[str, Any], 
     if request["execution_context"]["kind"] != "hosted":
         raise AdapterError("fw030.adapter.context_unsupported", "this adapter supports hosted GitHub Actions context only", "unsupported")
     context = request["execution_context"]["provider_context"]
+    try:
+        run_attempt = int(env.get("GITHUB_RUN_ATTEMPT", "0"))
+    except ValueError:
+        raise AdapterError("fw030.adapter.provider_context_invalid", "GitHub Actions attempt metadata is invalid", "unsupported")
     expected_pairs = {
         "provider": "GitHub Actions", "run_id": env.get("GITHUB_RUN_ID"),
-        "attempt": int(env.get("GITHUB_RUN_ATTEMPT", "0")), "event": env.get("GITHUB_EVENT_NAME"),
+        "attempt": run_attempt, "event": env.get("GITHUB_EVENT_NAME"),
         "ref": env.get("GITHUB_REF"),
     }
     if any(context.get(key) != value for key, value in expected_pairs.items()):
@@ -238,6 +244,7 @@ def _verify_container(inspect: Any, request: Mapping[str, Any]) -> None:
     config = item.get("Config", {})
     host = item.get("HostConfig", {})
     limits = request["policy"]["limits"]
+    input_source = next(mount["source"] for mount in request["policy"]["mounts"] if mount["kind"] == "input")
     cpu_nano = limits["cpu_millis"] * 1_000_000
     tmpfs = set(host.get("Tmpfs", {}).get("/output", "").split(","))
     required_tmpfs = {"rw", "noexec", "nosuid", f"size={limits['disk_mb']}m",
@@ -246,12 +253,15 @@ def _verify_container(inspect: Any, request: Mapping[str, Any]) -> None:
             or host.get("Memory") != limits["memory_mb"] * 1024 * 1024
             or host.get("NanoCpus") != cpu_nano or host.get("PidsLimit") != limits["process_count"]
             or config.get("User") != f"{request['policy']['uid']}:{request['policy']['gid']}"
+            or config.get("Image") != request["workload"]["image"]
+            or config.get("Cmd") != request["workload"]["argv"]
+            or config.get("WorkingDir") != request["workload"]["working_directory"]
             or "ALL" not in host.get("CapDrop", [])
             or not any("no-new-privileges" in item for item in host.get("SecurityOpt", []))
             or not required_tmpfs.issubset(tmpfs)):
         raise AdapterError("fw030.adapter.policy_mismatch", "observed container configuration does not match the requested controls")
     mounts = host.get("Binds", [])
-    if len(mounts) != 1 or not mounts[0].endswith(":/input:ro"):
+    if mounts != [f"{input_source}:/input:ro"]:
         raise AdapterError("fw030.adapter.mount_observation_mismatch", "observed input binding is not the declared read-only input")
 
 
@@ -267,18 +277,23 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
     cases: list[dict[str, str]] = []
     diagnostics: list[dict[str, str]] = []
     container_name = ""
-    run = runner or (lambda argv, timeout: _run(argv, timeout))
+    run = runner or (lambda argv, timeout: _run(argv, timeout, active_env))
     try:
         host = _host_facts(active_env)
         request, request_digest = _check_request(raw, active_env)
         root, input_dir, output_dir = _safe_paths(request, active_env)
+        (root / "podman-home").mkdir(mode=0o700, exist_ok=True)
+        (root / "podman-tmp").mkdir(mode=0o700, exist_ok=True)
+        auth_file = root / "podman-home" / "auth.json"
+        auth_file.write_text("{}", encoding="utf-8")
+        os.chmod(auth_file, 0o600)
         timeout = request["policy"]["limits"]["wall_seconds"]
         runtime = _profile_observation(run, min(timeout, 30))
         if runtime["oci_runtime"] != OCI_RUNTIME or runtime["oci_runtime_version"] != OCI_RUNTIME_VERSION:
             raise AdapterError("fw030.adapter.oci_runtime_mismatch", "OCI runtime identity does not match the observed profile", "unsupported")
         if observation_sink:
             observation_sink({**host, **runtime, "image_pull": "host registry access for exact pinned digest; workload network remains disabled"})
-        pulled = run(["podman", "pull", "--platform", "linux/amd64", "--quiet", PINNED_IMAGE], min(timeout, 120))
+        pulled = run(["podman", "pull", "--authfile", str(auth_file), "--platform", "linux/amd64", "--quiet", PINNED_IMAGE], min(timeout, 120))
         if pulled.returncode != 0:
             raise AdapterError("fw030.adapter.image_unavailable", "the exact pinned workload image could not be retrieved")
         readiness = "prerequisites_valid"
@@ -300,7 +315,8 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
             "--user", f"{request['policy']['uid']}:{request['policy']['gid']}", "--cap-drop=all",
             "--security-opt=no-new-privileges", f"--memory={limit['memory_mb']}m",
             f"--cpus={limit['cpu_millis'] / 1000:.3f}", f"--pids-limit={limit['process_count']}",
-            f"--timeout={timeout}", f"--tmpfs=/output:rw,noexec,nosuid,size={limit['disk_mb']}m,uid={request['policy']['uid']},gid={request['policy']['gid']}",
+            f"--timeout={timeout}", f"--workdir={request['workload']['working_directory']}",
+            f"--tmpfs=/output:rw,noexec,nosuid,size={limit['disk_mb']}m,uid={request['policy']['uid']},gid={request['policy']['gid']}",
             "--volume", f"{input_dir}:/input:ro", request["workload"]["image"],
             *request["workload"]["argv"],
         ]
@@ -322,8 +338,15 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
             result_path = output_dir / "cases.json"
             if result_path.is_symlink() or not result_path.is_file() or result_path.stat().st_size > min(MAX_OUTPUT_BYTES, request["policy"]["evidence"]["max_output_bytes"]):
                 raise AdapterError("fw030.adapter.output_invalid", "case result is not a bounded ordinary file")
-            parsed = _json_without_duplicates(result_path.read_bytes())
-            if not isinstance(parsed, list) or any(not isinstance(item, dict) or set(item) != {"case_id", "outcome"} for item in parsed):
+            try:
+                parsed = _json_without_duplicates(result_path.read_bytes())
+                if not isinstance(parsed, list) or any(not isinstance(item, dict) or set(item) != {"case_id", "outcome"} for item in parsed):
+                    raise ValueError("shape")
+                if any(not isinstance(item["case_id"], str) or not isinstance(item["outcome"], str) for item in parsed):
+                    raise ValueError("type")
+                if any(item["outcome"] not in {"passed", "failed", "skipped", "unknown"} for item in parsed):
+                    raise ValueError("outcome")
+            except (UnicodeError, json.JSONDecodeError, ValueError, TypeError, RecursionError):
                 raise AdapterError("fw030.adapter.cases_invalid", "case results do not match the bounded output contract")
             cases = [{"case_id": item["case_id"], "outcome": item["outcome"]} for item in parsed]
             expected = request["policy"]["evidence"]["case_ids"]
