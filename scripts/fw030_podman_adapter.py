@@ -378,7 +378,18 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
             execution = "succeeded"
         else:
             execution = "failed"
-            diagnostics.append(_diag("fw030.adapter.workload_failed", "$.states.execution", f"workload exited with status {ran.returncode}; case results are unavailable"))
+            stderr = (ran.stderr or "").lower()
+            error_classes = (
+                ("permission denied", "permission_denied"),
+                ("operation not permitted", "operation_not_permitted"),
+                ("invalid argument", "invalid_argument"),
+                ("exec format error", "exec_format_error"),
+                ("no such file or directory", "missing_runtime_path"),
+                ("cannot set up namespace", "namespace_setup_failed"),
+                ("executable file not found", "executable_missing"),
+            )
+            error_class = next((label for marker, label in error_classes if marker in stderr), "unclassified")
+            diagnostics.append(_diag("fw030.adapter.workload_failed", "$.states.execution", f"workload exited with status {ran.returncode}; runtime_error_class={error_class}; case results are unavailable"))
     except AdapterCancelled:
         execution = "cancelled"
         diagnostics.append(_diag("fw030.adapter.cancelled", "$.states.execution", "adapter received a cancellation signal"))
