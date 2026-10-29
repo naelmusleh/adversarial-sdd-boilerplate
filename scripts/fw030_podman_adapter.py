@@ -378,7 +378,7 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
             execution = "succeeded"
         else:
             execution = "failed"
-            diagnostics.append(_diag("fw030.adapter.workload_failed", "$.states.execution", "workload returned a non-zero status or exceeded its runtime limit"))
+            diagnostics.append(_diag("fw030.adapter.workload_failed", "$.states.execution", f"workload exited with status {ran.returncode}; case results are unavailable"))
     except AdapterCancelled:
         execution = "cancelled"
         diagnostics.append(_diag("fw030.adapter.cancelled", "$.states.execution", "adapter received a cancellation signal"))
@@ -476,13 +476,27 @@ def main(argv: Sequence[str] | None = None) -> int:
     sentinel.write_text("synthetic-host-only-value", encoding="utf-8")
     (root / "input" / "fixture.txt").write_text("synthetic-fixture", encoding="utf-8")
     script = f'''#!/bin/sh
-set -eu
-test "$(cat /input/fixture.txt)" = synthetic-fixture
-if touch /input/forbidden-write 2>/dev/null; then exit 61; fi
-if cat "{sentinel}" >/dev/null 2>&1; then exit 62; fi
-if /bin/busybox wget -T 2 -qO- http://1.1.1.1/ >/dev/null 2>&1; then exit 63; fi
-test -z "${{FW030_SECRET_SENTINEL-}}"
-printf '[{{"case_id":"INPUT_READONLY","outcome":"passed"}},{{"case_id":"HOST_PATH_DENIED","outcome":"passed"}},{{"case_id":"NETWORK_DISABLED","outcome":"passed"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"passed"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"passed"}}]' > /output/cases.json
+set -u
+input_read=failed
+if [ "$(cat /input/fixture.txt 2>/dev/null)" = synthetic-fixture ]; then input_read=passed; fi
+input_readonly=failed
+if ! touch /input/forbidden-write 2>/dev/null; then input_readonly=passed; fi
+host_denied=failed
+if ! cat "{sentinel}" >/dev/null 2>&1; then host_denied=passed; fi
+network_disabled=unknown
+if [ -x /bin/busybox ]; then
+  if ! /bin/busybox wget -T 2 -qO- http://1.1.1.1/ >/dev/null 2>&1; then network_disabled=passed; else network_disabled=failed; fi
+fi
+secrets_disabled=failed
+if [ -z "${{FW030_SECRET_SENTINEL-}}" ]; then secrets_disabled=passed; fi
+output_bounded=passed
+cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"'${{output_bounded}}'"}}]'
+printf '%s' "$cases" > /output/cases.json 2>/dev/null || exit 70
+if [ "$(wc -c < /output/cases.json)" -gt 4096 ]; then
+  output_bounded=failed
+  cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"failed"}}]'
+  printf '%s' "$cases" > /output/cases.json 2>/dev/null || exit 70
+fi
 '''
     (root / "input" / "workload.sh").write_text(script, encoding="utf-8")
     os.chmod(root / "input" / "fixture.txt", 0o644)
