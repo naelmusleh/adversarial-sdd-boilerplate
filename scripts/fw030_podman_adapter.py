@@ -295,6 +295,31 @@ def _profile_observation(runner: Runner, timeout: int) -> dict[str, Any]:
             "oci_runtime_version": version_match.group(1), "oci_runtime_version_raw": runtime_version_raw}
 
 
+def _tmpfs_options_match(raw: Any, disk_mb: int) -> bool:
+    if not isinstance(raw, str):
+        return False
+    options = raw.split(",")
+    required = {"rw", "noexec", "nosuid", "nodev", "mode=1777", f"size={disk_mb}m"}
+    # Podman 4.9 may normalize namespace/copy-up options and duplicate nodev.
+    # Permit those known additions, but reject conflicting or unrecognized options.
+    allowed = required | {"rprivate", "tmpcopyup"}
+    return required.issubset(options) and set(options).issubset(allowed)
+
+
+def _effective_tmpfs_mount_matches(raw: bytes, disk_mb: int) -> bool:
+    try:
+        mountpoint, fs_type, mount_options, super_options = raw.decode("ascii", errors="strict").strip().split("|", 3)
+    except (UnicodeError, ValueError):
+        return False
+    if mountpoint != "/output" or fs_type != "tmpfs":
+        return False
+    options = set(mount_options.split(",")) | set(super_options.split(","))
+    required = {"rw", "noexec", "nosuid", "nodev", "mode=1777"}
+    size_options = {f"size={disk_mb}m", f"size={disk_mb * 1024}k"}
+    allowed = required | size_options | {"relatime", "inode64"}
+    return required.issubset(options) and bool(options & size_options) and options.issubset(allowed)
+
+
 def _verify_container(inspect: Any, request: Mapping[str, Any]) -> None:
     if not isinstance(inspect, list) or len(inspect) != 1 or not isinstance(inspect[0], dict):
         raise AdapterError("fw030.adapter.inspect_invalid", "runtime inspection did not return one expected container")
@@ -304,8 +329,8 @@ def _verify_container(inspect: Any, request: Mapping[str, Any]) -> None:
     limits = request["policy"]["limits"]
     input_source = next(mount["source"] for mount in request["policy"]["mounts"] if mount["kind"] == "input")
     cpu_nano = limits["cpu_millis"] * 1_000_000
-    tmpfs = set(host.get("Tmpfs", {}).get("/output", "").split(","))
-    required_tmpfs = {"rw", "noexec", "nosuid", "nodev", "mode=1777", f"size={limits['disk_mb']}m"}
+    tmpfs_config = host.get("Tmpfs")
+    configured_tmpfs = tmpfs_config.get("/output") if isinstance(tmpfs_config, dict) else None
     if (host.get("NetworkMode") != "none" or host.get("ReadonlyRootfs") is not True
             or host.get("Memory") != limits["memory_mb"] * 1024 * 1024
             or host.get("NanoCpus") != cpu_nano or host.get("PidsLimit") != limits["process_count"]
@@ -321,13 +346,18 @@ def _verify_container(inspect: Any, request: Mapping[str, Any]) -> None:
             or (host.get("PortBindings") or {}) != {}
             or not any("no-new-privileges" in item for item in host.get("SecurityOpt", []))
             or set(host.get("Tmpfs", {})) != {"/output"}
-            or not required_tmpfs.issubset(tmpfs)):
+            or not _tmpfs_options_match(configured_tmpfs, limits["disk_mb"])):
         raise AdapterError("fw030.adapter.policy_mismatch", "observed container configuration does not match the requested controls")
     mounts = host.get("Binds", [])
     if mounts != [f"{input_source}:/input:ro"]:
         raise AdapterError("fw030.adapter.mount_observation_mismatch", "observed input binding is not the declared read-only input")
-    effective_binds = [mount for mount in item.get("Mounts", []) if mount.get("Type") == "bind"]
-    if len(effective_binds) != 1 or effective_binds[0].get("Source") != input_source or effective_binds[0].get("Destination") != "/input" or effective_binds[0].get("RW") is not False:
+    effective_mounts = item.get("Mounts")
+    if (not isinstance(effective_mounts, list) or len(effective_mounts) != 1
+            or not isinstance(effective_mounts[0], dict)
+            or effective_mounts[0].get("Type") != "bind"
+            or effective_mounts[0].get("Source") != input_source
+            or effective_mounts[0].get("Destination") != "/input"
+            or effective_mounts[0].get("RW") is not False):
         raise AdapterError("fw030.adapter.mount_observation_mismatch", "effective bind mounts differ from the exact read-only input declaration")
 
 
@@ -409,6 +439,12 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
             copied = run(["podman", "cp", f"{container_name}:/output/cases.json", str(output_dir / "cases.json")], 15)
             if copied.returncode != 0:
                 raise AdapterError("fw030.adapter.output_missing", "bounded case result could not be retrieved")
+            mount_copy = run(["podman", "cp", f"{container_name}:/output/tmpfs-mountinfo.txt", str(root / "tmpfs-mountinfo.txt")], 15)
+            mountinfo_path = root / "tmpfs-mountinfo.txt"
+            if (mount_copy.returncode != 0 or mountinfo_path.is_symlink() or not mountinfo_path.is_file()
+                    or mountinfo_path.stat().st_size > 4096
+                    or not _effective_tmpfs_mount_matches(mountinfo_path.read_bytes(), limit["disk_mb"])):
+                raise AdapterError("fw030.adapter.tmpfs_observation_invalid", "effective output tmpfs mount evidence was missing or did not match the selected policy")
             result_path = output_dir / "cases.json"
             if result_path.is_symlink() or not result_path.is_file() or result_path.stat().st_size > min(MAX_OUTPUT_BYTES, request["policy"]["evidence"]["max_output_bytes"]):
                 raise AdapterError("fw030.adapter.output_invalid", "case result is not a bounded ordinary file")
@@ -423,6 +459,10 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
             except (UnicodeError, json.JSONDecodeError, ValueError, TypeError, RecursionError):
                 raise AdapterError("fw030.adapter.cases_invalid", "case results do not match the bounded output contract")
             cases = [{"case_id": item["case_id"], "outcome": item["outcome"]} for item in parsed]
+            tmpfs_cases = [item for item in cases if item["case_id"] == "OUTPUT_TMPFS_EFFECTIVE"]
+            if len(tmpfs_cases) != 1 or tmpfs_cases[0]["outcome"] != "unknown":
+                raise AdapterError("fw030.adapter.tmpfs_observation_invalid", "workload did not provide exactly one unclaimed tmpfs evidence case")
+            tmpfs_cases[0]["outcome"] = "passed"
             expected = request["policy"]["evidence"]["case_ids"]
             if sorted(item["case_id"] for item in cases) != sorted(expected) or any(item["outcome"] != "passed" for item in cases):
                 raise AdapterError("fw030.adapter.case_failure", "one or more required synthetic boundary cases failed")
@@ -507,7 +547,7 @@ def _pilot_request(env: Mapping[str, str], root: Path) -> tuple[bytes, dict[str,
         "limits": {"cpu_millis": 1000, "memory_mb": 128, "process_count": 32, "disk_mb": 16, "wall_seconds": 30},
         "cancellation": "terminate_then_kill_within_wall_limit",
         "evidence": {"mode": "allowlisted_redacted", "max_output_bytes": 4096,
-                     "case_ids": ["INPUT_READONLY", "HOST_PATH_DENIED", "NETWORK_DISABLED", "SECRETS_NOT_INJECTED", "OUTPUT_BOUNDED"]},
+                     "case_ids": ["INPUT_READONLY", "HOST_PATH_DENIED", "NETWORK_DISABLED", "SECRETS_NOT_INJECTED", "OUTPUT_BOUNDED", "OUTPUT_TMPFS_EFFECTIVE"]},
     }
     canonical_policy = json.dumps(policy, sort_keys=True, separators=(",", ":")).encode("utf-8")
     policy["sha256"] = hashlib.sha256(canonical_policy).hexdigest()
@@ -535,6 +575,34 @@ def _pilot_request(env: Mapping[str, str], root: Path) -> tuple[bytes, dict[str,
     return raw, auth
 
 
+def _pilot_workload_script(sentinel: Path) -> str:
+    return f'''#!/bin/sh
+set -u
+input_read=failed
+if [ "$(cat /input/fixture.txt 2>/dev/null)" = synthetic-fixture ]; then input_read=passed; fi
+input_readonly=failed
+if [ "$input_read" = passed ] && ! touch /input/forbidden-write 2>/dev/null; then input_readonly=passed; fi
+host_denied=failed
+if ! cat "{sentinel}" >/dev/null 2>&1; then host_denied=passed; fi
+network_disabled=unknown
+if [ -x /bin/busybox ]; then
+  if ! /bin/busybox wget -T 2 -qO- http://1.1.1.1/ >/dev/null 2>&1; then network_disabled=passed; else network_disabled=failed; fi
+fi
+secrets_disabled=failed
+if [ -z "${{FW030_SECRET_SENTINEL-}}" ]; then secrets_disabled=passed; fi
+output_bounded=passed
+mount_row=$(awk '$5 == "/output" {{ for (i=1;i<=NF;i++) if ($i == "-") {{ print $5 "|" $(i+1) "|" $6 "|" $(i+3); exit }} }}' /proc/self/mountinfo)
+printf '%s' "$mount_row" > /output/tmpfs-mountinfo.txt 2>/dev/null || exit 70
+cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"'${{output_bounded}}'"}},{{"case_id":"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"}}]'
+printf '%s' "$cases" > /output/cases.json 2>/dev/null || exit 70
+if [ "$(wc -c < /output/cases.json)" -gt 4096 ]; then
+  output_bounded=failed
+  cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"failed"}},{{"case_id":"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"}}]'
+  printf '%s' "$cases" > /output/cases.json 2>/dev/null || exit 70
+fi
+'''
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pilot", action="store_true", help="run the synthetic, fixed-input adapter pilot")
@@ -555,29 +623,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     sentinel = root / "host-sentinel.txt"
     sentinel.write_text("synthetic-host-only-value", encoding="utf-8")
     (root / "input" / "fixture.txt").write_text("synthetic-fixture", encoding="utf-8")
-    script = f'''#!/bin/sh
-set -u
-input_read=failed
-if [ "$(cat /input/fixture.txt 2>/dev/null)" = synthetic-fixture ]; then input_read=passed; fi
-input_readonly=failed
-if [ "$input_read" = passed ] && ! touch /input/forbidden-write 2>/dev/null; then input_readonly=passed; fi
-host_denied=failed
-if ! cat "{sentinel}" >/dev/null 2>&1; then host_denied=passed; fi
-network_disabled=unknown
-if [ -x /bin/busybox ]; then
-  if ! /bin/busybox wget -T 2 -qO- http://1.1.1.1/ >/dev/null 2>&1; then network_disabled=passed; else network_disabled=failed; fi
-fi
-secrets_disabled=failed
-if [ -z "${{FW030_SECRET_SENTINEL-}}" ]; then secrets_disabled=passed; fi
-output_bounded=passed
-cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"'${{output_bounded}}'"}}]'
-printf '%s' "$cases" > /output/cases.json 2>/dev/null || exit 70
-if [ "$(wc -c < /output/cases.json)" -gt 4096 ]; then
-  output_bounded=failed
-  cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"failed"}}]'
-  printf '%s' "$cases" > /output/cases.json 2>/dev/null || exit 70
-fi
-'''
+    script = _pilot_workload_script(sentinel)
     (root / "input" / "workload.sh").write_text(script, encoding="utf-8")
     os.chmod(root / "input" / "fixture.txt", 0o644)
     os.chmod(root / "input" / "workload.sh", 0o644)
@@ -647,3 +693,4 @@ fi
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

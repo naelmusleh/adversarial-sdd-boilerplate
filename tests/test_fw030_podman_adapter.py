@@ -20,7 +20,7 @@ FIXTURE = ROOT / "docs/framework/schemas/fw030/fixtures/request.valid.synthetic.
 class PodmanAdapterTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name) / "invocation"
+        self.root = Path(self.temp.name).resolve() / "invocation"
         (self.root / "input").mkdir(parents=True)
         (self.root / "output").mkdir()
         (self.root / "input" / "fixture.txt").write_text("synthetic", encoding="utf-8")
@@ -30,7 +30,7 @@ class PodmanAdapterTests(unittest.TestCase):
             "GITHUB_REPOSITORY": "example/framework", "GITHUB_SHA": "a" * 40,
             "GITHUB_RUN_ID": "12345", "GITHUB_RUN_ATTEMPT": "1",
             "GITHUB_EVENT_NAME": "workflow_dispatch", "GITHUB_REF": "refs/heads/test",
-            "FW030_PILOT_ROOT": str(self.root), "RUNNER_TEMP": str(self.root.parent),
+            "FW030_PILOT_ROOT": str(self.root), "RUNNER_TEMP": str(self.root.parent.resolve()),
         }
         self.request = json.loads(FIXTURE.read_text(encoding="utf-8"))
         self.request["source"] = {"repository": self.env["GITHUB_REPOSITORY"], "revision": self.env["GITHUB_SHA"], "tree_sha256": "b" * 64}
@@ -46,6 +46,7 @@ class PodmanAdapterTests(unittest.TestCase):
         self.request["policy"]["limits"] = {"cpu_millis": 1000, "memory_mb": 128, "process_count": 32, "disk_mb": 16, "wall_seconds": 30}
         self.request["policy"]["uid"] = 1000
         self.request["policy"]["gid"] = 1000
+        self.request["policy"]["evidence"]["case_ids"] = ["INPUT_READONLY", "HOST_PATH_DENIED", "NETWORK_DISABLED", "SECRETS_NOT_INJECTED", "OUTPUT_BOUNDED", "OUTPUT_TMPFS_EFFECTIVE"]
         policy = dict(self.request["policy"])
         policy.pop("sha256")
         self.request["policy"]["sha256"] = hashlib.sha256(json.dumps(policy, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
@@ -109,15 +110,22 @@ class PodmanAdapterTests(unittest.TestCase):
 
     def test_rejects_unbound_authorization_before_workload(self) -> None:
         runtime = {"podman": adapter.PODMAN_VERSION, "oci_runtime": "crun", "oci_runtime_version": "1.14.1"}
+        calls = []
+        def runner(argv, timeout):
+            calls.append(list(argv))
+            if argv[:2] == ["podman", "pull"]:
+                return subprocess.CompletedProcess(argv, 0, "", "")
+            raise AssertionError("unbound authorization must not start a workload")
         with patch.object(adapter, "_host_facts", return_value={"os": "Ubuntu 24.04", "architecture": "x86_64", "image_header": "unknown", "image_env": "ubuntu24"}), patch.object(adapter, "_profile_observation", return_value=runtime):
-            result = adapter.run_request(self.raw, {**self.auth, "authorized_request_sha256": "d" * 64}, self.env)
+            result = adapter.run_request(self.raw, {**self.auth, "authorized_request_sha256": "d" * 64}, self.env, runner)
         self.assertEqual(result["states"]["execution"], "not_started")
         self.assertIsNone(result["authorization_reference"])
+        self.assertFalse(any(call[:2] == ["podman", "run"] for call in calls))
         self.assertIn("fw030.adapter.authorization_invalid", {d["code"] for d in result["diagnostics"]})
         self.assertTrue(validate_result(json.dumps(result))["valid"])
 
     def test_success_requires_all_declared_cases_and_verified_cleanup(self) -> None:
-        cases = [{"case_id": case_id, "outcome": "passed"} for case_id in self.request["policy"]["evidence"]["case_ids"]]
+        cases = [{"case_id": case_id, "outcome": "unknown" if case_id == "OUTPUT_TMPFS_EFFECTIVE" else "passed"} for case_id in self.request["policy"]["evidence"]["case_ids"]]
         inspect = [{"Config": {"User": "1000:1000", "Image": adapter.PINNED_IMAGE,
                                 "Cmd": ["sh", "-eu", "/input/workload.sh"], "WorkingDir": "/input"}, "HostConfig": {
             "NetworkMode": "none", "ReadonlyRootfs": True, "Memory": 128 * 1024 * 1024,
@@ -133,7 +141,10 @@ class PodmanAdapterTests(unittest.TestCase):
             if argv[:2] == ["podman", "inspect"]:
                 return subprocess.CompletedProcess(argv, 0, json.dumps(inspect), "")
             if argv[:2] == ["podman", "cp"]:
-                Path(argv[-1]).write_text(json.dumps(cases), encoding="utf-8")
+                if argv[2].endswith("/output/cases.json"):
+                    Path(argv[-1]).write_text(json.dumps(cases), encoding="utf-8")
+                else:
+                    Path(argv[-1]).write_text("/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64", encoding="ascii")
                 return subprocess.CompletedProcess(argv, 0, "", "")
             if argv[:3] == ["podman", "container", "exists"]:
                 return subprocess.CompletedProcess(argv, next(existence_checks), "", "")
@@ -174,6 +185,52 @@ class PodmanAdapterTests(unittest.TestCase):
             adapter._verify_container(inspect, request)
         self.assertEqual(caught.exception.code, "fw030.adapter.mount_observation_mismatch")
 
+    def test_tmpfs_config_rejects_conflicting_or_unexpected_options(self) -> None:
+        base = "rw,noexec,nosuid,nodev,size=16m,mode=1777,rprivate,tmpcopyup,nodev"
+        self.assertTrue(adapter._tmpfs_options_match(base, 16))
+        for conflicting in ("exec", "suid", "dev", "ro", "size=32m", "mode=0700", "uid=1000"):
+            with self.subTest(conflicting=conflicting):
+                self.assertFalse(adapter._tmpfs_options_match(f"{base},{conflicting}", 16))
+        self.assertFalse(adapter._tmpfs_options_match(None, 16))
+
+    def test_effective_tmpfs_mount_observation_is_strict(self) -> None:
+        valid = b"/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64"
+        self.assertTrue(adapter._effective_tmpfs_mount_matches(valid, 16))
+        for observed in (
+            b"/output|ext4|rw,nosuid,nodev,noexec|rw,size=16384k,mode=1777",
+            b"/other|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,mode=1777",
+            b"/output|tmpfs|rw,suid,nodev,noexec|rw,size=16384k,mode=1777",
+            b"/output|tmpfs|rw,nosuid,nodev,exec|rw,size=16384k,mode=1777",
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=32768k,mode=1777",
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,mode=0700",
+        ):
+            with self.subTest(observed=observed):
+                self.assertFalse(adapter._effective_tmpfs_mount_matches(observed, 16))
+
+    def test_generated_workload_has_valid_shell_syntax_and_does_not_claim_tmpfs(self) -> None:
+        script = adapter._pilot_workload_script(Path("/synthetic/host-sentinel.txt"))
+        checked = subprocess.run(["sh", "-n"], input=script, text=True, capture_output=True, check=False)
+        self.assertEqual(checked.returncode, 0, checked.stderr)
+        self.assertIn("/proc/self/mountinfo", script)
+        self.assertIn('"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"', script)
+
+    def test_rejects_unreported_or_additional_effective_mounts(self) -> None:
+        request = copy.deepcopy(self.request)
+        inspect = [{"Config": {"User": "1000:1000", "Image": adapter.PINNED_IMAGE,
+                                "Cmd": request["workload"]["argv"], "WorkingDir": "/input"},
+                    "HostConfig": {"NetworkMode": "none", "ReadonlyRootfs": True,
+                                   "Memory": 128 * 1024 * 1024, "NanoCpus": 1_000_000_000,
+                                   "PidsLimit": 32, "CapDrop": ["ALL"],
+                                   "SecurityOpt": ["no-new-privileges"],
+                                   "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777"},
+                                   "Binds": [f"{self.root}/input:/input:ro"]},
+                    "Mounts": [{"Type": "bind", "Source": str(self.root / "input"),
+                                "Destination": "/input", "RW": False},
+                               {"Type": "volume", "Source": "unexpected", "Destination": "/output", "RW": True}]}]
+        with self.assertRaises(adapter.AdapterError) as caught:
+            adapter._verify_container(inspect, request)
+        self.assertEqual(caught.exception.code, "fw030.adapter.mount_observation_mismatch")
+
     def test_malformed_case_output_becomes_failed_result_and_still_cleans_up(self) -> None:
         inspect = [{"Config": {"User": "1000:1000", "Image": adapter.PINNED_IMAGE,
                                 "Cmd": self.request["workload"]["argv"], "WorkingDir": "/input"},
@@ -190,7 +247,10 @@ class PodmanAdapterTests(unittest.TestCase):
             if argv[:2] == ["podman", "inspect"]:
                 return subprocess.CompletedProcess(argv, 0, json.dumps(inspect), "")
             if argv[:2] == ["podman", "cp"]:
-                Path(argv[-1]).write_text('[{"case_id": [], "outcome": "passed"}]', encoding="utf-8")
+                if argv[2].endswith("/output/cases.json"):
+                    Path(argv[-1]).write_text('[{"case_id": [], "outcome": "passed"}]', encoding="utf-8")
+                else:
+                    Path(argv[-1]).write_text("/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,mode=1777", encoding="ascii")
                 return subprocess.CompletedProcess(argv, 0, "", "")
             if argv[:3] == ["podman", "container", "exists"]:
                 return subprocess.CompletedProcess(argv, next(existence_checks), "", "")
@@ -253,3 +313,4 @@ class PodmanAdapterTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
