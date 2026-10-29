@@ -199,6 +199,21 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertEqual(row["other_option_keys"], ["<other>", "password", "uid"])
         self.assertTrue(row["option_details"][2]["has_value"])
 
+    def test_mount_observation_truncates_option_details_and_keys(self) -> None:
+        source = str(self.root / "input")
+        tokens = [f"option{i:02d}=private-value" for i in range(40)]
+        item = {"HostConfig": {"Binds": [f"{source}:/input:{','.join(tokens)}"]},
+                "Mounts": [{"Type": "bind", "Source": source, "Destination": "/input", "RW": False}]}
+        row = adapter._mount_observation_summary(item, source)["binds"][0]
+        self.assertEqual(row["option_count"], 32)
+        self.assertTrue(row["option_count_truncated"])
+        self.assertEqual(len(row["option_details"]), 8)
+        self.assertEqual(len(row["other_option_keys"]), 8)
+        self.assertTrue(all(len(key) <= 24 for key in row["other_option_keys"]))
+        rendered = json.dumps(row)
+        self.assertNotIn("private-value", rendered)
+        self.assertNotIn("option39", rendered)
+
     def test_mount_observation_allows_observed_default_rprivate(self) -> None:
         request = copy.deepcopy(self.request)
         source = str(self.root / "input")
