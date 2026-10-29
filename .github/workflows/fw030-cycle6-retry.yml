@@ -1,0 +1,17 @@
+name: FW-030 Cycle 6 Conditional Synthetic Retry
+
+on:
+  push:
+    branches:
+      - codex/fw030-impl02
+    paths:
+      - scripts/fw030-cycle6-retry-trigger.txt
+
+permissions: {}
+
+jobs:
+  synthetic-verification:
+    name: One DECISION-048 synthetic verification retry
+    permissions:
+      contents: read
+    uses: ./.github/workflows/fw030-adapter-pilot.yml
