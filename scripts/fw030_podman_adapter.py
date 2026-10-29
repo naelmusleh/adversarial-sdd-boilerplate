@@ -256,9 +256,18 @@ def _has_nested_mounts(input_dir: Path, mountinfo: bytes | None = None) -> bool:
     if not input_path.is_absolute():
         raise AdapterError("fw030.adapter.mount_preflight_unknown",
                            "input mount preflight path is not absolute")
-    for line in text.splitlines():
+    lines = text.splitlines()
+    if not lines or any(not line.strip() for line in lines):
+        raise AdapterError("fw030.adapter.mount_preflight_unknown",
+                           "input mount preflight data was empty or malformed")
+    for line in lines:
         fields = line.split()
-        if len(fields) < 10 or "-" not in fields[6:]:
+        try:
+            separator = fields.index("-", 6)
+        except ValueError as exc:
+            raise AdapterError("fw030.adapter.mount_preflight_unknown",
+                               "input mount preflight data was malformed") from exc
+        if len(fields) < 10 or separator + 3 >= len(fields):
             raise AdapterError("fw030.adapter.mount_preflight_unknown",
                                "input mount preflight data was malformed")
         encoded = fields[4]

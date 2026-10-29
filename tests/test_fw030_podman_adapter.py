@@ -225,6 +225,11 @@ class PodmanAdapterTests(unittest.TestCase):
         with self.assertRaises(adapter.AdapterError) as caught:
             adapter._has_nested_mounts(input_dir, b"malformed")
         self.assertEqual(caught.exception.code, "fw030.adapter.mount_preflight_unknown")
+        for malformed in (b"", b"   \\n", b"36 25 0:32 / / - rw,relatime ext4 /dev/root rw"):
+            with self.subTest(malformed=malformed):
+                with self.assertRaises(adapter.AdapterError) as caught:
+                    adapter._has_nested_mounts(input_dir, malformed)
+                self.assertEqual(caught.exception.code, "fw030.adapter.mount_preflight_unknown")
 
     def test_mount_observation_allows_observed_default_rprivate(self) -> None:
         request = copy.deepcopy(self.request)
