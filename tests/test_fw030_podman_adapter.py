@@ -172,6 +172,39 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertIn("fw030.adapter.cleanup_unknown", {d["code"] for d in result["diagnostics"]})
         self.assertTrue(validate_result(json.dumps(result))["valid"])
 
+    def test_mount_observation_summary_redacts_paths_and_bounds_options(self) -> None:
+        source = str(self.root / "input")
+        item = {"HostConfig": {"Binds": [f"{source}:/input:ro,rprivate"]},
+                "Mounts": [{"Type": "bind", "Source": source, "Destination": "/input", "RW": False}]}
+        summary = adapter._mount_observation_summary(item, source)
+        rendered = json.dumps(summary)
+        self.assertNotIn(str(self.root), rendered)
+        self.assertEqual(summary["bind_count"], 1)
+        self.assertEqual(summary["binds"][0]["options"], ["ro", "rprivate"])
+        self.assertEqual(summary["effective_mounts"][0]["read_only"], True)
+
+    def test_mount_observation_allows_only_observed_default_rprivate(self) -> None:
+        request = copy.deepcopy(self.request)
+        source = str(self.root / "input")
+        base = {"Config": {"User": "1000:1000", "Image": adapter.PINNED_IMAGE,
+                            "Cmd": request["workload"]["argv"], "WorkingDir": "/input"},
+                "HostConfig": {"NetworkMode": "none", "ReadonlyRootfs": True,
+                               "Memory": 128 * 1024 * 1024, "NanoCpus": 1_000_000_000,
+                               "PidsLimit": 32, "CapDrop": self.cap_drop,
+                               "SecurityOpt": ["no-new-privileges"],
+                               "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777"},
+                               "Binds": [f"{source}:/input:ro,rprivate"]},
+                "Mounts": [{"Type": "bind", "Source": source, "Destination": "/input", "RW": False}]}
+        adapter._verify_container([base], request)
+        for bind in (f"{source}:/input:rw,rprivate", f"{source}:/input:ro,rshared",
+                     f"{source}:/input:ro,rprivate,unknown", f"{source}:/extra:ro"):
+            item = copy.deepcopy(base)
+            item["HostConfig"]["Binds"] = [bind]
+            with self.subTest(bind_options=bind.rsplit(":", 1)[-1]):
+                with self.assertRaises(adapter.AdapterError) as caught:
+                    adapter._verify_container([item], request)
+                self.assertEqual(caught.exception.code, "fw030.adapter.mount_observation_mismatch")
+
     def test_effective_mount_source_must_match_declared_input(self) -> None:
         request = copy.deepcopy(self.request)
         inspect = [{"Config": {"User": "1000:1000", "Image": adapter.PINNED_IMAGE,

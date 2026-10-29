@@ -330,7 +330,42 @@ def _cap_drop_matches(raw: Any) -> bool:
             and set(raw) == PODMAN_DEFAULT_CAPABILITIES)
 
 
-def _verify_container(inspect: Any, request: Mapping[str, Any]) -> None:
+def _mount_observation_summary(item: Mapping[str, Any], input_source: str) -> dict[str, Any]:
+    """Return bounded mount facts without disclosing host paths or raw inspect data."""
+    host = item.get("HostConfig", {})
+    binds = host.get("Binds", []) if isinstance(host, dict) else []
+    effective = item.get("Mounts", [])
+    bind_rows: list[dict[str, Any]] = []
+    if isinstance(binds, list):
+        for raw in binds[:4]:
+            if not isinstance(raw, str):
+                bind_rows.append({"type": type(raw).__name__[:24]})
+                continue
+            fields = raw.split(":")
+            options = fields[2].split(",") if len(fields) == 3 else []
+            bind_rows.append({"source_matches_expected": len(fields) == 3 and fields[0] == input_source,
+                              "destination": fields[1] if len(fields) == 3 and fields[1] in {"/input", "/output"} else "other",
+                              "options": sorted({token for token in options if token in {"ro", "rw", "rprivate", "rshared", "rslave"}})[:5]})
+    else:
+        binds = []
+    effective_rows: list[dict[str, Any]] = []
+    if isinstance(effective, list):
+        for mount in effective[:4]:
+            if not isinstance(mount, dict):
+                effective_rows.append({"type": type(mount).__name__[:24]})
+                continue
+            effective_rows.append({"type": mount.get("Type") if mount.get("Type") in {"bind", "volume", "tmpfs"} else "other",
+                                   "source_matches_expected": mount.get("Source") == input_source,
+                                   "destination": mount.get("Destination") if mount.get("Destination") in {"/input", "/output"} else "other",
+                                   "read_only": mount.get("RW") is False})
+    else:
+        effective = []
+    return {"bind_count": len(binds), "binds": bind_rows,
+            "effective_mount_count": len(effective), "effective_mounts": effective_rows}
+
+
+def _verify_container(inspect: Any, request: Mapping[str, Any],
+                      observation_sink: Callable[[dict[str, Any]], None] | None = None) -> None:
     if not isinstance(inspect, list) or len(inspect) != 1 or not isinstance(inspect[0], dict):
         raise AdapterError("fw030.adapter.inspect_invalid", "runtime inspection did not return one expected container")
     item = inspect[0]
@@ -359,7 +394,16 @@ def _verify_container(inspect: Any, request: Mapping[str, Any]) -> None:
             or not _tmpfs_options_match(configured_tmpfs, limits["disk_mb"])):
         raise AdapterError("fw030.adapter.policy_mismatch", "observed container configuration does not match the requested controls")
     mounts = host.get("Binds", [])
-    if mounts != [f"{input_source}:/input:ro"]:
+    if observation_sink:
+        observation_sink(_mount_observation_summary(item, input_source))
+    expected_options = ({"ro"}, {"ro", "rprivate"})
+    parsed_bind: tuple[str, str, set[str]] | None = None
+    if isinstance(mounts, list) and len(mounts) == 1 and isinstance(mounts[0], str):
+        fields = mounts[0].split(":")
+        if len(fields) == 3:
+            parsed_bind = fields[0], fields[1], set(fields[2].split(","))
+    if (parsed_bind is None or parsed_bind[0] != input_source or parsed_bind[1] != "/input"
+            or parsed_bind[2] not in expected_options):
         raise AdapterError("fw030.adapter.mount_observation_mismatch", "observed input binding is not the declared read-only input")
     effective_mounts = item.get("Mounts")
     if (not isinstance(effective_mounts, list) or len(effective_mounts) != 1
@@ -443,7 +487,8 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
             if inspect.returncode != 0:
                 raise AdapterError("fw030.adapter.inspect_failed", "container policy inspection failed")
             try:
-                _verify_container(json.loads(inspect.stdout), request)
+                _verify_container(json.loads(inspect.stdout), request,
+                                  (lambda value: observation_sink({"mount_observation": value})) if observation_sink else None)
             except (json.JSONDecodeError, TypeError):
                 raise AdapterError("fw030.adapter.inspect_invalid", "container policy inspection was not valid JSON")
             copied = run(["podman", "cp", f"{container_name}:/output/cases.json", str(output_dir / "cases.json")], 15)
