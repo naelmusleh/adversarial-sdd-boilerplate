@@ -300,10 +300,13 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
         timeout = request["policy"]["limits"]["wall_seconds"]
         runtime = _profile_observation(run, min(timeout, 30))
         if observation_sink:
-            observation_sink({**host, **runtime, "image_pull": "host registry access for exact pinned digest; workload network remains disabled"})
+            observation_sink({**host, **runtime, "image_pull": "not_attempted; permitted host access is limited to pinned-image retrieval; workload network remains disabled"})
         if runtime["oci_runtime"] != OCI_RUNTIME or runtime["oci_runtime_version"] != OCI_RUNTIME_VERSION:
             raise AdapterError("fw030.adapter.oci_runtime_mismatch", "OCI runtime identity does not match the observed profile", "unsupported")
         pulled = run(["podman", "pull", "--authfile", str(auth_file), "--platform", "linux/amd64", "--quiet", PINNED_IMAGE], min(timeout, 120))
+        if observation_sink:
+            image_pull = "completed" if pulled.returncode == 0 else "failed"
+            observation_sink({**host, **runtime, "image_pull": f"{image_pull}; permitted host access is limited to pinned-image retrieval; workload network remains disabled"})
         if pulled.returncode != 0:
             raise AdapterError("fw030.adapter.image_unavailable", "the exact pinned workload image could not be retrieved")
         readiness = "prerequisites_valid"
@@ -484,7 +487,7 @@ printf '[{{"case_id":"INPUT_READONLY","outcome":"passed"}},{{"case_id":"HOST_PAT
         "schema": "FW030-PILOT-REPORT-1.0",
         "source": {"repository": env.get("GITHUB_REPOSITORY"), "revision": env.get("GITHUB_SHA")},
         "provider_run": {"run_id": env.get("GITHUB_RUN_ID"), "attempt": env.get("GITHUB_RUN_ATTEMPT"), "event": env.get("GITHUB_EVENT_NAME"), "ref": env.get("GITHUB_REF")},
-        "profile": {"id": PROFILE_ID, "revision": PROFILE_REVISION, **(observations[0] if observations else {})},
+        "profile": {"id": PROFILE_ID, "revision": PROFILE_REVISION, **(observations[-1] if observations else {})},
         "limitations": ["single hosted runner observation", "runner image header and ImageVersion may disagree", "Podman may escalate SIGTERM to SIGKILL; graceful termination is not claimed", "no complete host-isolation or production-readiness claim", "host used network only to retrieve the pinned image; workload networking remained disabled", "evidence is emitted to this run log only; no retention or durability guarantee"],
         "invocation_result": result,
     }
