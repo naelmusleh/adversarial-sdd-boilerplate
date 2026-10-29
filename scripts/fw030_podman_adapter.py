@@ -342,10 +342,27 @@ def _mount_observation_summary(item: Mapping[str, Any], input_source: str) -> di
                 bind_rows.append({"type": type(raw).__name__[:24]})
                 continue
             fields = raw.split(":")
-            options = fields[2].split(",") if len(fields) == 3 else []
+            option_tokens = fields[2].split(",") if len(fields) == 3 else []
+            recognized = {"ro", "rw", "rprivate", "rshared", "rslave"}
+            safe_details: list[dict[str, Any]] = []
+            other_keys: set[str] = set()
+            for token in option_tokens[:32]:
+                key, separator, _value = token.partition("=")
+                safe_key = key.lower() if re.fullmatch(r"[A-Za-z0-9_-]{1,24}", key) else "<other>"
+                has_value = bool(separator)
+                if safe_key not in recognized or has_value:
+                    other_keys.add(safe_key)
+                if len(safe_details) < 8:
+                    safe_details.append({"key": safe_key if safe_key in recognized or safe_key in other_keys else "<other>",
+                                         "has_value": has_value})
             bind_rows.append({"source_matches_expected": len(fields) == 3 and fields[0] == input_source,
                               "destination": fields[1] if len(fields) == 3 and fields[1] in {"/input", "/output"} else "other",
-                              "options": sorted({token for token in options if token in {"ro", "rw", "rprivate", "rshared", "rslave"}})[:5]})
+                              "options": sorted({token for token in option_tokens if token in recognized})[:5],
+                              "option_count": min(len(option_tokens), 32),
+                              "option_count_truncated": len(option_tokens) > 32,
+                              "other_option_count": len(other_keys),
+                              "other_option_keys": sorted(other_keys)[:8],
+                              "option_details": safe_details})
     else:
         binds = []
     effective_rows: list[dict[str, Any]] = []

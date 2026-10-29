@@ -183,6 +183,22 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertEqual(summary["binds"][0]["options"], ["ro", "rprivate"])
         self.assertEqual(summary["effective_mounts"][0]["read_only"], True)
 
+    def test_mount_observation_reports_bounded_option_keys_without_values(self) -> None:
+        source = str(self.root / "input")
+        item = {"HostConfig": {"Binds": [f"{source}:/input:ro,rprivate,uid=1000,password=synthetic-secret,/private/path"]},
+                "Mounts": [{"Type": "bind", "Source": source, "Destination": "/input", "RW": False}]}
+        summary = adapter._mount_observation_summary(item, source)
+        rendered = json.dumps(summary)
+        row = summary["binds"][0]
+        self.assertNotIn(str(self.root), rendered)
+        self.assertNotIn("1000", rendered)
+        self.assertNotIn("synthetic-secret", rendered)
+        self.assertNotIn("/private/path", rendered)
+        self.assertEqual(row["option_count"], 5)
+        self.assertEqual(row["other_option_count"], 3)
+        self.assertEqual(row["other_option_keys"], ["<other>", "password", "uid"])
+        self.assertTrue(row["option_details"][2]["has_value"])
+
     def test_mount_observation_allows_observed_default_rprivate(self) -> None:
         request = copy.deepcopy(self.request)
         source = str(self.root / "input")
