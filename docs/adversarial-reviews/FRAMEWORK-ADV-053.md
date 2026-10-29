@@ -115,3 +115,8 @@ Candidate `fde761de06d9972b74a886bf9952071bc1929d5c` passed independent read-onl
 ### Cycle-6 retry workflow gate
 
 The one-shot workflow at commit `477f453c5e9372097f6db930393a4df7c214f295` passed independent read-only review and exact Verify Pipeline runs [40897925014](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40897925014) and [40897934735](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40897934735). It triggers only on the designated marker path on `codex/fw030-impl02`, uses the fixed reusable synthetic pilot with contents-read only, and no secrets. The marker is absent at review time. DECISION-048 explicitly permits one retry after these gates; no further retry is allowed.
+
+
+### Cycle-6 final retry disposition
+
+The single DECISION-048 retry [40898439975](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40898439975) ran on marker/source commit `aa596f38c2173e84e11eb3fffdcd38987d3ef663` and failed with `fw030.adapter.tmpfs_observation_invalid`: the fixed stdout envelope did not contain valid effective `/output` tmpfs evidence. It produced no case results. The run reported cleanup complete. Exact-revision Verify Pipeline push run [40898439780](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40898439780) and PR run [40898452932](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40898452932) passed. The temporary retry workflow was removed in `69db2ff5fe303a61c1301d38304f6b4d6608bf41`; the marker was removed in `589cd7fd917c78ccb79a9d3bfe606b5a779f6bad`. DECISION-048 is exhausted. FW030-IMPL-02 remains blocked; no cases, implementation pass, merge, or deployment are claimed. Further work requires a fresh owner checkpoint.
