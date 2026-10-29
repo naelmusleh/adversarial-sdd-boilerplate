@@ -3,7 +3,7 @@ id: FRAMEWORK-ADV-053
 type: adversarial-review
 title: FW030-IMPL-02 initial independent code review
 status: in-review
-version: 1.2
+version: 1.3
 created: 2026-10-28
 updated: 2026-10-29
 related-artifacts: FRAMEWORK-ARCHITECTURE-004, FRAMEWORK-PROFILE-030-001, FRAMEWORK-CONTRACT-030, FRAMEWORK-BACKLOG-001, DECISION-043
@@ -45,3 +45,8 @@ Verify Pipeline run [40797321974](https://github.com/naelmusleh/adversarial-sdd-
 ## Fresh-cycle finding on exact candidate `3336a38b11cdce4b51f46156f9f1d1350d68e01a`
 
 Independent reviewer `/root/fw030_option_fix_review` identified that `_verify_container` accepts extra options alongside the required tmpfs flags and filters effective mounts down to bind entries, so it neither rejects contradictory extras nor detects an unexpected `/output` user mount. Podman 4.9's inspect contract omits tmpfs entries from the user-mount list; a corrected candidate must report configured tmpfs strictly and observe the effective tmpfs from inside the synthetic workload's mount table. Verdict for this candidate: NEEDS-CHANGES; no retry is authorized on it. The owner has separately authorized one new correction/review/CI/retry cycle in DECISION-044.
+
+
+## Cycle-3 retry disposition (2026-10-29)
+
+After the cycle-3 corrected adapter review passed, a one-time trigger workflow was independently reviewed at `8701f2f256230add2fe9e75e1fbc8ab2c9163d02`; exact adapter and workflow Verify Pipeline runs `40874914344`, `40874924272`, `40875188008`, and `40875194970` passed their required jobs. The authorized synthetic retry [40875354469](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40875354469) ran on source `a1d7b4364ec7ea8a90577b28ac760c4c3d5901c9`, reached container inspection, then returned `fw030.adapter.mount_observation_mismatch` before case results. Cleanup was reported `complete`. The trigger workflow and marker were removed immediately after the run. The single retry under DECISION-044 is consumed; no FW030-IMPL-02 pass is claimed. DECISION-046 is a separate owner checkpoint for one bounded sanitized bind-observation correction/review/CI/retry cycle.
