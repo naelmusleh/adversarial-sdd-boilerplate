@@ -76,6 +76,7 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertEqual(result["states"]["request_readiness"], "unsupported")
         self.assertEqual(result["states"]["execution"], "not_started")
         self.assertEqual(observations[0]["oci_runtime_version"], "9.9.9")
+        self.assertTrue(observations[0]["image_pull"].startswith("not_attempted;"))
         self.assertIn("fw030.adapter.oci_runtime_mismatch", {d["code"] for d in result["diagnostics"]})
         self.assertTrue(validate_result(json.dumps(result))["valid"])
 
