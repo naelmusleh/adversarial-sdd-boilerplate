@@ -3,9 +3,9 @@ id: FRAMEWORK-ADV-053
 type: adversarial-review
 title: FW030-IMPL-02 initial independent code review
 status: in-review
-version: 1.1
+version: 1.2
 created: 2026-10-28
-updated: 2026-10-28
+updated: 2026-10-29
 related-artifacts: FRAMEWORK-ARCHITECTURE-004, FRAMEWORK-PROFILE-030-001, FRAMEWORK-CONTRACT-030, FRAMEWORK-BACKLOG-001, DECISION-043
 ---
 
@@ -40,3 +40,8 @@ A second independent review of the corrected environment boundary is required on
 ## Superseded exact-revision CI
 
 Verify Pipeline run [40797321974](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40797321974) failed the Python job on superseded source `3d18aebede357426ca3338f67c71d499bbd5d5c1`; it is not evidence for the corrected candidate. The failures were (a) review artifact status `complete`, which is not an allowed artifact status; (b) three adapter fixtures whose UID/GID did not match the request; and (c) the now-recorded full-environment leak. The review artifact is now `in-review`, the fixtures use the requested non-root identity, and the host subprocess environment is allowlisted. A fresh exact-head Verify Pipeline run is required.
+
+
+## Fresh-cycle finding on exact candidate `3336a38b11cdce4b51f46156f9f1d1350d68e01a`
+
+Independent reviewer `/root/fw030_option_fix_review` identified that `_verify_container` accepts extra options alongside the required tmpfs flags and filters effective mounts down to bind entries, so it neither rejects contradictory extras nor detects an unexpected `/output` user mount. Podman 4.9's inspect contract omits tmpfs entries from the user-mount list; a corrected candidate must report configured tmpfs strictly and observe the effective tmpfs from inside the synthetic workload's mount table. Verdict for this candidate: NEEDS-CHANGES; no retry is authorized on it. The owner has separately authorized one new correction/review/CI/retry cycle in DECISION-044.
