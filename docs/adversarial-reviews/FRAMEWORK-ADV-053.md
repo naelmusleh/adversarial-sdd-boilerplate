@@ -110,3 +110,8 @@ The evidence-only run [40896580178](https://github.com/naelmusleh/adversarial-sd
 ## Cycle-6 correction review and conditional retry permission
 
 Candidate `fde761de06d9972b74a886bf9952071bc1929d5c` passed independent read-only review. The reviewer confirmed the fixed three-line envelope is emitted while `/output` tmpfs is mounted, its total and field sizes are bounded, and host validation checks envelope shape, case JSON, and tmpfs evidence. The reviewer recommended permitting exactly one synthetic verification retry, based on diagnostic run [40896580178](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40896580178) showing Podman could not find the tmpfs case file after the foreground container exited; cleanup was complete. Exact Verify Pipeline [40897581419](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40897581419) passed all required jobs. DECISION-048 explicitly permits one retry after the separate temporary trigger workflow also passes review and exact CI. No retry has run at this checkpoint.
+
+
+### Cycle-6 retry workflow gate
+
+The one-shot workflow at commit `477f453c5e9372097f6db930393a4df7c214f295` passed independent read-only review and exact Verify Pipeline runs [40897925014](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40897925014) and [40897934735](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40897934735). It triggers only on the designated marker path on `codex/fw030-impl02`, uses the fixed reusable synthetic pilot with contents-read only, and no secrets. The marker is absent at review time. DECISION-048 explicitly permits one retry after these gates; no further retry is allowed.
