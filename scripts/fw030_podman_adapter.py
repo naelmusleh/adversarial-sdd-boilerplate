@@ -236,7 +236,7 @@ def _profile_observation(runner: Runner, timeout: int) -> dict[str, Any]:
     if rootless is not True:
         raise AdapterError("fw030.adapter.runtime_not_rootless", "Podman is not operating rootless", "unsupported")
     runtime_version_raw = str(runtime_version)
-    version_match = re.match(r"^(?:crun version\\s+)?(\\d+\\.\\d+\\.\\d+)(?=$|\\s)", runtime_version_raw)
+    version_match = re.match(r"^(?:crun version\s+)?(\d+\.\d+\.\d+)(?=$|\s)", runtime_version_raw)
     if version_match is None:
         raise AdapterError("fw030.adapter.runtime_observation_invalid", "Podman returned an unrecognized OCI runtime version", "unsupported")
     return {"podman": PODMAN_VERSION, "oci_runtime": str(runtime),
