@@ -1,0 +1,23 @@
+name: FW-030 Adapter Synthetic Pilot
+
+on:
+  workflow_call:
+
+permissions: {}
+
+jobs:
+  bounded-podman-adapter:
+    name: Bounded rootless adapter cases
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      # Same immutable checkout action used by Verify Pipeline.
+      - name: Check out the exact caller revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Run the synthetic profile-bound adapter pilot
+        shell: bash
+        run: python3 scripts/fw030_podman_adapter.py --pilot
