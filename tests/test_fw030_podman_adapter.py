@@ -44,6 +44,8 @@ class PodmanAdapterTests(unittest.TestCase):
             {"kind": "output", "source": str(self.root / "output"), "target": "/output", "mode": "write_only"},
         ]
         self.request["policy"]["limits"] = {"cpu_millis": 1000, "memory_mb": 128, "process_count": 32, "disk_mb": 16, "wall_seconds": 30}
+        self.request["policy"]["uid"] = 1000
+        self.request["policy"]["gid"] = 1000
         policy = dict(self.request["policy"])
         policy.pop("sha256")
         self.request["policy"]["sha256"] = hashlib.sha256(json.dumps(policy, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
