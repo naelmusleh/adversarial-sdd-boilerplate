@@ -72,3 +72,6 @@ The bounded diagnostic run [40887400236](https://github.com/naelmusleh/adversari
 ### Cycle-5 correction review finding
 
 Independent read-only review of exact candidate `355a429d80861e19b9122e7c67a5a32fc3ad454b` returned NEEDS-CHANGES. Finding: `_has_nested_mounts` treated empty mountinfo as no nested mount and did not require the `-` separator after the mandatory mount fields. The correction rejects empty/blank records, requires the separator at or after field 7 with a complete filesystem tuple, and adds empty and misplaced-separator fixtures. The exact-candidate Verify Pipeline passed all required checks, but the candidate is not accepted; no retry was dispatched. A new exact review and Verify Pipeline are required.
+
+
+A second independent review of `7c6fc50ea3dcb29cfa2c1d214f44f9ae2107b58b` returned NEEDS-CHANGES. It identified that mountinfo parsing accepted trailing fields beyond the defined filesystem tuple and that the blank-line fixture contained a literal `\\n`. The next correction requires exactly three fields after the separator and tests true blank input, extra trailing data, and a valid optional-field record. No retry was dispatched.

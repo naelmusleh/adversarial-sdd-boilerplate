@@ -219,13 +219,15 @@ class PodmanAdapterTests(unittest.TestCase):
         encoded_input = str(input_dir).replace(" ", "\\040")
         root_mount = "36 25 0:32 / / rw,relatime - ext4 /dev/root rw"
         input_mount = f"37 25 0:32 / {encoded_input} rw,relatime - ext4 /dev/root rw"
+        optional_mount = "39 25 0:32 / / rw,relatime shared:1 master:2 - ext4 /dev/root rw"
         nested_mount = f"38 25 0:33 / {encoded_input}/nested rw,relatime - ext4 /dev/loop0 rw"
-        self.assertFalse(adapter._has_nested_mounts(input_dir, (root_mount + "\n" + input_mount + "\n").encode()))
+        self.assertFalse(adapter._has_nested_mounts(input_dir, (root_mount + "\n" + input_mount + "\n" + optional_mount + "\n").encode()))
         self.assertTrue(adapter._has_nested_mounts(input_dir, (root_mount + "\n" + nested_mount + "\n").encode()))
         with self.assertRaises(adapter.AdapterError) as caught:
             adapter._has_nested_mounts(input_dir, b"malformed")
         self.assertEqual(caught.exception.code, "fw030.adapter.mount_preflight_unknown")
-        for malformed in (b"", b"   \\n", b"36 25 0:32 / / - rw,relatime ext4 /dev/root rw"):
+        for malformed in (b"", b"   \n", b"36 25 0:32 / / - rw,relatime ext4 /dev/root rw",
+                          (root_mount + " trailing").encode()):
             with self.subTest(malformed=malformed):
                 with self.assertRaises(adapter.AdapterError) as caught:
                     adapter._has_nested_mounts(input_dir, malformed)
