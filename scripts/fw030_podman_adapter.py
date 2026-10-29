@@ -27,6 +27,8 @@ from scripts.fw030_contract import validate_request, validate_result
 PROFILE_ID = "github-actions.ubuntu-24.04.rootless-podman"
 PROFILE_REVISION = "2026-10-28.1"
 PODMAN_VERSION = "4.9.3"
+OCI_RUNTIME = "crun"
+OCI_RUNTIME_VERSION = "1.14.1"
 PINNED_IMAGE = "docker.io/library/alpine@sha256:dc92f017beea8e7f43263073d717f7bc011228c95d5312e440deb4d035bb4eec"
 CAPABILITIES = {"runtime.rootless", "filesystem.readonly-input", "network.disabled", "secrets.disabled", "resources.limits", "evidence.bounded"}
 MAX_REQUEST_BYTES = 256 * 1024
@@ -237,15 +239,16 @@ def _verify_container(inspect: Any, request: Mapping[str, Any]) -> None:
     host = item.get("HostConfig", {})
     limits = request["policy"]["limits"]
     cpu_nano = limits["cpu_millis"] * 1_000_000
-    expected_tmpfs = f"rw,noexec,nosuid,size={limits['disk_mb']}m,rprivate,nodev"
-    tmpfs = host.get("Tmpfs", {}).get("/output", "")
+    tmpfs = set(host.get("Tmpfs", {}).get("/output", "").split(","))
+    required_tmpfs = {"rw", "noexec", "nosuid", f"size={limits['disk_mb']}m",
+                      f"uid={request['policy']['uid']}", f"gid={request['policy']['gid']}"}
     if (host.get("NetworkMode") != "none" or host.get("ReadonlyRootfs") is not True
             or host.get("Memory") != limits["memory_mb"] * 1024 * 1024
             or host.get("NanoCpus") != cpu_nano or host.get("PidsLimit") != limits["process_count"]
             or config.get("User") != f"{request['policy']['uid']}:{request['policy']['gid']}"
             or "ALL" not in host.get("CapDrop", [])
             or not any("no-new-privileges" in item for item in host.get("SecurityOpt", []))
-            or tmpfs != expected_tmpfs):
+            or not required_tmpfs.issubset(tmpfs)):
         raise AdapterError("fw030.adapter.policy_mismatch", "observed container configuration does not match the requested controls")
     mounts = host.get("Binds", [])
     if len(mounts) != 1 or not mounts[0].endswith(":/input:ro"):
@@ -253,7 +256,8 @@ def _verify_container(inspect: Any, request: Mapping[str, Any]) -> None:
 
 
 def run_request(raw: bytes, authorization: Mapping[str, str] | None,
-                env: Mapping[str, str] | None = None, runner: Runner | None = None) -> dict[str, Any]:
+                env: Mapping[str, str] | None = None, runner: Runner | None = None,
+                observation_sink: Callable[[dict[str, str]], None] | None = None) -> dict[str, Any]:
     """Execute one fixed-profile request; caller supplies, but cannot create, authorization."""
     active_env = dict(os.environ if env is None else env)
     request: dict[str, Any] | None = None
@@ -270,6 +274,13 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
         root, input_dir, output_dir = _safe_paths(request, active_env)
         timeout = request["policy"]["limits"]["wall_seconds"]
         runtime = _profile_observation(run, min(timeout, 30))
+        if runtime["oci_runtime"] != OCI_RUNTIME or runtime["oci_runtime_version"] != OCI_RUNTIME_VERSION:
+            raise AdapterError("fw030.adapter.oci_runtime_mismatch", "OCI runtime identity does not match the observed profile", "unsupported")
+        if observation_sink:
+            observation_sink({**host, **runtime, "image_pull": "host registry access for exact pinned digest; workload network remains disabled"})
+        pulled = run(["podman", "pull", "--platform", "linux/amd64", "--quiet", PINNED_IMAGE], min(timeout, 120))
+        if pulled.returncode != 0:
+            raise AdapterError("fw030.adapter.image_unavailable", "the exact pinned workload image could not be retrieved")
         readiness = "prerequisites_valid"
         if not isinstance(authorization, Mapping) or set(authorization) != {"record_id", "record_sha256", "authorized_request_sha256"}:
             raise AdapterError("fw030.adapter.authorization_missing", "caller did not supply the required request-bound authorization reference")
@@ -289,7 +300,7 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
             "--user", f"{request['policy']['uid']}:{request['policy']['gid']}", "--cap-drop=all",
             "--security-opt=no-new-privileges", f"--memory={limit['memory_mb']}m",
             f"--cpus={limit['cpu_millis'] / 1000:.3f}", f"--pids-limit={limit['process_count']}",
-            f"--timeout={timeout}", f"--tmpfs=/output:rw,noexec,nosuid,size={limit['disk_mb']}m",
+            f"--timeout={timeout}", f"--tmpfs=/output:rw,noexec,nosuid,size={limit['disk_mb']}m,uid={request['policy']['uid']},gid={request['policy']['gid']}",
             "--volume", f"{input_dir}:/input:ro", request["workload"]["image"],
             *request["workload"]["argv"],
         ]
@@ -370,7 +381,7 @@ def _pilot_request(env: Mapping[str, str], root: Path) -> tuple[bytes, dict[str,
         "limits": {"cpu_millis": 1000, "memory_mb": 128, "process_count": 32, "disk_mb": 16, "wall_seconds": 30},
         "cancellation": "terminate_then_kill_within_wall_limit",
         "evidence": {"mode": "allowlisted_redacted", "max_output_bytes": 4096,
-                     "case_ids": ["INPUT_READONLY", "HOST_PATH_DENIED", "NETWORK_DISABLED", "OUTPUT_BOUNDED"]},
+                     "case_ids": ["INPUT_READONLY", "HOST_PATH_DENIED", "NETWORK_DISABLED", "SECRETS_NOT_INJECTED", "OUTPUT_BOUNDED"]},
     }
     canonical_policy = json.dumps(policy, sort_keys=True, separators=(",", ":")).encode("utf-8")
     policy["sha256"] = hashlib.sha256(canonical_policy).hexdigest()
@@ -422,19 +433,29 @@ test "$(cat /input/fixture.txt)" = synthetic-fixture
 if touch /input/forbidden-write 2>/dev/null; then exit 61; fi
 if cat "{sentinel}" >/dev/null 2>&1; then exit 62; fi
 if /bin/busybox wget -T 2 -qO- http://1.1.1.1/ >/dev/null 2>&1; then exit 63; fi
-printf '[{{"case_id":"INPUT_READONLY","outcome":"passed"}},{{"case_id":"HOST_PATH_DENIED","outcome":"passed"}},{{"case_id":"NETWORK_DISABLED","outcome":"passed"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"passed"}}]' > /output/cases.json
+test -z "${{FW030_SECRET_SENTINEL-}}"
+printf '[{{"case_id":"INPUT_READONLY","outcome":"passed"}},{{"case_id":"HOST_PATH_DENIED","outcome":"passed"}},{{"case_id":"NETWORK_DISABLED","outcome":"passed"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"passed"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"passed"}}]' > /output/cases.json
 '''
     (root / "input" / "workload.sh").write_text(script, encoding="utf-8")
     env["FW030_PILOT_ROOT"] = str(root)
     try:
         raw, authorization = _pilot_request(env, root)
-        result = run_request(raw, authorization, env)
+        observations: list[dict[str, str]] = []
+        result = run_request(raw, authorization, env, observation_sink=observations.append)
     finally:
         shutil.rmtree(root, ignore_errors=True)
     if root.exists():
         result["states"]["cleanup"] = "failed"
         result["diagnostics"].append(_diag("fw030.adapter.temp_cleanup_failed", "$.states.cleanup", "temporary pilot files remain after cleanup"))
-    print(json.dumps(result, sort_keys=True, separators=(",", ":")))
+    report = {
+        "schema": "FW030-PILOT-REPORT-1.0",
+        "source": {"repository": env.get("GITHUB_REPOSITORY"), "revision": env.get("GITHUB_SHA")},
+        "provider_run": {"run_id": env.get("GITHUB_RUN_ID"), "attempt": env.get("GITHUB_RUN_ATTEMPT"), "event": env.get("GITHUB_EVENT_NAME"), "ref": env.get("GITHUB_REF")},
+        "profile": {"id": PROFILE_ID, "revision": PROFILE_REVISION, **(observations[0] if observations else {})},
+        "limitations": ["single hosted runner observation", "runner image header and ImageVersion may disagree", "Podman may escalate SIGTERM to SIGKILL; graceful termination is not claimed", "no complete host-isolation or production-readiness claim", "host used network only to retrieve the pinned image; workload networking remained disabled", "evidence is emitted to this run log only; no retention or durability guarantee"],
+        "invocation_result": result,
+    }
+    print(json.dumps(report, sort_keys=True, separators=(",", ":")))
     return 0 if result["states"]["execution"] == "succeeded" and result["states"]["cleanup"] == "complete" else 1
 
 
