@@ -10,7 +10,8 @@ jobs:
     name: Bounded rootless adapter cases
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    permissions: {}
+    permissions:
+      contents: read
     env:
       FW030_SECRET_SENTINEL: synthetic-fw030-environment-only
     steps:
