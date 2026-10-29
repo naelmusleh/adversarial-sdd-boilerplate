@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import subprocess
@@ -76,7 +77,8 @@ class PodmanAdapterTests(unittest.TestCase):
 
     def test_success_requires_all_declared_cases_and_verified_cleanup(self) -> None:
         cases = [{"case_id": case_id, "outcome": "passed"} for case_id in self.request["policy"]["evidence"]["case_ids"]]
-        inspect = [{"Config": {"User": "1000:1000"}, "HostConfig": {
+        inspect = [{"Config": {"User": "1000:1000", "Image": adapter.PINNED_IMAGE,
+                                "Cmd": ["sh", "-eu", "/input/workload.sh"], "WorkingDir": "/input"}, "HostConfig": {
             "NetworkMode": "none", "ReadonlyRootfs": True, "Memory": 128 * 1024 * 1024,
             "NanoCpus": 1_000_000_000, "PidsLimit": 32, "CapDrop": ["ALL"],
             "SecurityOpt": ["no-new-privileges"], "Tmpfs": {"/output": "rw,noexec,nosuid,size=16m,uid=1000,gid=1000,rprivate,nodev"},
@@ -116,6 +118,33 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertEqual(result["states"]["cleanup"], "unknown")
         self.assertIn("fw030.adapter.cleanup_unknown", {d["code"] for d in result["diagnostics"]})
         self.assertTrue(validate_result(json.dumps(result))["valid"])
+
+    def test_effective_mount_source_must_match_declared_input(self) -> None:
+        request = copy.deepcopy(self.request)
+        inspect = [{"Config": {"User": "1000:1000", "Image": adapter.PINNED_IMAGE,
+                                "Cmd": request["workload"]["argv"], "WorkingDir": "/input"},
+                    "HostConfig": {"NetworkMode": "none", "ReadonlyRootfs": True,
+                                   "Memory": 128 * 1024 * 1024, "NanoCpus": 1_000_000_000,
+                                   "PidsLimit": 32, "CapDrop": ["ALL"],
+                                   "SecurityOpt": ["no-new-privileges"],
+                                   "Tmpfs": {"/output": "rw,noexec,nosuid,size=16m,uid=1000,gid=1000"},
+                                   "Binds": ["/unexpected/input:/input:ro"]}}]
+        with self.assertRaises(adapter.AdapterError) as caught:
+            adapter._verify_container(inspect, request)
+        self.assertEqual(caught.exception.code, "fw030.adapter.mount_observation_mismatch")
+
+    def test_podman_subprocess_environment_excludes_host_secrets_and_user_config(self) -> None:
+        captured: dict[str, object] = {}
+        def fake_run(argv, **kwargs):
+            captured.update(kwargs)
+            return subprocess.CompletedProcess(argv, 0, "", "")
+        env = {**self.env, "FW030_SECRET_SENTINEL": "must-not-propagate", "HOME": "/host/home"}
+        with patch.object(adapter.subprocess, "run", side_effect=fake_run):
+            adapter._run(["podman", "--version"], 5, env)
+        child_env = captured["env"]
+        self.assertNotIn("FW030_SECRET_SENTINEL", child_env)
+        self.assertEqual(child_env["HOME"], str(self.root / "podman-home"))
+        self.assertFalse(captured["shell"])
 
 
 if __name__ == "__main__":
