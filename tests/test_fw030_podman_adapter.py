@@ -214,6 +214,18 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertNotIn("private-value", rendered)
         self.assertNotIn("option39", rendered)
 
+    def test_recursive_bind_preflight_rejects_nested_mounts_and_fails_closed(self) -> None:
+        input_dir = Path("/tmp/fw030 synthetic/input")
+        encoded_input = str(input_dir).replace(" ", "\\040")
+        root_mount = "36 25 0:32 / / rw,relatime - ext4 /dev/root rw"
+        input_mount = f"37 25 0:32 / {encoded_input} rw,relatime - ext4 /dev/root rw"
+        nested_mount = f"38 25 0:33 / {encoded_input}/nested rw,relatime - ext4 /dev/loop0 rw"
+        self.assertFalse(adapter._has_nested_mounts(input_dir, (root_mount + "\n" + input_mount + "\n").encode()))
+        self.assertTrue(adapter._has_nested_mounts(input_dir, (root_mount + "\n" + nested_mount + "\n").encode()))
+        with self.assertRaises(adapter.AdapterError) as caught:
+            adapter._has_nested_mounts(input_dir, b"malformed")
+        self.assertEqual(caught.exception.code, "fw030.adapter.mount_preflight_unknown")
+
     def test_mount_observation_allows_observed_default_rprivate(self) -> None:
         request = copy.deepcopy(self.request)
         source = str(self.root / "input")

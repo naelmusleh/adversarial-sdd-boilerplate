@@ -244,6 +244,36 @@ def _check_request(raw: bytes, env: Mapping[str, str]) -> tuple[dict[str, Any], 
     return request, hashlib.sha256(raw).hexdigest()
 
 
+def _has_nested_mounts(input_dir: Path, mountinfo: bytes | None = None) -> bool:
+    """Fail closed if mountinfo is unavailable or malformed; detect mounts below input."""
+    try:
+        raw = Path("/proc/self/mountinfo").read_bytes() if mountinfo is None else mountinfo
+        text = raw.decode("ascii", errors="strict")
+    except (OSError, UnicodeError) as exc:
+        raise AdapterError("fw030.adapter.mount_preflight_unknown",
+                           "input mount preflight could not be completed") from exc
+    input_path = Path(os.path.normpath(str(input_dir)))
+    if not input_path.is_absolute():
+        raise AdapterError("fw030.adapter.mount_preflight_unknown",
+                           "input mount preflight path is not absolute")
+    for line in text.splitlines():
+        fields = line.split()
+        if len(fields) < 10 or "-" not in fields[6:]:
+            raise AdapterError("fw030.adapter.mount_preflight_unknown",
+                               "input mount preflight data was malformed")
+        encoded = fields[4]
+        def decode_mount_escape(match: re.Match[str]) -> str:
+            return chr(int(match.group(1), 8))
+        mount_text = re.sub(r"\\([0-7]{3})", decode_mount_escape, encoded)
+        if "\\" in mount_text or not mount_text.startswith("/"):
+            raise AdapterError("fw030.adapter.mount_preflight_unknown",
+                               "input mount preflight data was malformed")
+        mount_path = Path(os.path.normpath(mount_text))
+        if mount_path != input_path and input_path in mount_path.parents:
+            return True
+    return False
+
+
 def _safe_paths(request: Mapping[str, Any], env: Mapping[str, str]) -> tuple[Path, Path, Path]:
     root_text = env.get("FW030_PILOT_ROOT", "")
     runner_temp = env.get("RUNNER_TEMP", "")
@@ -257,6 +287,9 @@ def _safe_paths(request: Mapping[str, Any], env: Mapping[str, str]) -> tuple[Pat
     output_dir = root / "output"
     if not input_dir.is_dir() or not output_dir.is_dir() or input_dir.is_symlink() or output_dir.is_symlink():
         raise AdapterError("fw030.adapter.path_invalid", "input and output directories must be ordinary directories")
+    if _has_nested_mounts(input_dir):
+        raise AdapterError("fw030.adapter.input_nested_mount",
+                           "synthetic input contains a nested mount; recursive bind is refused")
     mounts = request["policy"]["mounts"]
     if len(mounts) != 2:
         raise AdapterError("fw030.adapter.mount_policy", "pilot profile requires exactly one input and one output declaration")
@@ -413,7 +446,7 @@ def _verify_container(inspect: Any, request: Mapping[str, Any],
     mounts = host.get("Binds", [])
     if observation_sink:
         observation_sink(_mount_observation_summary(item, input_source))
-    expected_options = ({"ro"}, {"ro", "rprivate"})
+    expected_options = ({"ro"}, {"ro", "rprivate"}, {"ro", "rprivate", "rbind"})
     parsed_bind: tuple[str, str, set[str]] | None = None
     if isinstance(mounts, list) and len(mounts) == 1 and isinstance(mounts[0], str):
         fields = mounts[0].split(":")
