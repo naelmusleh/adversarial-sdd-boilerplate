@@ -256,13 +256,22 @@ def _verify_container(inspect: Any, request: Mapping[str, Any]) -> None:
             or config.get("Image") != request["workload"]["image"]
             or config.get("Cmd") != request["workload"]["argv"]
             or config.get("WorkingDir") != request["workload"]["working_directory"]
+            or any(str(value).startswith("FW030_SECRET_SENTINEL=") for value in config.get("Env", []))
             or "ALL" not in host.get("CapDrop", [])
+            or host.get("CapAdd") not in (None, [])
+            or host.get("Privileged") is True
+            or host.get("Devices") not in (None, [])
+            or (host.get("PortBindings") or {}) != {}
             or not any("no-new-privileges" in item for item in host.get("SecurityOpt", []))
+            or set(host.get("Tmpfs", {})) != {"/output"}
             or not required_tmpfs.issubset(tmpfs)):
         raise AdapterError("fw030.adapter.policy_mismatch", "observed container configuration does not match the requested controls")
     mounts = host.get("Binds", [])
     if mounts != [f"{input_source}:/input:ro"]:
         raise AdapterError("fw030.adapter.mount_observation_mismatch", "observed input binding is not the declared read-only input")
+    effective_binds = [mount for mount in item.get("Mounts", []) if mount.get("Type") == "bind"]
+    if len(effective_binds) != 1 or effective_binds[0].get("Source") != input_source or effective_binds[0].get("Destination") != "/input" or effective_binds[0].get("RW") is not False:
+        raise AdapterError("fw030.adapter.mount_observation_mismatch", "effective bind mounts differ from the exact read-only input declaration")
 
 
 def run_request(raw: bytes, authorization: Mapping[str, str] | None,
