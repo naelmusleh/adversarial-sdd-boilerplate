@@ -79,10 +79,12 @@ class PodmanAdapterTests(unittest.TestCase):
         inspect = [{"Config": {"User": "1000:1000"}, "HostConfig": {
             "NetworkMode": "none", "ReadonlyRootfs": True, "Memory": 128 * 1024 * 1024,
             "NanoCpus": 1_000_000_000, "PidsLimit": 32, "CapDrop": ["ALL"],
-            "SecurityOpt": ["no-new-privileges"], "Tmpfs": {"/output": "rw,noexec,nosuid,size=16m,rprivate,nodev"},
+            "SecurityOpt": ["no-new-privileges"], "Tmpfs": {"/output": "rw,noexec,nosuid,size=16m,uid=1000,gid=1000,rprivate,nodev"},
             "Binds": [f"{self.root}/input:/input:ro"]}}]
         existence_checks = iter([0, 1])
         def runner(argv, timeout):
+            if argv[:2] == ["podman", "pull"]:
+                return subprocess.CompletedProcess(argv, 0, "", "")
             if argv[:2] == ["podman", "run"]:
                 return subprocess.CompletedProcess(argv, 0, "", "")
             if argv[:2] == ["podman", "inspect"]:
