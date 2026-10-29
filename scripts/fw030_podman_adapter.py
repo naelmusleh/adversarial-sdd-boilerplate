@@ -396,14 +396,14 @@ def _verify_container(inspect: Any, request: Mapping[str, Any],
     mounts = host.get("Binds", [])
     if observation_sink:
         observation_sink(_mount_observation_summary(item, input_source))
-    expected_options = ({"ro"}, {"ro", "rprivate"})
+    expected_options = {"ro"}
     parsed_bind: tuple[str, str, set[str]] | None = None
     if isinstance(mounts, list) and len(mounts) == 1 and isinstance(mounts[0], str):
         fields = mounts[0].split(":")
         if len(fields) == 3:
             parsed_bind = fields[0], fields[1], set(fields[2].split(","))
     if (parsed_bind is None or parsed_bind[0] != input_source or parsed_bind[1] != "/input"
-            or parsed_bind[2] not in expected_options):
+            or parsed_bind[2] != expected_options):
         raise AdapterError("fw030.adapter.mount_observation_mismatch", "observed input binding is not the declared read-only input")
     effective_mounts = item.get("Mounts")
     if (not isinstance(effective_mounts, list) or len(effective_mounts) != 1

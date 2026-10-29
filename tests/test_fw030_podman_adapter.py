@@ -183,7 +183,7 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertEqual(summary["binds"][0]["options"], ["ro", "rprivate"])
         self.assertEqual(summary["effective_mounts"][0]["read_only"], True)
 
-    def test_mount_observation_allows_only_observed_default_rprivate(self) -> None:
+    def test_mount_observation_does_not_allow_unobserved_rprivate(self) -> None:
         request = copy.deepcopy(self.request)
         source = str(self.root / "input")
         base = {"Config": {"User": "1000:1000", "Image": adapter.PINNED_IMAGE,
@@ -195,9 +195,9 @@ class PodmanAdapterTests(unittest.TestCase):
                                "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777"},
                                "Binds": [f"{source}:/input:ro,rprivate"]},
                 "Mounts": [{"Type": "bind", "Source": source, "Destination": "/input", "RW": False}]}
-        adapter._verify_container([base], request)
-        for bind in (f"{source}:/input:rw,rprivate", f"{source}:/input:ro,rshared",
-                     f"{source}:/input:ro,rprivate,unknown", f"{source}:/extra:ro"):
+        for bind in (f"{source}:/input:ro,rprivate", f"{source}:/input:rw,rprivate",
+                     f"{source}:/input:ro,rshared", f"{source}:/input:ro,rprivate,unknown",
+                     f"{source}:/extra:ro"):
             item = copy.deepcopy(base)
             item["HostConfig"]["Binds"] = [bind]
             with self.subTest(bind_options=bind.rsplit(":", 1)[-1]):
