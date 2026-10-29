@@ -95,3 +95,8 @@ After the correction and temporary trigger workflow passed independent review an
 ## Cycle-6 owner checkpoint
 
 The owner authorized one bounded investigation of `fw030.adapter.output_missing` after DECISION-047’s failed retry. Baseline is `9e78da36a3615feac93bb8a0ed0b3facc0416384`; the prior run accepted the effective read-only bind, then failed copying `/output/cases.json`, produced no cases, and reported cleanup complete. The investigation begins with static analysis and redacted transfer diagnostics, requires independent review and exact-revision CI, and permits at most one new synthetic retry only if evidence supports a bounded correction and the reviewed checkpoint explicitly allows it. DECISION-048 records the scope and stop conditions. No application input or secrets are introduced.
+
+
+## Cycle-6 diagnostic instrumentation candidate
+
+DECISION-048 authorizes a bounded investigation after `podman cp` failed retrieving `/output/cases.json`. Static inspection found that the adapter currently discards that command's exit status and stderr. The candidate adds only the return code and the existing bounded path/credential-redacted first-line hint to the failure diagnostic; a synthetic unit fixture covers redaction and cleanup state. It does not alter runtime policy or dispatch a workload. Independent review and exact-revision Verify Pipeline are required before a diagnostic run.

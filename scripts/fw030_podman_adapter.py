@@ -552,7 +552,11 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
                 raise AdapterError("fw030.adapter.inspect_invalid", "container policy inspection was not valid JSON")
             copied = run(["podman", "cp", f"{container_name}:/output/cases.json", str(output_dir / "cases.json")], 15)
             if copied.returncode != 0:
-                raise AdapterError("fw030.adapter.output_missing", "bounded case result could not be retrieved")
+                hint = _safe_runtime_error_hint(copied.stderr or "")
+                raise AdapterError(
+                    "fw030.adapter.output_missing",
+                    f"bounded case result retrieval failed (runtime_exit={copied.returncode}; stderr_hint={hint})",
+                )
             mount_copy = run(["podman", "cp", f"{container_name}:/output/tmpfs-mountinfo.txt", str(root / "tmpfs-mountinfo.txt")], 15)
             mountinfo_path = root / "tmpfs-mountinfo.txt"
             if (mount_copy.returncode != 0 or mountinfo_path.is_symlink() or not mountinfo_path.is_file()

@@ -326,6 +326,46 @@ class PodmanAdapterTests(unittest.TestCase):
             adapter._verify_container(inspect, request)
         self.assertEqual(caught.exception.code, "fw030.adapter.mount_observation_mismatch")
 
+    def test_case_result_copy_failure_reports_only_redacted_runtime_hint(self) -> None:
+        inspect = [{"Config": {"User": "1000:1000", "Image": adapter.PINNED_IMAGE,
+                                "Cmd": self.request["workload"]["argv"], "WorkingDir": "/input"},
+                    "HostConfig": {"NetworkMode": "none", "ReadonlyRootfs": True,
+                                   "Memory": 128 * 1024 * 1024, "NanoCpus": 1_000_000_000,
+                                   "PidsLimit": 32, "CapDrop": self.cap_drop,
+                                   "SecurityOpt": ["no-new-privileges"],
+                                   "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777"},
+                                   "Binds": [f"{self.root}/input:/input:ro"]},
+                    "Mounts": [{"Type": "bind", "Source": str(self.root / "input"),
+                                "Destination": "/input", "RW": False}]}]
+        existence_checks = iter([0, 1])
+        def runner(argv, timeout):
+            if argv[:2] in (["podman", "pull"], ["podman", "run"]):
+                return subprocess.CompletedProcess(argv, 0, "", "")
+            if argv[:2] == ["podman", "inspect"]:
+                return subprocess.CompletedProcess(argv, 0, json.dumps(inspect), "")
+            if argv[:2] == ["podman", "cp"]:
+                return subprocess.CompletedProcess(
+                    argv, 125, "", "Error: permission denied at /runner/private/output/cases.json token=synthetic-secret"
+                )
+            if argv[:3] == ["podman", "container", "exists"]:
+                return subprocess.CompletedProcess(argv, next(existence_checks), "", "")
+            if argv[:3] == ["podman", "rm", "--force"]:
+                return subprocess.CompletedProcess(argv, 0, "", "")
+            raise AssertionError("unexpected runtime command")
+        runtime = {"podman": adapter.PODMAN_VERSION, "oci_runtime": "crun", "oci_runtime_version": "1.14.1"}
+        host = {"os": "Ubuntu 24.04", "architecture": "x86_64", "image_header": "unknown", "image_env": "ubuntu24"}
+        with patch.object(adapter, "_host_facts", return_value=host), patch.object(adapter, "_profile_observation", return_value=runtime):
+            result = adapter.run_request(self.raw, self.auth, self.env, runner)
+        diagnostic = next(item for item in result["diagnostics"] if item["code"] == "fw030.adapter.output_missing")
+        self.assertIn("runtime_exit=125", diagnostic["message"])
+        self.assertIn("permission denied", diagnostic["message"])
+        self.assertIn("<path>", diagnostic["message"])
+        self.assertNotIn(str(self.root), diagnostic["message"])
+        self.assertNotIn("synthetic-secret", diagnostic["message"])
+        self.assertEqual(result["case_results"], [])
+        self.assertEqual(result["states"]["cleanup"], "complete")
+        self.assertTrue(validate_result(json.dumps(result))["valid"])
+
     def test_malformed_case_output_becomes_failed_result_and_still_cleans_up(self) -> None:
         inspect = [{"Config": {"User": "1000:1000", "Image": adapter.PINNED_IMAGE,
                                 "Cmd": self.request["workload"]["argv"], "WorkingDir": "/input"},
