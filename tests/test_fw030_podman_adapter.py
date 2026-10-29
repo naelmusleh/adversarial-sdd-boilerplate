@@ -69,11 +69,11 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertTrue(validate_result(json.dumps(result))["valid"])
 
     def test_crun_runtime_version_is_normalized_and_raw_value_retained(self) -> None:
-        raw_version = "crun version 1.14.1\\ncommit: synthetic"
+        raw_version = "crun version 1.14.1\ncommit: synthetic"
         info = {"host": {"security": {"rootless": True}, "ociRuntime": {"name": "crun", "version": raw_version}}}
         def runner(argv, timeout):
             if argv == ["podman", "--version"]:
-                return subprocess.CompletedProcess(argv, 0, "podman version 4.9.3\\n", "")
+                return subprocess.CompletedProcess(argv, 0, "podman version 4.9.3\n", "")
             if argv == ["podman", "info", "--format", "json"]:
                 return subprocess.CompletedProcess(argv, 0, json.dumps(info), "")
             raise AssertionError("unexpected runtime observation command")
