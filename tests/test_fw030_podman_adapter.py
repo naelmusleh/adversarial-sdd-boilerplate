@@ -68,6 +68,17 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertEqual(calls, [])
         self.assertTrue(validate_result(json.dumps(result))["valid"])
 
+    def test_unsupported_oci_runtime_is_recorded_without_running_workload(self) -> None:
+        observed_runtime = {"podman": adapter.PODMAN_VERSION, "oci_runtime": "crun", "oci_runtime_version": "9.9.9"}
+        observations: list[dict[str, str]] = []
+        with patch.object(adapter, "_host_facts", return_value={"os": "Ubuntu 24.04", "architecture": "x86_64", "image_header": "unknown", "image_env": "ubuntu24"}), patch.object(adapter, "_profile_observation", return_value=observed_runtime):
+            result = adapter.run_request(self.raw, self.auth, self.env, observation_sink=observations.append)
+        self.assertEqual(result["states"]["request_readiness"], "unsupported")
+        self.assertEqual(result["states"]["execution"], "not_started")
+        self.assertEqual(observations[0]["oci_runtime_version"], "9.9.9")
+        self.assertIn("fw030.adapter.oci_runtime_mismatch", {d["code"] for d in result["diagnostics"]})
+        self.assertTrue(validate_result(json.dumps(result))["valid"])
+
     def test_rejects_unbound_authorization_before_workload(self) -> None:
         runtime = {"podman": adapter.PODMAN_VERSION, "oci_runtime": "crun", "oci_runtime_version": "1.14.1"}
         with patch.object(adapter, "_host_facts", return_value={"os": "Ubuntu 24.04", "architecture": "x86_64", "image_header": "unknown", "image_env": "ubuntu24"}), patch.object(adapter, "_profile_observation", return_value=runtime):
