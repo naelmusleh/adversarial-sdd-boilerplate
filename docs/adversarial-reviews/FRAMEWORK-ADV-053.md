@@ -2,7 +2,7 @@
 id: FRAMEWORK-ADV-053
 type: adversarial-review
 title: FW030-IMPL-02 initial independent code review
-status: complete
+status: in-review
 version: 1.1
 created: 2026-10-28
 updated: 2026-10-28
@@ -35,3 +35,8 @@ The reviewer did not run tests. The profile remains bounded to one observed GitH
 
 
 A second independent review of the corrected environment boundary is required on the current exact PR head. The previous exact-review miss was fixed before any synthetic adapter pilot was dispatched; no runtime pilot has yet run against this adapter implementation.
+
+
+## Superseded exact-revision CI
+
+Verify Pipeline run [40797321974](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40797321974) failed the Python job on superseded source `3d18aebede357426ca3338f67c71d499bbd5d5c1`; it is not evidence for the corrected candidate. The failures were (a) review artifact status `complete`, which is not an allowed artifact status; (b) three adapter fixtures whose UID/GID did not match the request; and (c) the now-recorded full-environment leak. The review artifact is now `in-review`, the fixtures use the requested non-root identity, and the host subprocess environment is allowlisted. A fresh exact-head Verify Pipeline run is required.
