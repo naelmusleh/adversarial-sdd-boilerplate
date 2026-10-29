@@ -65,8 +65,6 @@ def _run(argv: Sequence[str], timeout: int, env: Mapping[str, str] | None = None
         if base.get(name):
             safe_env[name] = base[name]
     safe_env["TMPDIR"] = str(root / "podman-tmp")
-    if env:
-        safe_env.update(env)
     try:
         return subprocess.run(list(argv), shell=False, check=False, capture_output=True,
                               text=True, timeout=timeout, env=safe_env, start_new_session=True)
