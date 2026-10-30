@@ -135,7 +135,7 @@ class PodmanAdapterTests(unittest.TestCase):
             "Binds": [f"{self.root}/input:/input:ro"]}, "Mounts": [{"Type": "bind", "Source": str(self.root / "input"), "Destination": "/input", "RW": False}]}]
         workload_stdout = (
             "FW030_OUTPUT_V1\n" + json.dumps(cases, separators=(",", ":")) +
-            "\n/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64\n"
+            "\n/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,uid=1000,gid=1000,inode64|1777\n"
         )
         existence_checks = iter([0, 1])
         def runner(argv, timeout):
@@ -392,7 +392,7 @@ class PodmanAdapterTests(unittest.TestCase):
                                    "Binds": [f"{self.root}/input:/input:ro"]}, "Mounts": [{"Type": "bind", "Source": str(self.root / "input"), "Destination": "/input", "RW": False}]}]
         malformed_output = (
             "FW030_OUTPUT_V1\n[{\"case_id\":[],\"outcome\":\"passed\"}]" +
-            "\n/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64\n"
+            "\n/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,uid=1000,gid=1000,inode64|1777\n"
         )
         existence_checks = iter([0, 1])
         def runner(argv, timeout):
