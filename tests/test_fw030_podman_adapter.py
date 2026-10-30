@@ -298,6 +298,18 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertIn("mode_match=false", summary)
         self.assertIn("unknown_option_count=1", summary)
         self.assertNotIn("private-secret", summary)
+        conflicting = adapter._effective_tmpfs_diagnostic(
+            b"/output|tmpfs|rw,ro,nosuid,nodev,noexec|rw,size=16m,size=32m,mode=1777,mode=0700",
+            16,
+        )
+        self.assertIn("flag_conflict_count=1", conflicting)
+        self.assertIn("size_match=false", conflicting)
+        self.assertIn("size_conflict_count=1", conflicting)
+        self.assertIn("mode_match=false", conflicting)
+        self.assertIn("mode_conflict_count=1", conflicting)
+        self.assertNotIn("16m", conflicting)
+        self.assertNotIn("32m", conflicting)
+        self.assertNotIn("0700", conflicting)
         self.assertNotIn("999m", summary)
         self.assertNotIn("0700", summary)
         self.assertNotIn("abc", summary)
