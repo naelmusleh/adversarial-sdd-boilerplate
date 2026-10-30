@@ -1,1 +1,0 @@
-DECISION-049 authorized one diagnostic-only synthetic FW030-IMPL-02 run after exact review and CI. No retry is authorized.
