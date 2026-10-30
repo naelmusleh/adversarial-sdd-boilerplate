@@ -3,7 +3,7 @@ id: DECISION-LOG-001
 type: decision-log
 title: Reusable template decisions
 status: active
-version: 1.16
+version: 1.17
 created: 2026-10-10
 updated: 2026-10-30
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-EXERCISE-005, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-ARCHITECTURE-003, FRAMEWORK-ARCHITECTURE-004, FRAMEWORK-CONTRACT-030, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-COVERAGE-002, FRAMEWORK-CX-002, FRAMEWORK-ADV-035, FRAMEWORK-ADV-036, DECISION-033, DECISION-034, DECISION-035
@@ -40,6 +40,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-EXERCISE
 
 | DECISION-049 | 2026-10-30 | Authorize a bounded FW030-IMPL-02 tmpfs-evidence diagnostic only. | Owner instruction “okay proceed,” following DECISION-048’s failed retry and requirement for a fresh checkpoint, authorizes a new bounded diagnostic of `fw030.adapter.tmpfs_observation_invalid` on the same synthetic profile. The change may add only privacy-safe, allowlisted summaries of the workload-observed `/output` mount fields and a temporary marker workflow, after independent review and exact-revision Verify Pipeline pass. Run the synthetic workload at most once for diagnosis; do not change acceptance policy, interpret missing evidence as a pass, or perform a follow-up retry/fix under this decision. Remove the temporary workflow and marker and verify cleanup. If the summary does not resolve the mismatch, retain BLOCKED status and seek a separate checkpoint. No app data/secrets, profile expansion, production use, merge, or deployment. | DECISION-048, FRAMEWORK-ADV-053, FRAMEWORK-BACKLOG-001 |
 
+| DECISION-050 | 2026-10-30 | Authorize a bounded FW030-IMPL-02 tmpfs observation correction and one conditional synthetic verification run. | Under the owner's standing direction to continue through checkpoints, and following cycle-7 direct evidence, authorize one narrowly scoped follow-up on the same GitHub-hosted Ubuntu 24.04/rootless Podman 4.9.3 synthetic profile: observe `/output` directory permissions directly as a bounded numeric mode; classify any observed tmpfs `uid`/`gid` options only as matches or mismatches against the declared synthetic identity; update the validator only to accept the evidence-supported representation while continuing to reject unknown/conflicting options and requiring exact tmpfs type, `/output`, required flags, and configured size. Add adversarial fixtures. Independent review and exact-revision Verify Pipeline are required before at most one synthetic verification run through a separately reviewed, exact-CI-passing temporary trigger workflow. If evidence does not support the correction, review/CI blocks, the run fails, cases fail, or cleanup is uncertain, stop with FW030-IMPL-02 blocked; no further retry. No app data/secrets, profile expansion, production use, merge, or deployment. | DECISION-043, DECISION-049, FRAMEWORK-ADV-053, FRAMEWORK-ADV-054, FRAMEWORK-BACKLOG-001 |
 ## Decision discipline
 
 Add a stable ID for each new material decision. Record the decision authority, date, rationale, impacted artifacts, consequences, and revisit conditions. Preserve app-specific decisions in that app's repository.
