@@ -32,3 +32,11 @@ related-artifacts: DECISION-050, FRAMEWORK-ADV-053, FRAMEWORK-ADV-054, FRAMEWORK
 ## Boundaries and next step
 
 DECISION-050 permits at most one synthetic verification run only after a separately reviewed temporary trigger workflow and its exact-revision Verify Pipeline pass. The run must use only the fixed synthetic workload and selected profile, then remove the trigger workflow and marker and verify cleanup. If it fails, reports no cases, or cleanup is uncertain, FW030-IMPL-02 remains blocked; no further retry is permitted under DECISION-050. No app data/secrets, profile expansion, production use, merge, or deployment is authorized.
+
+
+## One-shot verification workflow review
+
+- **Workflow commit:** a24710359aa1461b304e158764629af03e0e9b8f.
+- **Independent reviewer:** /root/fw030_impl02_final_review; verdict PASS. It triggers only on the dedicated marker path on codex/fw030-impl02, has no top-level permissions, grants contents:read to its sole job, and calls only the fixed reusable synthetic adapter pilot. It has no secrets or app-data inputs; the marker was absent at review time.
+- **Exact Verify Pipeline:** push [41049903392](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/41049903392) and PR [41049911086](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/41049911086) passed all required jobs.
+- DECISION-050 permits at most one synthetic verification after these gates; no further retry is authorized.
