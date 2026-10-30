@@ -1,0 +1,1 @@
+DECISION-050 permits one synthetic FW030-IMPL-02 verification after reviewed correction and exact CI. No further retry is authorized.
