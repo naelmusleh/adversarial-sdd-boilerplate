@@ -352,54 +352,73 @@ def _tmpfs_options_match(raw: Any, disk_mb: int) -> bool:
     return required.issubset(options) and set(options).issubset(allowed)
 
 
-def _effective_tmpfs_mount_matches(raw: bytes, disk_mb: int) -> bool:
+def _effective_tmpfs_mount_matches(raw: bytes, disk_mb: int, uid: int, gid: int) -> bool:
     try:
-        mountpoint, fs_type, mount_options, super_options = raw.decode("ascii", errors="strict").strip().split("|", 3)
+        mountpoint, fs_type, mount_options, super_options, directory_mode = raw.decode(
+            "ascii", errors="strict"
+        ).strip().split("|", 4)
     except (UnicodeError, ValueError):
         return False
-    if mountpoint != "/output" or fs_type != "tmpfs":
+    if mountpoint != "/output" or fs_type != "tmpfs" or directory_mode != "1777":
         return False
-    options = set(mount_options.split(",")) | set(super_options.split(","))
-    required = {"rw", "noexec", "nosuid", "nodev", "mode=1777"}
-    size_options = {f"size={disk_mb}m", f"size={disk_mb * 1024}k"}
-    allowed = required | size_options | {"relatime", "inode64"}
-    return required.issubset(options) and bool(options & size_options) and options.issubset(allowed)
+    options = mount_options.split(",") + super_options.split(",")
+    required = {"rw", "noexec", "nosuid", "nodev"}
+    size_values = [option[5:] for option in options if option.startswith("size=")]
+    mode_values = [option[5:] for option in options if option.startswith("mode=")]
+    uid_values = [option[4:] for option in options if option.startswith("uid=")]
+    gid_values = [option[4:] for option in options if option.startswith("gid=")]
+    expected_sizes = {f"{disk_mb}m", f"{disk_mb * 1024}k"}
+    conflicting = {"ro", "suid", "dev", "exec"}
+    known = required | conflicting | {"size", "mode", "uid", "gid", "relatime", "inode64"}
+    return (
+        required.issubset(options)
+        and not (set(options) & conflicting)
+        and bool(size_values) and all(value in expected_sizes for value in size_values)
+        and all(value == "1777" for value in mode_values)
+        and all(value == str(uid) for value in uid_values)
+        and all(value == str(gid) for value in gid_values)
+        and all(option.split("=", 1)[0] in known for option in options)
+    )
 
 
-def _effective_tmpfs_diagnostic(raw: bytes, disk_mb: int) -> str:
+def _effective_tmpfs_diagnostic(raw: bytes, disk_mb: int, uid: int, gid: int) -> str:
     """Summarize only allowlisted tmpfs properties; never emit raw mount data."""
     try:
-        fields = raw.decode("ascii", errors="strict").strip().split("|", 3)
+        fields = raw.decode("ascii", errors="strict").strip().split("|", 4)
     except UnicodeError:
         return "field_parse=invalid; reason=non_ascii"
-    if len(fields) != 4:
+    if len(fields) != 5:
         return f"field_parse=invalid; field_count={min(len(fields), 9)}"
-    mountpoint, fs_type, mount_options_raw, super_options_raw = fields
-    mount_options = mount_options_raw.split(",")
-    super_options = super_options_raw.split(",")
-    all_options = mount_options + super_options
+    mountpoint, fs_type, mount_options_raw, super_options_raw, directory_mode = fields
+    options = mount_options_raw.split(",") + super_options_raw.split(",")
     required_flags = {"rw", "noexec", "nosuid", "nodev"}
-    missing = sorted(required_flags - set(all_options))
+    missing = sorted(required_flags - set(options))
     expected_sizes = {f"{disk_mb}m", f"{disk_mb * 1024}k"}
-    size_values = [option[5:] for option in all_options if option.startswith("size=")]
-    mode_values = [option[5:] for option in all_options if option.startswith("mode=")]
-    size_match = len(size_values) > 0 and all(value in expected_sizes for value in size_values)
-    mode_match = len(mode_values) > 0 and all(value == "1777" for value in mode_values)
+    size_values = [option[5:] for option in options if option.startswith("size=")]
+    mode_values = [option[5:] for option in options if option.startswith("mode=")]
+    uid_values = [option[4:] for option in options if option.startswith("uid=")]
+    gid_values = [option[4:] for option in options if option.startswith("gid=")]
+    size_match = bool(size_values) and all(value in expected_sizes for value in size_values)
+    mount_mode_match = all(value == "1777" for value in mode_values)
+    directory_mode_match = directory_mode == "1777"
+    uid_match = all(value == str(uid) for value in uid_values)
+    gid_match = all(value == str(gid) for value in gid_values)
     conflicting_flags = {"ro", "suid", "dev", "exec"}
-    flag_conflict_count = sum(1 for option in all_options if option in conflicting_flags)
-    known_keys = required_flags | conflicting_flags | {"relatime", "inode64", "mode", "size"}
-    unknown_count = sum(1 for option in all_options if option.split("=", 1)[0] not in known_keys)
+    flag_conflict_count = sum(1 for option in options if option in conflicting_flags)
+    known_keys = required_flags | conflicting_flags | {"relatime", "inode64", "mode", "size", "uid", "gid"}
+    unknown_count = sum(1 for option in options if option.split("=", 1)[0] not in known_keys)
     return (
         f"field_parse=valid; mountpoint_match={str(mountpoint == '/output').lower()}; "
         f"filesystem_match={str(fs_type == 'tmpfs').lower()}; missing_flags={','.join(missing) or 'none'}; "
         f"flag_conflict_count={min(flag_conflict_count, 32)}; "
         f"size_match={str(size_match).lower()}; size_conflict_count={min(sum(value not in expected_sizes for value in size_values), 32)}; "
-        f"mode_match={str(mode_match).lower()}; mode_conflict_count={min(sum(value != '1777' for value in mode_values), 32)}; "
+        f"mount_mode_match={str(mount_mode_match).lower()}; "
+        f"directory_mode_match={str(directory_mode_match).lower()}; "
+        f"uid_option_match={str(uid_match).lower()}; gid_option_match={str(gid_match).lower()}; "
         f"unknown_option_count={min(unknown_count, 32)}"
     )
 
-
-def _parse_workload_output(raw: str, max_case_bytes: int, disk_mb: int) -> bytes:
+def _parse_workload_output(raw: str, max_case_bytes: int, disk_mb: int, uid: int, gid: int) -> bytes:
     """Parse bounded synthetic evidence streamed while its tmpfs mount is still alive."""
     try:
         encoded = raw.encode("ascii", errors="strict")
@@ -413,8 +432,8 @@ def _parse_workload_output(raw: str, max_case_bytes: int, disk_mb: int) -> bytes
     case_bytes, mount_bytes = lines[1].encode("ascii"), lines[2].encode("ascii")
     if not case_bytes or len(case_bytes) > max_case_bytes:
         raise AdapterError("fw030.adapter.output_invalid", "case evidence exceeded the declared output limit")
-    if len(mount_bytes) > 4096 or not _effective_tmpfs_mount_matches(mount_bytes, disk_mb):
-        raise AdapterError("fw030.adapter.tmpfs_observation_invalid", "effective output tmpfs evidence was missing or invalid; " + _effective_tmpfs_diagnostic(mount_bytes, disk_mb))
+    if len(mount_bytes) > 4096 or not _effective_tmpfs_mount_matches(mount_bytes, disk_mb, uid, gid):
+        raise AdapterError("fw030.adapter.tmpfs_observation_invalid", "effective output tmpfs evidence was missing or invalid; " + _effective_tmpfs_diagnostic(mount_bytes, disk_mb, uid, gid))
     return case_bytes
 
 
@@ -604,7 +623,7 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
                 raise AdapterError("fw030.adapter.inspect_invalid", "container policy inspection was not valid JSON")
             case_bytes = _parse_workload_output(
                 ran.stdout or "", min(MAX_OUTPUT_BYTES, request["policy"]["evidence"]["max_output_bytes"]),
-                limit["disk_mb"],
+                limit["disk_mb"], request["policy"]["uid"], request["policy"]["gid"],
             )
             try:
                 parsed = _json_without_duplicates(case_bytes)
@@ -754,7 +773,8 @@ for field in CapEff CapPrm CapInh CapBnd CapAmb; do
   if ! awk -v key="$field:" '$1 == key {{ found=1; if (tolower($2) !~ /^0+$/) bad=1 }} END {{ if (!found || bad) exit 1 }}' /proc/self/status; then capabilities_dropped=failed; fi
 done
 mount_row=$(awk '$5 == "/output" {{ for (i=1;i<=NF;i++) if ($i == "-") {{ print $5 "|" $(i+1) "|" $6 "|" $(i+3); exit }} }}' /proc/self/mountinfo)
-printf '%s' "$mount_row" > /output/tmpfs-mountinfo.txt 2>/dev/null || exit 70
+mount_mode=$(/bin/busybox stat -c %a /output 2>/dev/null) || exit 70
+printf '%s|%s' "$mount_row" "$mount_mode" > /output/tmpfs-mountinfo.txt 2>/dev/null || exit 70
 cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"'${{output_bounded}}'"}},{{"case_id":"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"}},{{"case_id":"CAPABILITIES_DROPPED","outcome":"'${{capabilities_dropped}}'"}}]'
 printf '%s' "$cases" > /output/cases.json 2>/dev/null || exit 70
 if [ "$(wc -c < /output/cases.json)" -gt 4096 ]; then
