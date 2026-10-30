@@ -289,6 +289,20 @@ class PodmanAdapterTests(unittest.TestCase):
             with self.subTest(observed=observed):
                 self.assertFalse(adapter._effective_tmpfs_mount_matches(observed, 16))
 
+    def test_tmpfs_diagnostic_is_allowlisted_and_redacts_raw_mount_values(self) -> None:
+        raw = b"/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=999m,mode=0700,private-secret=abc"
+        summary = adapter._effective_tmpfs_diagnostic(raw, 16)
+        self.assertIn("mountpoint_match=true", summary)
+        self.assertIn("filesystem_match=true", summary)
+        self.assertIn("size_match=false", summary)
+        self.assertIn("mode_match=false", summary)
+        self.assertIn("unknown_option_count=1", summary)
+        self.assertNotIn("private-secret", summary)
+        self.assertNotIn("999m", summary)
+        self.assertNotIn("0700", summary)
+        self.assertNotIn("abc", summary)
+        self.assertIn("field_parse=invalid", adapter._effective_tmpfs_diagnostic(b"bad", 16))
+
     def test_generated_workload_has_valid_shell_syntax_and_does_not_claim_tmpfs(self) -> None:
         script = adapter._pilot_workload_script(Path("/synthetic/host-sentinel.txt"))
         checked = subprocess.run(["sh", "-n"], input=script, text=True, capture_output=True, check=False)
