@@ -289,6 +289,8 @@ class PodmanAdapterTests(unittest.TestCase):
             b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,uid=0,gid=1000|1000|1000|1777",
             b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,uid=1000,gid=0|1000|1000|1777",
             b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,uid=1000,gid=1000|0|0|1777",
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k|owner|1000|1777",
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k|1000|1000|1777".replace(b"|1000|1000|1777", b"|100000000000|1000|1777"),
             b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,private-secret=abc|1000|1000|1777",
             b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,ro=conflict|1000|1000|1777",
         )
@@ -304,6 +306,8 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertIn("size_match=false", summary)
         self.assertIn("mount_mode_match=false", summary)
         self.assertIn("directory_mode_match=false", summary)
+        self.assertIn("directory_owner_parse=true", summary)
+        self.assertIn("directory_group_parse=true", summary)
         self.assertIn("uid_option_match=false", summary)
         self.assertIn("gid_option_match=false", summary)
         self.assertIn("unknown_option_count=1", summary)
