@@ -381,14 +381,20 @@ def _effective_tmpfs_diagnostic(raw: bytes, disk_mb: int) -> str:
     required_flags = {"rw", "noexec", "nosuid", "nodev"}
     missing = sorted(required_flags - set(all_options))
     expected_sizes = {f"{disk_mb}m", f"{disk_mb * 1024}k"}
-    size_match = any(option.startswith("size=") and option[5:] in expected_sizes for option in all_options)
-    mode_match = "mode=1777" in all_options
-    known_keys = required_flags | {"relatime", "inode64", "mode", "size"}
+    size_values = [option[5:] for option in all_options if option.startswith("size=")]
+    mode_values = [option[5:] for option in all_options if option.startswith("mode=")]
+    size_match = len(size_values) > 0 and all(value in expected_sizes for value in size_values)
+    mode_match = len(mode_values) > 0 and all(value == "1777" for value in mode_values)
+    conflicting_flags = {"ro", "suid", "dev", "exec"}
+    flag_conflict_count = sum(1 for option in all_options if option in conflicting_flags)
+    known_keys = required_flags | conflicting_flags | {"relatime", "inode64", "mode", "size"}
     unknown_count = sum(1 for option in all_options if option.split("=", 1)[0] not in known_keys)
     return (
         f"field_parse=valid; mountpoint_match={str(mountpoint == '/output').lower()}; "
         f"filesystem_match={str(fs_type == 'tmpfs').lower()}; missing_flags={','.join(missing) or 'none'}; "
-        f"size_match={str(size_match).lower()}; mode_match={str(mode_match).lower()}; "
+        f"flag_conflict_count={min(flag_conflict_count, 32)}; "
+        f"size_match={str(size_match).lower()}; size_conflict_count={min(sum(value not in expected_sizes for value in size_values), 32)}; "
+        f"mode_match={str(mode_match).lower()}; mode_conflict_count={min(sum(value != '1777' for value in mode_values), 32)}; "
         f"unknown_option_count={min(unknown_count, 32)}"
     )
 
