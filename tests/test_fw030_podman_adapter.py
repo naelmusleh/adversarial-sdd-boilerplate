@@ -277,7 +277,7 @@ class PodmanAdapterTests(unittest.TestCase):
 
     def test_effective_tmpfs_mount_observation_is_strict(self) -> None:
         valid = b"/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64"
-        self.assertTrue(adapter._effective_tmpfs_mount_matches(valid, 16))
+        self.assertTrue(adapter._effective_tmpfs_mount_matches(valid, 16, 1000, 1000))
         for observed in (
             b"/output|ext4|rw,nosuid,nodev,noexec|rw,size=16384k,mode=1777",
             b"/other|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,mode=1777",
@@ -287,11 +287,11 @@ class PodmanAdapterTests(unittest.TestCase):
             b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,mode=0700",
         ):
             with self.subTest(observed=observed):
-                self.assertFalse(adapter._effective_tmpfs_mount_matches(observed, 16))
+                self.assertFalse(adapter._effective_tmpfs_mount_matches(observed, 16, 1000, 1000))
 
     def test_tmpfs_diagnostic_is_allowlisted_and_redacts_raw_mount_values(self) -> None:
         raw = b"/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=999m,mode=0700,private-secret=abc"
-        summary = adapter._effective_tmpfs_diagnostic(raw, 16)
+        summary = adapter._effective_tmpfs_diagnostic(raw, 16, 1000, 1000)
         self.assertIn("mountpoint_match=true", summary)
         self.assertIn("filesystem_match=true", summary)
         self.assertIn("size_match=false", summary)
@@ -313,7 +313,7 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertNotIn("999m", summary)
         self.assertNotIn("0700", summary)
         self.assertNotIn("abc", summary)
-        self.assertIn("field_parse=invalid", adapter._effective_tmpfs_diagnostic(b"bad", 16))
+        self.assertIn("field_parse=invalid", adapter._effective_tmpfs_diagnostic(b"bad", 16, 1000, 1000))
 
     def test_generated_workload_has_valid_shell_syntax_and_does_not_claim_tmpfs(self) -> None:
         script = adapter._pilot_workload_script(Path("/synthetic/host-sentinel.txt"))
@@ -357,15 +357,15 @@ class PodmanAdapterTests(unittest.TestCase):
         cases = b'[{"case_id":"OUTPUT_BOUNDED","outcome":"passed"}]'
         mount = b"/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64"
         valid = b"FW030_OUTPUT_V1\n" + cases + b"\n" + mount + b"\n"
-        self.assertEqual(adapter._parse_workload_output(valid.decode("ascii"), 4096, 16), cases)
+        self.assertEqual(adapter._parse_workload_output(valid.decode("ascii"), 4096, 16, 1000, 1000), cases)
         with self.assertRaises(adapter.AdapterError) as caught:
-            adapter._parse_workload_output((b"FW030_OUTPUT_V1\n" + b"x" * 4097 + b"\n" + mount).decode("ascii"), 4096, 16)
+            adapter._parse_workload_output((b"FW030_OUTPUT_V1\n" + b"x" * 4097 + b"\n" + mount).decode("ascii"), 4096, 16, 1000, 1000)
         self.assertEqual(caught.exception.code, "fw030.adapter.output_invalid")
         with self.assertRaises(adapter.AdapterError) as caught:
-            adapter._parse_workload_output("unexpected", 4096, 16)
+            adapter._parse_workload_output("unexpected", 4096, 16, 1000, 1000)
         self.assertEqual(caught.exception.code, "fw030.adapter.output_invalid")
         with self.assertRaises(adapter.AdapterError) as caught:
-            adapter._parse_workload_output((b"FW030_OUTPUT_V1\n" + cases + b"\n/output|ext4|rw|rw\n").decode("ascii"), 4096, 16)
+            adapter._parse_workload_output((b"FW030_OUTPUT_V1\n" + cases + b"\n/output|ext4|rw|rw|1777\n").decode("ascii"), 4096, 16, 1000, 1000)
         self.assertEqual(caught.exception.code, "fw030.adapter.tmpfs_observation_invalid")
 
     def test_malformed_case_output_becomes_failed_result_and_still_cleans_up(self) -> None:
