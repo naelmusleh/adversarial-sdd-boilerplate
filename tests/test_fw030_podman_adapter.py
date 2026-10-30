@@ -276,50 +276,63 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertFalse(adapter._tmpfs_options_match(None, 16))
 
     def test_effective_tmpfs_mount_observation_is_strict(self) -> None:
-        valid = b"/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64"
+        valid = b"/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,uid=1000,gid=1000,inode64|1777"
         self.assertTrue(adapter._effective_tmpfs_mount_matches(valid, 16, 1000, 1000))
-        for observed in (
-            b"/output|ext4|rw,nosuid,nodev,noexec|rw,size=16384k,mode=1777",
-            b"/other|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,mode=1777",
-            b"/output|tmpfs|rw,suid,nodev,noexec|rw,size=16384k,mode=1777",
-            b"/output|tmpfs|rw,nosuid,nodev,exec|rw,size=16384k,mode=1777",
-            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=32768k,mode=1777",
-            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,mode=0700",
-        ):
+        invalid_observations = (
+            b"/output|ext4|rw,nosuid,nodev,noexec|rw,size=16384k|1777",
+            b"/other|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k|1777",
+            b"/output|tmpfs|rw,ro,nosuid,nodev,noexec|rw,size=16384k|1777",
+            b"/output|tmpfs|rw,nosuid,nodev,exec|rw,size=16384k|1777",
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=32768k|1777",
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k|0700",
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k|1770",
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,uid=0,gid=1000|1777",
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,uid=1000,gid=0|1777",
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,private-secret=abc|1777",
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,ro=conflict|1777",
+        )
+        for observed in invalid_observations:
             with self.subTest(observed=observed):
                 self.assertFalse(adapter._effective_tmpfs_mount_matches(observed, 16, 1000, 1000))
 
     def test_tmpfs_diagnostic_is_allowlisted_and_redacts_raw_mount_values(self) -> None:
-        raw = b"/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=999m,mode=0700,private-secret=abc"
+        raw = b"/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=999m,mode=0700,uid=8,gid=9,private-secret=abc|0700"
         summary = adapter._effective_tmpfs_diagnostic(raw, 16, 1000, 1000)
         self.assertIn("mountpoint_match=true", summary)
         self.assertIn("filesystem_match=true", summary)
         self.assertIn("size_match=false", summary)
-        self.assertIn("mode_match=false", summary)
+        self.assertIn("mount_mode_match=false", summary)
+        self.assertIn("directory_mode_match=false", summary)
+        self.assertIn("uid_option_match=false", summary)
+        self.assertIn("gid_option_match=false", summary)
         self.assertIn("unknown_option_count=1", summary)
         self.assertNotIn("private-secret", summary)
+        self.assertNotIn("999m", summary)
+        self.assertNotIn("0700", summary)
+        self.assertNotIn("abc", summary)
         conflicting = adapter._effective_tmpfs_diagnostic(
-            b"/output|tmpfs|rw,ro,nosuid,nodev,noexec|rw,size=16m,size=32m,mode=1777,mode=0700",
-            16,
+            b"/output|tmpfs|rw,ro,nosuid,nodev,noexec|rw,size=16m,size=32m,mode=1777,mode=0700|0700",
+            16, 1000, 1000,
         )
         self.assertIn("flag_conflict_count=1", conflicting)
         self.assertIn("size_match=false", conflicting)
         self.assertIn("size_conflict_count=1", conflicting)
-        self.assertIn("mode_match=false", conflicting)
-        self.assertIn("mode_conflict_count=1", conflicting)
+        self.assertIn("mount_mode_match=false", conflicting)
+        self.assertIn("directory_mode_match=false", conflicting)
+        self.assertIn("uid_option_match=true", conflicting)
+        self.assertIn("gid_option_match=true", conflicting)
         self.assertNotIn("16m", conflicting)
         self.assertNotIn("32m", conflicting)
         self.assertNotIn("0700", conflicting)
-        self.assertNotIn("999m", summary)
-        self.assertNotIn("0700", summary)
-        self.assertNotIn("abc", summary)
         self.assertIn("field_parse=invalid", adapter._effective_tmpfs_diagnostic(b"bad", 16, 1000, 1000))
+
 
     def test_generated_workload_has_valid_shell_syntax_and_does_not_claim_tmpfs(self) -> None:
         script = adapter._pilot_workload_script(Path("/synthetic/host-sentinel.txt"))
         checked = subprocess.run(["sh", "-n"], input=script, text=True, capture_output=True, check=False)
         self.assertEqual(checked.returncode, 0, checked.stderr)
         self.assertIn("/proc/self/mountinfo", script)
+        self.assertIn("/bin/busybox stat -c %a /output", script)
         self.assertIn("FW030_OUTPUT_V1", script)
         self.assertIn("cat /output/cases.json", script)
         self.assertIn("cat /output/tmpfs-mountinfo.txt", script)
@@ -355,7 +368,7 @@ class PodmanAdapterTests(unittest.TestCase):
 
     def test_workload_output_envelope_is_bounded_and_binds_tmpfs_evidence(self) -> None:
         cases = b'[{"case_id":"OUTPUT_BOUNDED","outcome":"passed"}]'
-        mount = b"/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,mode=1777,inode64"
+        mount = b"/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,uid=1000,gid=1000,inode64|1777"
         valid = b"FW030_OUTPUT_V1\n" + cases + b"\n" + mount + b"\n"
         self.assertEqual(adapter._parse_workload_output(valid.decode("ascii"), 4096, 16, 1000, 1000), cases)
         with self.assertRaises(adapter.AdapterError) as caught:
