@@ -369,7 +369,7 @@ def _effective_tmpfs_mount_matches(raw: bytes, disk_mb: int, uid: int, gid: int)
     gid_values = [option[4:] for option in options if option.startswith("gid=")]
     expected_sizes = {f"{disk_mb}m", f"{disk_mb * 1024}k"}
     conflicting = {"ro", "suid", "dev", "exec"}
-    known = required | conflicting | {"size", "mode", "uid", "gid", "relatime", "inode64"}
+    known = required | {"size", "mode", "uid", "gid", "relatime", "inode64"}
     return (
         required.issubset(options)
         and not (set(options) & conflicting)
