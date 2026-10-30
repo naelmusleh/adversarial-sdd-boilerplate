@@ -382,7 +382,7 @@ def _effective_tmpfs_diagnostic(raw: bytes, disk_mb: int) -> str:
     missing = sorted(required_flags - set(all_options))
     expected_sizes = {f"{disk_mb}m", f"{disk_mb * 1024}k"}
     size_match = any(option.startswith("size=") and option[5:] in expected_sizes for option in all_options)
-    mode_match = f"mode={1777:o}" in all_options
+    mode_match = "mode=1777" in all_options
     known_keys = required_flags | {"relatime", "inode64", "mode", "size"}
     unknown_count = sum(1 for option in all_options if option.split("=", 1)[0] not in known_keys)
     return (
