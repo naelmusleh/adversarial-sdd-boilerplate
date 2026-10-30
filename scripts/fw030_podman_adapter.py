@@ -366,6 +366,33 @@ def _effective_tmpfs_mount_matches(raw: bytes, disk_mb: int) -> bool:
     return required.issubset(options) and bool(options & size_options) and options.issubset(allowed)
 
 
+def _effective_tmpfs_diagnostic(raw: bytes, disk_mb: int) -> str:
+    """Summarize only allowlisted tmpfs properties; never emit raw mount data."""
+    try:
+        fields = raw.decode("ascii", errors="strict").strip().split("|", 3)
+    except UnicodeError:
+        return "field_parse=invalid; reason=non_ascii"
+    if len(fields) != 4:
+        return f"field_parse=invalid; field_count={min(len(fields), 9)}"
+    mountpoint, fs_type, mount_options_raw, super_options_raw = fields
+    mount_options = mount_options_raw.split(",")
+    super_options = super_options_raw.split(",")
+    all_options = mount_options + super_options
+    required_flags = {"rw", "noexec", "nosuid", "nodev"}
+    missing = sorted(required_flags - set(all_options))
+    expected_sizes = {f"{disk_mb}m", f"{disk_mb * 1024}k"}
+    size_match = any(option.startswith("size=") and option[5:] in expected_sizes for option in all_options)
+    mode_match = f"mode={1777:o}" in all_options
+    known_keys = required_flags | {"relatime", "inode64", "mode", "size"}
+    unknown_count = sum(1 for option in all_options if option.split("=", 1)[0] not in known_keys)
+    return (
+        f"field_parse=valid; mountpoint_match={str(mountpoint == '/output').lower()}; "
+        f"filesystem_match={str(fs_type == 'tmpfs').lower()}; missing_flags={','.join(missing) or 'none'}; "
+        f"size_match={str(size_match).lower()}; mode_match={str(mode_match).lower()}; "
+        f"unknown_option_count={min(unknown_count, 32)}"
+    )
+
+
 def _parse_workload_output(raw: str, max_case_bytes: int, disk_mb: int) -> bytes:
     """Parse bounded synthetic evidence streamed while its tmpfs mount is still alive."""
     try:
@@ -381,7 +408,7 @@ def _parse_workload_output(raw: str, max_case_bytes: int, disk_mb: int) -> bytes
     if not case_bytes or len(case_bytes) > max_case_bytes:
         raise AdapterError("fw030.adapter.output_invalid", "case evidence exceeded the declared output limit")
     if len(mount_bytes) > 4096 or not _effective_tmpfs_mount_matches(mount_bytes, disk_mb):
-        raise AdapterError("fw030.adapter.tmpfs_observation_invalid", "effective output tmpfs evidence was missing or invalid")
+        raise AdapterError("fw030.adapter.tmpfs_observation_invalid", "effective output tmpfs evidence was missing or invalid; " + _effective_tmpfs_diagnostic(mount_bytes, disk_mb))
     return case_bytes
 
 
