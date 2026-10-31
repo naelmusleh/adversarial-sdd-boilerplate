@@ -1,0 +1,17 @@
+name: FW-030 Cycle 9 Synthetic Verification
+
+on:
+  push:
+    branches:
+      - codex/fw030-impl02
+    paths:
+      - .github/fw030-cycle9-retry/dispatch.json
+
+permissions: {}
+
+jobs:
+  bounded-synthetic-verification:
+    name: Run the single authorized synthetic verification
+    uses: ./.github/workflows/fw030-adapter-pilot.yml
+    permissions:
+      contents: read
