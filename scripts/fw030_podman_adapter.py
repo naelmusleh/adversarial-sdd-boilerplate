@@ -42,6 +42,7 @@ CAPABILITIES = {"runtime.rootless", "filesystem.readonly-input", "network.disabl
 MAX_REQUEST_BYTES = 256 * 1024
 MAX_OUTPUT_BYTES = 1024 * 1024
 _DIGEST = re.compile(r"^[0-9a-f]{64}$")
+_MAX_LINUX_UID_GID = (1 << 32) - 1
 
 
 class AdapterError(Exception):
@@ -352,6 +353,13 @@ def _tmpfs_options_match(raw: Any, disk_mb: int) -> bool:
     return required.issubset(options) and set(options).issubset(allowed)
 
 
+def _valid_linux_uid_gid(value: str) -> bool:
+    return (
+        value.isascii() and value.isdecimal() and len(value) <= 10
+        and int(value) <= _MAX_LINUX_UID_GID
+    )
+
+
 def _effective_tmpfs_mount_matches(raw: bytes, disk_mb: int) -> bool:
     try:
         mountpoint, fs_type, mount_options, super_options, directory_uid, directory_gid, directory_mode = raw.decode(
@@ -360,8 +368,7 @@ def _effective_tmpfs_mount_matches(raw: bytes, disk_mb: int) -> bool:
     except (UnicodeError, ValueError):
         return False
     if (mountpoint != "/output" or fs_type != "tmpfs" or directory_mode != "1777"
-            or not directory_uid.isdigit() or not directory_gid.isdigit()
-            or len(directory_uid) > 10 or len(directory_gid) > 10):
+            or not _valid_linux_uid_gid(directory_uid) or not _valid_linux_uid_gid(directory_gid)):
         return False
     options = mount_options.split(",") + super_options.split(",")
     required = {"rw", "noexec", "nosuid", "nodev"}
@@ -403,8 +410,8 @@ def _effective_tmpfs_diagnostic(raw: bytes, disk_mb: int) -> str:
     size_match = bool(size_values) and all(value in expected_sizes for value in size_values)
     mount_mode_match = all(value == "1777" for value in mode_values)
     directory_mode_match = directory_mode == "1777"
-    directory_owner_parse = directory_uid.isdigit() and len(directory_uid) <= 10
-    directory_group_parse = directory_gid.isdigit() and len(directory_gid) <= 10
+    directory_owner_parse = _valid_linux_uid_gid(directory_uid)
+    directory_group_parse = _valid_linux_uid_gid(directory_gid)
     uid_match = directory_owner_parse and all(value == directory_uid for value in uid_values)
     gid_match = directory_group_parse and all(value == directory_gid for value in gid_values)
     conflicting_flags = {"ro", "suid", "dev", "exec"}
