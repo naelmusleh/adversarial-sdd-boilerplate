@@ -291,12 +291,76 @@ class PodmanAdapterTests(unittest.TestCase):
             b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,uid=1000,gid=1000|0|0|1777",
             b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k|owner|1000|1777",
             b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k|100000000000|1000|1777",
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k|4294967296|1000|1777",
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k|9999999999|1000|1777",
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k|1000|4294967296|1777",
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k|1000|9999999999|1777",
             b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,private-secret=abc|1000|1000|1777",
             b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16384k,ro=conflict|1000|1000|1777",
         )
         for observed in invalid_observations:
             with self.subTest(observed=observed):
                 self.assertFalse(adapter._effective_tmpfs_mount_matches(observed, 16))
+
+    def test_impossible_tmpfs_owner_or_group_fails_before_case_acceptance_and_cleans_up(self) -> None:
+        inspect = [{"Config": {"User": "1000:1000", "Image": adapter.PINNED_IMAGE,
+                                "Cmd": self.request["workload"]["argv"], "WorkingDir": "/input"},
+                    "HostConfig": {"NetworkMode": "none", "ReadonlyRootfs": True,
+                                   "Memory": 128 * 1024 * 1024, "NanoCpus": 1_000_000_000,
+                                   "PidsLimit": 32, "CapDrop": self.cap_drop,
+                                   "SecurityOpt": ["no-new-privileges"],
+                                   "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777"},
+                                   "Binds": [f"{self.root}/input:/input:ro"]},
+                    "Mounts": [{"Type": "bind", "Source": str(self.root / "input"),
+                                "Destination": "/input", "RW": False}]}]
+        case_rows = [
+            {"case_id": case_id,
+             "outcome": "unknown" if case_id == "OUTPUT_TMPFS_EFFECTIVE" else "passed"}
+            for case_id in self.request["policy"]["evidence"]["case_ids"]
+        ]
+        invalid_ids = ("4294967296", "9999999999")
+        runtime = {"podman": adapter.PODMAN_VERSION, "oci_runtime": "crun",
+                   "oci_runtime_version": "1.14.1"}
+
+        for field_index in (4, 5):
+            for invalid_id in invalid_ids:
+                with self.subTest(field="directory_uid" if field_index == 4 else "directory_gid",
+                                  invalid_id=invalid_id):
+                    fields = ["/output", "tmpfs",
+                              "rw,nosuid,nodev,noexec,relatime",
+                              "rw,size=16384k,inode64", "1000", "1000", "1777"]
+                    fields[field_index] = invalid_id
+                    mount_evidence = "|".join(fields)
+                    stdout = ("FW030_OUTPUT_V1\\n" +
+                              json.dumps(case_rows, separators=(",", ":")) +
+                              "\\n" + mount_evidence + "\\n")
+                    existence_checks = iter([0, 1])
+
+                    def runner(argv, timeout):
+                        if argv[:2] == ["podman", "pull"]:
+                            return subprocess.CompletedProcess(argv, 0, "", "")
+                        if argv[:2] == ["podman", "run"]:
+                            return subprocess.CompletedProcess(argv, 0, stdout, "")
+                        if argv[:2] == ["podman", "inspect"]:
+                            return subprocess.CompletedProcess(argv, 0, json.dumps(inspect), "")
+                        if argv[:3] == ["podman", "container", "exists"]:
+                            return subprocess.CompletedProcess(argv, next(existence_checks), "", "")
+                        if argv[:3] == ["podman", "rm", "--force"]:
+                            return subprocess.CompletedProcess(argv, 0, "", "")
+                        raise AssertionError("unexpected runtime command")
+
+                    with patch.object(adapter, "_host_facts", return_value={
+                            "os": "Ubuntu 24.04", "architecture": "x86_64",
+                            "image_header": "unknown", "image_env": "ubuntu24"}), \
+                         patch.object(adapter, "_profile_observation", return_value=runtime):
+                        result = adapter.run_request(self.raw, self.auth, self.env, runner)
+
+                    self.assertEqual(result["states"]["execution"], "failed")
+                    self.assertEqual(result["states"]["cleanup"], "complete")
+                    self.assertEqual(result["case_results"], [])
+                    self.assertIn("fw030.adapter.tmpfs_observation_invalid",
+                                  {item["code"] for item in result["diagnostics"]})
+                    self.assertTrue(validate_result(json.dumps(result))["valid"])
 
     def test_tmpfs_diagnostic_is_allowlisted_and_redacts_raw_mount_values(self) -> None:
         raw = b"/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=999m,mode=0700,uid=8,gid=9,private-secret=abc|1000|1000|0700"
