@@ -331,9 +331,9 @@ class PodmanAdapterTests(unittest.TestCase):
                               "rw,size=16384k,inode64", "1000", "1000", "1777"]
                     fields[field_index] = invalid_id
                     mount_evidence = "|".join(fields)
-                    stdout = ("FW030_OUTPUT_V1\\n" +
+                    stdout = ("FW030_OUTPUT_V1\n" +
                               json.dumps(case_rows, separators=(",", ":")) +
-                              "\\n" + mount_evidence + "\\n")
+                              "\n" + mount_evidence + "\n")
                     existence_checks = iter([0, 1])
 
                     def runner(argv, timeout):
