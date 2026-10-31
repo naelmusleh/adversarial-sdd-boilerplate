@@ -2,7 +2,7 @@
 id: FRAMEWORK-ADV-056
 type: adversarial-review
 title: FW030-IMPL-02 cycle-9 UID/GID bound correction
-status: accepted
+status: approved
 version: 1.0
 created: 2026-10-31
 updated: 2026-10-31
