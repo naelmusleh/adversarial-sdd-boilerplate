@@ -5,7 +5,7 @@ title: FW-TASK-030 optional isolated command runner architecture
 status: approved
 version: 1.0
 created: 2026-10-26
-updated: 2026-10-26
+updated: 2026-10-28
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-034, FRAMEWORK-FEASIBILITY-011, FRAMEWORK-COVERAGE-003, FRAMEWORK-CX-003, FRAMEWORK-ADV-047, FRAMEWORK-ADV-048, FRAMEWORK-ADV-049, FRAMEWORK-ADV-050, FRAMEWORK-GATE-CONTRACT-001, WORKFLOW-FEASIBILITY-001
 ---
 
@@ -108,7 +108,7 @@ The adapter emits an `InvocationResult` containing request/preflight status, a r
 | ADR | Decision area | Alternatives and evidence | Proposed disposition / authority | Downstream consequence |
 | --- | --- | --- | --- | --- |
 | ADR-FW030-01 | Adapter abstraction | A: host-neutral optional interface with explicit profile capability declaration. B: bake one provider/runtime directly into the lifecycle runner. | Recommend A to satisfy FR-FW-035 and avoid universal runtime assumptions. Within approved requirements; independent review required. | Adapter implementations become separate, profile-specific tasks; absent adapter fails closed. |
-| ADR-FW030-02 | Initial runtime profile | A: GitHub-hosted Ubuntu 24.04/rootless Podman pilot candidate (one observed run; runner image metadata mismatch). B: local Podman/Docker (local engine was inaccessible). C: another OS-native sandbox (not evaluated). | No adoption now. Owner must select a candidate after G-ARCH and decide whether to authorize its implementation. Feasibility evidence alone is not adoption. | Runtime-backed implementation is blocked; follow-up profile evaluation/adoption task remains conditional. |
+| ADR-FW030-02 | Initial runtime profile | A: GitHub-hosted Ubuntu 24.04/rootless Podman pilot candidate (one observed run; runner image metadata mismatch and SIGTERM-to-SIGKILL escalation in two cases). B: local Podman/Docker (local engine was inaccessible). C: another OS-native sandbox (not evaluated). | DECISION-043 selects A as the bounded FW030-IMPL-02 implementation target and accepts the recorded residual risks for that unit only. It does not establish production support or generalize beyond the observed environment snapshot. | Implement only this explicitly named profile; unsupported environments fail closed. Retain image-identity and termination limitations in evidence and claims. |
 | ADR-FW030-03 | Request and evidence state model | A: one flat status field. B: separate readiness, authorization, execution, cleanup, evidence, and review axes. | Recommend B; required to preserve authorization and failed execution through recovery, and approved by G-CX contract. | Every adapter/result schema and UI/CLI surface must preserve all axes. |
 | ADR-FW030-04 | Unsupported behavior | A: transparent unsandboxed fallback. B: fail closed with reason and safe recovery. | B is required by FR-FW-035; A is prohibited. No owner exception path is proposed. | Unsupported/missing prerequisites stop before workload launch. |
 | ADR-FW030-05 | Initializer integration | A: start a container during project initialization. B: initializer remains file generation; a separate authorized runner entrypoint executes workloads. | B is required by FR-FW-037. | Initializer regression check remains a separate mandatory acceptance check. |
@@ -134,11 +134,11 @@ The adapter emits an `InvocationResult` containing request/preflight status, a r
 | Proposed unit | Scope | Dependency/state | Acceptance evidence |
 | --- | --- | --- | --- |
 | FW030-IMPL-01 | Versioned host-neutral request/result contract, schema validator, and deterministic synthetic fixtures; no runtime support claim | Conditional on G-ARCH PASS and an explicit owner implementation authorization; can be platform-neutral | Validate allowed schema versions and reject unsupported/missing/malformed profiles, policy and capabilities before any command launch; include separate state axes and redaction. |
-| FW030-IMPL-02 | One profile-specific adapter implementation and enforcement suite | **Blocked** until owner selects/adopts a host/runtime profile and accepts its residual risk; no implicit default | Exact command/image/runtime identity; deny-by-default network/secrets; identity/mount/resource/time policy; positive and negative controls; cleanup/cancellation; independent security review. |
+| FW030-IMPL-02 | One profile-specific adapter implementation and enforcement suite | **Authorized by DECISION-043** for GitHub-hosted Ubuntu 24.04/rootless Podman 4.9.3 only; no implicit default or fallback | Exact command/image/runtime identity; deny-by-default network/secrets; identity/mount/resource/time policy; positive and negative controls; cancellation/cleanup evidence with signal-escalation caveat; independent security review. |
 | FW030-IMPL-03 | Bounded evidence collector and CLI/reporting adapter | Conditional on FW030-IMPL-01; profile-specific fields depend on FW030-IMPL-02 | Exact source/request/profile/policy/run binding; bounded redacted output; stale/incomplete/conflicted states; no gate pass from CI alone. |
 | FW030-IMPL-04 | Initializer non-execution regression and docs integration | Can proceed only after separate G-IMPL authorization for a selected unit | Regression proves initializer generates files only and starts no workload; commands remain separate and explicit. |
 
-Each unit remains a proposal until G-ARCH passes and the owner authorizes a G-IMPL scope. Do not split or start units just because the architecture lists them. FW030-IMPL-02 cannot proceed before its profile choice. If the owner elects not to adopt a profile, close the runtime adapter portion as not adopted rather than claiming generic support.
+Each unit remains subject to its own G-IMPL authorization and acceptance evidence. DECISION-043 selects the hosted Ubuntu/Podman snapshot only for FW030-IMPL-02. No implementation unit may infer support for other profiles. If the adapter cannot enforce or observe a required control, it must fail closed or report the limitation; it must not claim generic support.
 
 ## G-ARCH review preparation
 
