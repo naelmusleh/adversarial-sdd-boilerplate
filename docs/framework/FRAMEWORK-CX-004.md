@@ -3,7 +3,7 @@ id: FRAMEWORK-CX-004
 type: framework-cx
 title: FW-TASK-033 founder-facing coordination interaction contract
 status: draft
-version: 0.2
+version: 0.3
 created: 2026-11-01
 updated: 2026-11-01
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-COVERAGE-004, DECISION-057, DECISION-058, FRAMEWORK-GATE-CONTRACT-001
@@ -21,7 +21,7 @@ The core experience should reduce the owner's coordination burden: the owner sta
 
 ### A. Owner asks what happens next
 
-The orchestrator's response presents, in this order:
+The orchestrator's response presents, in this order. It leads with ordinary language; lifecycle IDs and technical status tokens are optional references after their meaning is explained.
 
 1. **Goal in progress:** one sentence grounded in the mission or approved task.
 2. **Current step:** active task and lifecycle gate, with status and linked evidence.
@@ -31,6 +31,44 @@ The orchestrator's response presents, in this order:
 6. **Next step:** the next permitted action and responsible role.
 
 If canonical records conflict or are missing, the response says which record is unresolved and does not invent state from chat history.
+
+### Plain-language labels and example
+
+Do not present gate IDs or internal state tokens by themselves. When they help the owner locate evidence, show the short explanation first and place the ID after it.
+
+| Internal term | Owner-facing wording |
+| --- | --- |
+| G-INTENT | Agreeing on the problem and goal |
+| G-SETUP | Setting up the project and its source records |
+| G-REQ | Agreeing on what the product must do |
+| G-FEAS | Checking whether the proposed approach can work |
+| G-COVERAGE | Checking that the agreed user journey is accounted for |
+| G-CX | Reviewing whether the experience is clear and usable |
+| G-ARCH | Deciding how to structure the approved work |
+| G-IMPL | Building and checking the approved task |
+| G-RELEASE | Checking readiness for the authorized launch |
+| G-OPERATE | Operating the product and learning from its use |
+| `stale` | Needs a fresh check because a source changed |
+| `conflicted` | Project records disagree; the owner needs to resolve the mismatch |
+| `unavailable` | Could not access or complete this check |
+| `unknown` | Not established yet |
+| `blocked` | Waiting for a named decision, dependency, or correction |
+
+Example response shape:
+
+> **Goal:** Let a new customer complete the approved first task.
+>
+> **Current step:** We are deciding how to structure the approved work (architecture review, `G-ARCH`).
+>
+> **Verified:** Requirements review passed; the role model is documented for all 26 roles in the pinned reference.
+>
+> **Still needed:** One independent review of the updated founder-facing wording and the final CI result. The app’s status record is current.
+>
+> **From you:** Nothing right now.
+>
+> **Next:** After review and CI, I’ll report whether this planning stage passed and what approval is needed before implementation.
+
+The example is a format illustration, not evidence that these statements are true for another project. In an actual report, each statement must link to current app records.
 
 ### B. Orchestrator assigns a specialist
 
@@ -67,3 +105,9 @@ Use the canonical task/gate states defined by the app; summarize them in plain l
 ## G-CX disposition template
 
 Record the exact revision, evaluator, target journeys, each criterion's finding/evidence, severity, disposition, and whether a full affected-scope rerun was completed. A static text contract does not establish usability with actual owners or prove that an installed runtime follows the interaction. Those require a later cold-start exercise using an initialized app and the exact selected tool.
+
+## Critique finding disposition
+
+| Finding | Initial critique | Correction | Rerun state |
+| --- | --- | --- | --- |
+| CX-033-F01 | Gate IDs and states such as `stale`/`conflicted` lacked a required plain-language mapping and example for a nontechnical owner. | Added owner-facing translations, required IDs-after-meaning rule, and a sample status update with evidence/authorization limits. | Full affected-scope independent rerun is pending the owner checkpoint required before a third consecutive review pass. No G-CX PASS is claimed. |
