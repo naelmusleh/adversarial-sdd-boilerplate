@@ -134,8 +134,9 @@ class PodmanAdapterTests(unittest.TestCase):
             "SecurityOpt": ["no-new-privileges"], "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777,rprivate,nodev"},
             "Binds": [f"{self.root}/input:/input:ro"]}, "Mounts": [{"Type": "bind", "Source": str(self.root / "input"), "Destination": "/input", "RW": False}]}]
         workload_stdout = (
-            "FW030_OUTPUT_V1\n" + json.dumps(cases, separators=(",", ":")) +
-            "\n/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,uid=1000,gid=1000,inode64|1000|1000|1777\n"
+            "FW030_OUTPUT_V2\n" + json.dumps(cases, separators=(",", ":")) +
+            "\n/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,uid=1000,gid=1000,inode64|1000|1000|1777" +
+            "\n0 0 4294967295\n0 0 4294967295\n"
         )
         existence_checks = iter([0, 1])
         def runner(argv, timeout):
@@ -331,9 +332,9 @@ class PodmanAdapterTests(unittest.TestCase):
                               "rw,size=16384k,inode64", "1000", "1000", "1777"]
                     fields[field_index] = invalid_id
                     mount_evidence = "|".join(fields)
-                    stdout = ("FW030_OUTPUT_V1\n" +
+                    stdout = ("FW030_OUTPUT_V2\n" +
                               json.dumps(case_rows, separators=(",", ":")) +
-                              "\n" + mount_evidence + "\n")
+                              "\n" + mount_evidence + "\n0 0 4294967295\n0 0 4294967295\n")
                     existence_checks = iter([0, 1])
 
                     def runner(argv, timeout):
@@ -364,7 +365,9 @@ class PodmanAdapterTests(unittest.TestCase):
 
     def test_tmpfs_diagnostic_is_allowlisted_and_redacts_raw_mount_values(self) -> None:
         raw = b"/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=999m,mode=0700,uid=8,gid=9,private-secret=abc|1000|1000|0700"
-        summary = adapter._effective_tmpfs_diagnostic(raw, 16)
+        uid_map = "0 1001 1;1 100000 65536"
+        gid_map = "0 1001 1;1 100000 65536"
+        summary = adapter._effective_tmpfs_diagnostic(raw, 16, 1000, 1000, uid_map, gid_map)
         self.assertIn("mountpoint_match=true", summary)
         self.assertIn("filesystem_match=true", summary)
         self.assertIn("size_match=false", summary)
@@ -374,11 +377,41 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertIn("directory_group_parse=true", summary)
         self.assertIn("uid_option_match=false", summary)
         self.assertIn("gid_option_match=false", summary)
+        self.assertIn("uid_matches_workload=false", summary)
+        self.assertIn("gid_matches_workload=false", summary)
+        self.assertIn("uid_map_valid=true", summary)
+        self.assertIn("gid_map_valid=true", summary)
+        self.assertIn("uid_workload_mapped=true", summary)
+        self.assertIn("gid_workload_mapped=true", summary)
+        self.assertIn("uid_matches_parent_mapping=false", summary)
+        self.assertIn("gid_matches_parent_mapping=false", summary)
         self.assertIn("unknown_option_count=1", summary)
         self.assertNotIn("private-secret", summary)
         self.assertNotIn("999m", summary)
         self.assertNotIn("0700", summary)
         self.assertNotIn("abc", summary)
+        self.assertNotIn("100000", summary)
+        self.assertNotIn("1001", summary)
+        mapped_options = adapter._effective_tmpfs_diagnostic(
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16m,uid=100999,gid=100999|0|0|1777",
+            16, 1000, 1000, uid_map, gid_map,
+        )
+        self.assertIn("uid_matches_parent_mapping=true", mapped_options)
+        self.assertIn("gid_matches_parent_mapping=true", mapped_options)
+        self.assertIn("uid_matches_directory_parent_mapping=false", mapped_options)
+        self.assertNotIn("100999", mapped_options)
+        directory_parent_options = adapter._effective_tmpfs_diagnostic(
+            b"/output|tmpfs|rw,nosuid,nodev,noexec|rw,size=16m,uid=1001,gid=1001|0|0|1777",
+            16, 1000, 1000, uid_map, gid_map,
+        )
+        self.assertIn("uid_matches_parent_mapping=false", directory_parent_options)
+        self.assertIn("uid_matches_directory_parent_mapping=true", directory_parent_options)
+        self.assertNotIn("1001", directory_parent_options)
+        self.assertEqual(adapter._mapped_linux_id("0 1001 1;1 100000 65536", 1000), (True, 100999))
+        self.assertEqual(adapter._mapped_linux_id("0 1000 2;1 100000 10", 0), (False, None))
+        self.assertEqual(adapter._mapped_linux_id("0 4294967295 2", 0), (False, None))
+        self.assertEqual(adapter._mapped_linux_id("0 0 1;1 0 1", 0), (False, None))
+        self.assertEqual(adapter._mapped_linux_id(";".join(["0 0 1"] * 65), 0), (False, None))
         conflicting = adapter._effective_tmpfs_diagnostic(
             b"/output|tmpfs|rw,ro,nosuid,nodev,noexec|rw,size=16m,size=32m,mode=1777,mode=0700|1000|1000|0700",
             16,
@@ -390,6 +423,8 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertIn("directory_mode_match=false", conflicting)
         self.assertIn("uid_option_match=true", conflicting)
         self.assertIn("gid_option_match=true", conflicting)
+        self.assertIn("uid_option_count=0", conflicting)
+        self.assertIn("gid_option_count=0", conflicting)
         self.assertNotIn("16m", conflicting)
         self.assertNotIn("32m", conflicting)
         self.assertNotIn("0700", conflicting)
@@ -402,9 +437,11 @@ class PodmanAdapterTests(unittest.TestCase):
         self.assertEqual(checked.returncode, 0, checked.stderr)
         self.assertIn("/proc/self/mountinfo", script)
         self.assertIn("/bin/busybox stat -c '%u|%g|%a' /output", script)
-        self.assertIn('printf \'%s|%s\' "$mount_row" "$mount_stats"', script)
+        self.assertIn('printf \'%s|%s\\n%s\\n%s\' "$mount_row" "$mount_stats" "$uid_map" "$gid_map"', script)
         self.assertNotIn("stat -c %u:%g:%a", script)
-        self.assertIn("FW030_OUTPUT_V1", script)
+        self.assertIn("FW030_OUTPUT_V2", script)
+        self.assertIn("/proc/self/uid_map", script)
+        self.assertIn("/proc/self/gid_map", script)
         self.assertIn("cat /output/cases.json", script)
         self.assertIn("cat /output/tmpfs-mountinfo.txt", script)
         self.assertIn('"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"', script)
@@ -440,16 +477,17 @@ class PodmanAdapterTests(unittest.TestCase):
     def test_workload_output_envelope_is_bounded_and_binds_tmpfs_evidence(self) -> None:
         cases = b'[{"case_id":"OUTPUT_BOUNDED","outcome":"passed"}]'
         mount = b"/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,uid=1000,gid=1000,inode64|1000|1000|1777"
-        valid = b"FW030_OUTPUT_V1\n" + cases + b"\n" + mount + b"\n"
+        maps = b"0 0 4294967295"
+        valid = b"FW030_OUTPUT_V2\n" + cases + b"\n" + mount + b"\n" + maps + b"\n" + maps + b"\n"
         self.assertEqual(adapter._parse_workload_output(valid.decode("ascii"), 4096, 16), cases)
         with self.assertRaises(adapter.AdapterError) as caught:
-            adapter._parse_workload_output((b"FW030_OUTPUT_V1\n" + b"x" * 4097 + b"\n" + mount).decode("ascii"), 4096, 16)
+            adapter._parse_workload_output((b"FW030_OUTPUT_V2\n" + b"x" * 4097 + b"\n" + mount + b"\n" + maps + b"\n" + maps).decode("ascii"), 4096, 16)
         self.assertEqual(caught.exception.code, "fw030.adapter.output_invalid")
         with self.assertRaises(adapter.AdapterError) as caught:
             adapter._parse_workload_output("unexpected", 4096, 16)
         self.assertEqual(caught.exception.code, "fw030.adapter.output_invalid")
         with self.assertRaises(adapter.AdapterError) as caught:
-            adapter._parse_workload_output((b"FW030_OUTPUT_V1\n" + cases + b"\n/output|ext4|rw|rw|1000|1000|1777\n").decode("ascii"), 4096, 16)
+            adapter._parse_workload_output((b"FW030_OUTPUT_V2\n" + cases + b"\n/output|ext4|rw|rw|1000|1000|1777\n" + maps + b"\n" + maps + b"\n").decode("ascii"), 4096, 16)
         self.assertEqual(caught.exception.code, "fw030.adapter.tmpfs_observation_invalid")
 
     def test_malformed_case_output_becomes_failed_result_and_still_cleans_up(self) -> None:
@@ -462,8 +500,9 @@ class PodmanAdapterTests(unittest.TestCase):
                                    "Tmpfs": {"/output": "rw,noexec,nosuid,nodev,size=16m,mode=1777"},
                                    "Binds": [f"{self.root}/input:/input:ro"]}, "Mounts": [{"Type": "bind", "Source": str(self.root / "input"), "Destination": "/input", "RW": False}]}]
         malformed_output = (
-            "FW030_OUTPUT_V1\n[{\"case_id\":[],\"outcome\":\"passed\"}]" +
-            "\n/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,uid=1000,gid=1000,inode64|1000|1000|1777\n"
+            "FW030_OUTPUT_V2\n[{\"case_id\":[],\"outcome\":\"passed\"}]" +
+            "\n/output|tmpfs|rw,nosuid,nodev,noexec,relatime|rw,size=16384k,uid=1000,gid=1000,inode64|1000|1000|1777" +
+            "\n0 0 4294967295\n0 0 4294967295\n"
         )
         existence_checks = iter([0, 1])
         def runner(argv, timeout):

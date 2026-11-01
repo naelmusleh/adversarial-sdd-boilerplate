@@ -360,6 +360,40 @@ def _valid_linux_uid_gid(value: str) -> bool:
     )
 
 
+def _mapped_linux_id(raw: str, container_id: int) -> tuple[bool, int | None]:
+    """Validate a bounded proc ID map and translate one container ID without exposing it."""
+    if not isinstance(raw, str) or not raw.isascii() or len(raw) > 2048:
+        return False, None
+    rows = raw.split(";")
+    if not 1 <= len(rows) <= 64:
+        return False, None
+    matches: list[int] = []
+    inside_ranges: list[tuple[int, int]] = []
+    outside_ranges: list[tuple[int, int]] = []
+    for row in rows:
+        fields = row.split()
+        if len(fields) != 3 or any(not field.isascii() or not field.isdecimal() for field in fields):
+            return False, None
+        inside, outside, length = (int(field) for field in fields)
+        if (length < 1 or inside > _MAX_LINUX_UID_GID or outside > _MAX_LINUX_UID_GID
+                or inside + length - 1 > _MAX_LINUX_UID_GID
+                or outside + length - 1 > _MAX_LINUX_UID_GID):
+            return False, None
+        inside_end = inside + length - 1
+        outside_end = outside + length - 1
+        if any(inside <= end and start <= inside_end for start, end in inside_ranges):
+            return False, None
+        if any(outside <= end and start <= outside_end for start, end in outside_ranges):
+            return False, None
+        inside_ranges.append((inside, inside_end))
+        outside_ranges.append((outside, outside_end))
+        if inside <= container_id <= inside + length - 1:
+            matches.append(outside + container_id - inside)
+    if len(matches) > 1:
+        return False, None
+    return True, matches[0] if matches else None
+
+
 def _effective_tmpfs_mount_matches(raw: bytes, disk_mb: int) -> bool:
     try:
         mountpoint, fs_type, mount_options, super_options, directory_uid, directory_gid, directory_mode = raw.decode(
@@ -390,8 +424,15 @@ def _effective_tmpfs_mount_matches(raw: bytes, disk_mb: int) -> bool:
     )
 
 
-def _effective_tmpfs_diagnostic(raw: bytes, disk_mb: int) -> str:
-    """Summarize only allowlisted tmpfs properties; never emit raw mount data."""
+def _effective_tmpfs_diagnostic(
+    raw: bytes,
+    disk_mb: int,
+    workload_uid: int = 1000,
+    workload_gid: int = 1000,
+    uid_map: str = "",
+    gid_map: str = "",
+) -> str:
+    """Summarize allowlisted tmpfs and identity-map relations, never raw values."""
     try:
         fields = raw.decode("ascii", errors="strict").strip().split("|", 6)
     except UnicodeError:
@@ -414,6 +455,20 @@ def _effective_tmpfs_diagnostic(raw: bytes, disk_mb: int) -> str:
     directory_group_parse = _valid_linux_uid_gid(directory_gid)
     uid_match = directory_owner_parse and all(value == directory_uid for value in uid_values)
     gid_match = directory_group_parse and all(value == directory_gid for value in gid_values)
+    uid_map_valid, mapped_uid = _mapped_linux_id(uid_map, workload_uid)
+    gid_map_valid, mapped_gid = _mapped_linux_id(gid_map, workload_gid)
+    uid_directory_map_valid, mapped_directory_uid = (
+        _mapped_linux_id(uid_map, int(directory_uid)) if directory_owner_parse else (False, None)
+    )
+    gid_directory_map_valid, mapped_directory_gid = (
+        _mapped_linux_id(gid_map, int(directory_gid)) if directory_group_parse else (False, None)
+    )
+    uid_matches_workload = bool(uid_values) and all(value == str(workload_uid) for value in uid_values)
+    gid_matches_workload = bool(gid_values) and all(value == str(workload_gid) for value in gid_values)
+    uid_matches_parent = mapped_uid is not None and bool(uid_values) and all(value == str(mapped_uid) for value in uid_values)
+    gid_matches_parent = mapped_gid is not None and bool(gid_values) and all(value == str(mapped_gid) for value in gid_values)
+    uid_matches_directory_parent = mapped_directory_uid is not None and bool(uid_values) and all(value == str(mapped_directory_uid) for value in uid_values)
+    gid_matches_directory_parent = mapped_directory_gid is not None and bool(gid_values) and all(value == str(mapped_directory_gid) for value in gid_values)
     conflicting_flags = {"ro", "suid", "dev", "exec"}
     flag_conflict_count = sum(1 for option in options if option.split("=", 1)[0] in conflicting_flags)
     known_keys = required_flags | {"relatime", "inode64", "mode", "size", "uid", "gid"}
@@ -427,25 +482,48 @@ def _effective_tmpfs_diagnostic(raw: bytes, disk_mb: int) -> str:
         f"directory_owner_parse={str(directory_owner_parse).lower()}; directory_group_parse={str(directory_group_parse).lower()}; "
         f"directory_mode_match={str(directory_mode_match).lower()}; "
         f"uid_option_match={str(uid_match).lower()}; gid_option_match={str(gid_match).lower()}; "
+        f"uid_option_count={min(len(uid_values), 32)}; gid_option_count={min(len(gid_values), 32)}; "
+        f"uid_matches_workload={str(uid_matches_workload).lower()}; gid_matches_workload={str(gid_matches_workload).lower()}; "
+        f"uid_map_valid={str(uid_map_valid).lower()}; gid_map_valid={str(gid_map_valid).lower()}; "
+        f"uid_workload_mapped={str(uid_map_valid and mapped_uid is not None).lower()}; "
+        f"gid_workload_mapped={str(gid_map_valid and mapped_gid is not None).lower()}; "
+        f"uid_matches_parent_mapping={str(uid_matches_parent).lower()}; "
+        f"gid_matches_parent_mapping={str(gid_matches_parent).lower()}; "
+        f"uid_directory_mapping_valid={str(uid_directory_map_valid).lower()}; "
+        f"gid_directory_mapping_valid={str(gid_directory_map_valid).lower()}; "
+        f"uid_matches_directory_parent_mapping={str(uid_matches_directory_parent).lower()}; "
+        f"gid_matches_directory_parent_mapping={str(gid_matches_directory_parent).lower()}; "
         f"unknown_option_count={min(unknown_count, 32)}"
     )
 
-def _parse_workload_output(raw: str, max_case_bytes: int, disk_mb: int) -> bytes:
+def _parse_workload_output(
+    raw: str,
+    max_case_bytes: int,
+    disk_mb: int,
+    workload_uid: int = 1000,
+    workload_gid: int = 1000,
+) -> bytes:
     """Parse bounded synthetic evidence streamed while its tmpfs mount is still alive."""
     try:
         encoded = raw.encode("ascii", errors="strict")
     except UnicodeError as exc:
         raise AdapterError("fw030.adapter.output_invalid", "workload output was not bounded ASCII evidence") from exc
-    if len(encoded) > max_case_bytes + 4096 + 64:
+    if len(encoded) > max_case_bytes + 8192 + 64:
         raise AdapterError("fw030.adapter.output_invalid", "workload output exceeded the bounded evidence envelope")
     lines = raw.splitlines()
-    if len(lines) != 3 or lines[0] != "FW030_OUTPUT_V1":
+    if len(lines) != 5 or lines[0] != "FW030_OUTPUT_V2":
         raise AdapterError("fw030.adapter.output_invalid", "workload output envelope was missing or malformed")
     case_bytes, mount_bytes = lines[1].encode("ascii"), lines[2].encode("ascii")
+    uid_map, gid_map = lines[3], lines[4]
+    if len(mount_bytes) > 4096 or len(uid_map) > 2048 or len(gid_map) > 2048:
+        raise AdapterError("fw030.adapter.output_invalid", "identity observation exceeded its bounded envelope")
     if not case_bytes or len(case_bytes) > max_case_bytes:
         raise AdapterError("fw030.adapter.output_invalid", "case evidence exceeded the declared output limit")
     if len(mount_bytes) > 4096 or not _effective_tmpfs_mount_matches(mount_bytes, disk_mb):
-        raise AdapterError("fw030.adapter.tmpfs_observation_invalid", "effective output tmpfs evidence was missing or invalid; " + _effective_tmpfs_diagnostic(mount_bytes, disk_mb))
+        diagnostic = _effective_tmpfs_diagnostic(
+            mount_bytes, disk_mb, workload_uid, workload_gid, uid_map, gid_map
+        )
+        raise AdapterError("fw030.adapter.tmpfs_observation_invalid", "effective output tmpfs evidence was missing or invalid; " + diagnostic)
     return case_bytes
 
 
@@ -635,7 +713,7 @@ def run_request(raw: bytes, authorization: Mapping[str, str] | None,
                 raise AdapterError("fw030.adapter.inspect_invalid", "container policy inspection was not valid JSON")
             case_bytes = _parse_workload_output(
                 ran.stdout or "", min(MAX_OUTPUT_BYTES, request["policy"]["evidence"]["max_output_bytes"]),
-                limit["disk_mb"],
+                limit["disk_mb"], request["policy"]["uid"], request["policy"]["gid"],
             )
             try:
                 parsed = _json_without_duplicates(case_bytes)
@@ -786,7 +864,10 @@ for field in CapEff CapPrm CapInh CapBnd CapAmb; do
 done
 mount_row=$(awk '$5 == "/output" {{ for (i=1;i<=NF;i++) if ($i == "-") {{ print $5 "|" $(i+1) "|" $6 "|" $(i+3); exit }} }}' /proc/self/mountinfo)
 mount_stats=$(/bin/busybox stat -c '%u|%g|%a' /output 2>/dev/null) || exit 70
-printf '%s|%s' "$mount_row" "$mount_stats" > /output/tmpfs-mountinfo.txt 2>/dev/null || exit 70
+uid_map=$(/bin/busybox awk 'NR <= 64 {{ if (NR > 1) printf ";"; printf "%s %s %s", $1, $2, $3 }} END {{ if (NR == 0 || NR > 64) exit 1 }}' /proc/self/uid_map) || exit 70
+gid_map=$(/bin/busybox awk 'NR <= 64 {{ if (NR > 1) printf ";"; printf "%s %s %s", $1, $2, $3 }} END {{ if (NR == 0 || NR > 64) exit 1 }}' /proc/self/gid_map) || exit 70
+if [ "${{#uid_map}}" -gt 2048 ] || [ "${{#gid_map}}" -gt 2048 ]; then exit 70; fi
+printf '%s|%s\n%s\n%s' "$mount_row" "$mount_stats" "$uid_map" "$gid_map" > /output/tmpfs-mountinfo.txt 2>/dev/null || exit 70
 cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"'${{output_bounded}}'"}},{{"case_id":"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"}},{{"case_id":"CAPABILITIES_DROPPED","outcome":"'${{capabilities_dropped}}'"}}]'
 printf '%s' "$cases" > /output/cases.json 2>/dev/null || exit 70
 if [ "$(wc -c < /output/cases.json)" -gt 4096 ]; then
@@ -794,7 +875,7 @@ if [ "$(wc -c < /output/cases.json)" -gt 4096 ]; then
   cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"failed"}},{{"case_id":"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"}},{{"case_id":"CAPABILITIES_DROPPED","outcome":"'${{capabilities_dropped}}'"}}]'
   printf '%s' "$cases" > /output/cases.json 2>/dev/null || exit 70
 fi
-printf 'FW030_OUTPUT_V1\n'
+printf 'FW030_OUTPUT_V2\n'
 cat /output/cases.json 2>/dev/null || exit 70
 printf '\n'
 cat /output/tmpfs-mountinfo.txt 2>/dev/null || exit 70
