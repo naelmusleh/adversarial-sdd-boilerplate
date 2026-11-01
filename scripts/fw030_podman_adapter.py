@@ -473,27 +473,25 @@ def _effective_tmpfs_diagnostic(
     flag_conflict_count = sum(1 for option in options if option.split("=", 1)[0] in conflicting_flags)
     known_keys = required_flags | {"relatime", "inode64", "mode", "size", "uid", "gid"}
     unknown_count = sum(1 for option in options if option.split("=", 1)[0] not in known_keys)
+    # The result contract caps each diagnostic message at 512 characters. Keep
+    # this allowlisted summary compact enough to fit after the stable error prefix.
     return (
-        f"field_parse=valid; mountpoint_match={str(mountpoint == '/output').lower()}; "
-        f"filesystem_match={str(fs_type == 'tmpfs').lower()}; missing_flags={','.join(missing) or 'none'}; "
-        f"flag_conflict_count={min(flag_conflict_count, 32)}; "
-        f"size_match={str(size_match).lower()}; size_conflict_count={min(sum(value not in expected_sizes for value in size_values), 32)}; "
-        f"mount_mode_match={str(mount_mode_match).lower()}; "
-        f"directory_owner_parse={str(directory_owner_parse).lower()}; directory_group_parse={str(directory_group_parse).lower()}; "
-        f"directory_mode_match={str(directory_mode_match).lower()}; "
-        f"uid_option_match={str(uid_match).lower()}; gid_option_match={str(gid_match).lower()}; "
-        f"uid_option_count={min(len(uid_values), 32)}; gid_option_count={min(len(gid_values), 32)}; "
-        f"uid_matches_workload={str(uid_matches_workload).lower()}; gid_matches_workload={str(gid_matches_workload).lower()}; "
-        f"uid_map_valid={str(uid_map_valid).lower()}; gid_map_valid={str(gid_map_valid).lower()}; "
-        f"uid_workload_mapped={str(uid_map_valid and mapped_uid is not None).lower()}; "
-        f"gid_workload_mapped={str(gid_map_valid and mapped_gid is not None).lower()}; "
-        f"uid_matches_parent_mapping={str(uid_matches_parent).lower()}; "
-        f"gid_matches_parent_mapping={str(gid_matches_parent).lower()}; "
-        f"uid_directory_mapping_valid={str(uid_directory_map_valid).lower()}; "
-        f"gid_directory_mapping_valid={str(gid_directory_map_valid).lower()}; "
-        f"uid_matches_directory_parent_mapping={str(uid_matches_directory_parent).lower()}; "
-        f"gid_matches_directory_parent_mapping={str(gid_matches_directory_parent).lower()}; "
-        f"unknown_option_count={min(unknown_count, 32)}"
+        f"parse=valid;mount={str(mountpoint == '/output').lower()};fs={str(fs_type == 'tmpfs').lower()};"
+        f"missing={','.join(missing) or 'none'};flags={min(flag_conflict_count, 32)};"
+        f"size={str(size_match).lower()};size_bad={min(sum(value not in expected_sizes for value in size_values), 32)};"
+        f"mode={str(mount_mode_match).lower()};dir_uid={str(directory_owner_parse).lower()};"
+        f"dir_gid={str(directory_group_parse).lower()};dir_mode={str(directory_mode_match).lower()};"
+        f"uid_stat={str(uid_match).lower()};gid_stat={str(gid_match).lower()};"
+        f"uid_work={str(uid_matches_workload).lower()};gid_work={str(gid_matches_workload).lower()};"
+        f"uid_map={str(uid_map_valid).lower()};gid_map={str(gid_map_valid).lower()};"
+        f"uid_work_mapped={str(uid_map_valid and mapped_uid is not None).lower()};"
+        f"gid_work_mapped={str(gid_map_valid and mapped_gid is not None).lower()};"
+        f"uid_parent={str(uid_matches_parent).lower()};gid_parent={str(gid_matches_parent).lower()};"
+        f"uid_dir_map={str(uid_directory_map_valid).lower()};gid_dir_map={str(gid_directory_map_valid).lower()};"
+        f"uid_dir_parent={str(uid_matches_directory_parent).lower()};"
+        f"gid_dir_parent={str(gid_matches_directory_parent).lower()};"
+        f"uid_count={min(len(uid_values), 32)};gid_count={min(len(gid_values), 32)};"
+        f"unknown={min(unknown_count, 32)}"
     )
 
 def _parse_workload_output(
@@ -867,7 +865,7 @@ mount_stats=$(/bin/busybox stat -c '%u|%g|%a' /output 2>/dev/null) || exit 70
 uid_map=$(/bin/busybox awk 'NR <= 64 {{ if (NR > 1) printf ";"; printf "%s %s %s", $1, $2, $3 }} END {{ if (NR == 0 || NR > 64) exit 1 }}' /proc/self/uid_map) || exit 70
 gid_map=$(/bin/busybox awk 'NR <= 64 {{ if (NR > 1) printf ";"; printf "%s %s %s", $1, $2, $3 }} END {{ if (NR == 0 || NR > 64) exit 1 }}' /proc/self/gid_map) || exit 70
 if [ "${{#uid_map}}" -gt 2048 ] || [ "${{#gid_map}}" -gt 2048 ]; then exit 70; fi
-printf '%s|%s\n%s\n%s' "$mount_row" "$mount_stats" "$uid_map" "$gid_map" > /output/tmpfs-mountinfo.txt 2>/dev/null || exit 70
+printf '%s|%s\\n%s\\n%s' "$mount_row" "$mount_stats" "$uid_map" "$gid_map" > /output/tmpfs-mountinfo.txt 2>/dev/null || exit 70
 cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"'${{output_bounded}}'"}},{{"case_id":"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"}},{{"case_id":"CAPABILITIES_DROPPED","outcome":"'${{capabilities_dropped}}'"}}]'
 printf '%s' "$cases" > /output/cases.json 2>/dev/null || exit 70
 if [ "$(wc -c < /output/cases.json)" -gt 4096 ]; then
