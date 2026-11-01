@@ -259,8 +259,10 @@ def _project_record(
         raise CollectionError("job-identity-incomplete")
     run_source = source_ref
     job_source = _safe_text(job.get("_collector_source_url"), token, 2048) or source_ref
-    run_finished_at = run.get("updated_at") if run.get("status") == "completed" else None
-    run_timing = _interval(run_id, attempt, None, run.get("run_started_at"), run_finished_at, run_source, token)
+    # The run API's updated_at is not a documented completion timestamp. Keep
+    # aggregate completion unknown instead of presenting a last-update time as
+    # a measured end time; individual job completion timestamps remain direct.
+    run_timing = _interval(run_id, attempt, None, run.get("run_started_at"), None, run_source, token)
     job_timing = _interval(run_id, attempt, job_id, job.get("started_at"), job.get("completed_at"), job_source, token)
     conclusion = job.get("conclusion")
     valid_conclusions = {"success", "failure", "cancelled", "skipped", "timed_out", "action_required"}

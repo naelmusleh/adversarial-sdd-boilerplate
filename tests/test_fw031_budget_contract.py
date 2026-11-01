@@ -374,6 +374,10 @@ class Fw031BudgetContractTests(unittest.TestCase):
     def test_warning_exhaustion_and_completed_outcome_are_consistent(self) -> None:
         policy = _policy()
         result = _result(policy)
+        result["stop_state"] = "warning"
+        out = _validate_result(result, policy)
+        self.assertIn("fw031.result.false_warning", {d["code"] for d in out["diagnostics"]})
+
         result["observations"][0]["value"] = 9
         result["stop_state"] = "warning"
         self.assertTrue(_validate_result(result, policy)["valid"])

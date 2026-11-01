@@ -432,6 +432,8 @@ def _result_semantics(result: Mapping[str, Any], policy: Mapping[str, Any]) -> l
             issues.append(_diag("fw031.result.exhaustion_missing", "$.stop_state", "an exceeded exhaustion threshold must be recorded"))
         if warning_reached and state == "clear":
             issues.append(_diag("fw031.result.warning_missing", "$.stop_state", "a reached warning threshold cannot be recorded as clear"))
+        if state == "warning" and (not warning_reached or exhaustion_reached):
+            issues.append(_diag("fw031.result.false_warning", "$.stop_state", "warning state requires a reached warning threshold and no reached exhaustion threshold"))
         if state == "exhausted" and not exhaustion_reached:
             issues.append(_diag("fw031.result.false_exhaustion", "$.stop_state", "exhaustion requires an observed threshold breach"))
         if state == "exhausted" and result["execution_outcome"] == "completed":

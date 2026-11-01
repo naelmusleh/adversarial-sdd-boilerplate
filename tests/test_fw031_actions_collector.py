@@ -57,6 +57,8 @@ class CollectorTests(unittest.TestCase):
         result = ActionsApi("secret-token", opener=opener, sleeper=lambda _: None).collect("owner/repo", 55, 2)
         self.assertEqual(result["collection_state"], "complete")
         self.assertEqual(result["records"][0]["identity"]["run_attempt"], 2)
+        self.assertEqual(result["records"][0]["timing"]["run"]["completed_at"]["state"], "unknown")
+        self.assertIsNone(result["records"][0]["timing"]["run"]["completed_at"]["value"])
         self.assertIn("/attempts/2/jobs?", calls[1].full_url)
         self.assertTrue(all(call.get_method() == "GET" for call in calls))
         self.assertNotIn("Authorization", result["records"][0]["source"])
