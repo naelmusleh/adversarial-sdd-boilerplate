@@ -785,8 +785,8 @@ for field in CapEff CapPrm CapInh CapBnd CapAmb; do
   if ! awk -v key="$field:" '$1 == key {{ found=1; if (tolower($2) !~ /^0+$/) bad=1 }} END {{ if (!found || bad) exit 1 }}' /proc/self/status; then capabilities_dropped=failed; fi
 done
 mount_row=$(awk '$5 == "/output" {{ for (i=1;i<=NF;i++) if ($i == "-") {{ print $5 "|" $(i+1) "|" $6 "|" $(i+3); exit }} }}' /proc/self/mountinfo)
-mount_owner=$(/bin/busybox stat -c %u:%g:%a /output 2>/dev/null) || exit 70
-printf '%s|%s' "$mount_row" "$mount_owner" > /output/tmpfs-mountinfo.txt 2>/dev/null || exit 70
+mount_stats=$(/bin/busybox stat -c '%u|%g|%a' /output 2>/dev/null) || exit 70
+printf '%s|%s' "$mount_row" "$mount_stats" > /output/tmpfs-mountinfo.txt 2>/dev/null || exit 70
 cases='[{{"case_id":"INPUT_READONLY","outcome":"'${{input_readonly}}'"}},{{"case_id":"HOST_PATH_DENIED","outcome":"'${{host_denied}}'"}},{{"case_id":"NETWORK_DISABLED","outcome":"'${{network_disabled}}'"}},{{"case_id":"SECRETS_NOT_INJECTED","outcome":"'${{secrets_disabled}}'"}},{{"case_id":"OUTPUT_BOUNDED","outcome":"'${{output_bounded}}'"}},{{"case_id":"OUTPUT_TMPFS_EFFECTIVE","outcome":"unknown"}},{{"case_id":"CAPABILITIES_DROPPED","outcome":"'${{capabilities_dropped}}'"}}]'
 printf '%s' "$cases" > /output/cases.json 2>/dev/null || exit 70
 if [ "$(wc -c < /output/cases.json)" -gt 4096 ]; then
