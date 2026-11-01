@@ -18,6 +18,7 @@ related-artifacts: DECISION-053, FRAMEWORK-ADV-059, FRAMEWORK-ARCHITECTURE-004, 
 - **Reviewed baseline:** `cfa2ee87c20fc5c5786df3a8244a77677084e616`, clean source candidate before cycle-11 documentation disposition.
 - **Scope:** determine whether the cycle-10 effective tmpfs UID/GID mismatch has an evidence-supported explanation and correction under DECISION-053.
 - **Verdict:** BLOCKED. Diagnosis is inconclusive; stop runtime attempts and record the tested profile as unsupported.
+- **Disposition record review:** The independent reviewer also confirmed the final cycle-11 disposition wording in the decision log, backlog, and this artifact; no material mismatch was found. The reviewed documentation snapshot is committed as `5a64d787225aca69c9d580ec94f4e4533bc3c319`.
 
 ## Evidence and reasoning
 
@@ -27,6 +28,7 @@ related-artifacts: DECISION-053, FRAMEWORK-ADV-059, FRAMEWORK-ARCHITECTURE-004, 
 - The [Podman 4.9.3 run manual](https://docs.podman.io/en/v4.9.3/markdown/podman-run.1.html) explains that rootless containers use user namespaces and container IDs may map to different host IDs. It does not establish that the mount-option and same-container `stat` observations in this exact run are expressed in different ID spaces, nor does it explain the reported mismatch for this invocation.
 - The Linux [`mountinfo` documentation](https://docs.kernel.org/6.8/filesystems/proc.html) distinguishes per-mount options from superblock options but does not resolve this UID/GID discrepancy.
 - The independent reviewer concluded that removing or changing the comparison would be guesswork without the withheld values or direct evidence for their representation. No code correction or retry is justified.
+- Exact Verify Pipeline [41262287449](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/41262287449) passed all three required jobs on documentation commit `5a64d787225aca69c9d580ec94f4e4533bc3c319`; the FW-030 runtime probes were skipped.
 
 ## Disposition and limits
 
