@@ -69,11 +69,12 @@ When stopping, offer evidence-based options, impacts, the recommended resolution
 ### 4. Implement only the selected item
 
 1. Inspect relevant code and local patterns; prefer the smallest coherent change that meets the accepted criteria.
-2. Preserve compatibility and behavior outside the task's stated scope. Avoid unrelated refactors, dependency upgrades, formatting churn, new providers, or speculative abstractions.
-3. Add or update source, configuration, documentation, and task-level checks only when needed for this item's acceptance criteria and consistent with project conventions.
-4. Apply the application's security, privacy, accessibility, reliability, and platform requirements where relevant; record any risk that cannot be addressed within the task.
-5. Do not add secrets to source, logs, shell output, or artifacts. Do not use production data for local verification unless the project's approved procedure explicitly permits it.
-6. If implementation reveals that another task or scope change is required, stop that expansion and report the dependency. Do not implement the additional task under the selected ID.
+2. For a task explicitly marked MVP / launch-sprint, implement the smallest end-to-end slice for its primary persona and accepted launch outcome. Cut optional scope early; do not gold-plate, add speculative scale abstractions, or expand into deferred secondary journeys. Keep deferrals brief, with rationale and a revisit trigger. These limits do not waive adopted gate evidence or required quality, security, privacy, legal, accessibility, authorization, data-integrity, review, CI, or release controls.
+3. Preserve compatibility and behavior outside the task's stated scope. Avoid unrelated refactors, dependency upgrades, formatting churn, new providers, or speculative abstractions.
+4. Add or update source, configuration, documentation, and task-level checks only when needed for this item's acceptance criteria and consistent with project conventions.
+5. Apply the application's security, privacy, accessibility, reliability, and platform requirements where relevant; record any risk that cannot be addressed within the task.
+6. Do not add secrets to source, logs, shell output, or artifacts. Do not use production data for local verification unless the project's approved procedure explicitly permits it.
+7. If implementation reveals that another task or scope change is required, stop that expansion and report the dependency. Do not implement the additional task under the selected ID.
 
 ### 5. Verify and review
 

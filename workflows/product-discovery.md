@@ -15,6 +15,19 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, 
 
 Turn a product idea into a reviewable intent brief and SDD requirements package without leaving the owner to write the product documents. The agent does discovery synthesis, drafts artifacts, researches uncertain claims where access permits, proposes testable options, and asks the owner only for decisions that genuinely affect scope, user outcomes, risk, or investment.
 
+## Optional MVP / launch-sprint mode
+
+When the owner selects this mode for a new app MVP or a large feature, plan to ten working days by default; use the owner's stated target date when supplied. Keep discovery focused on one primary persona, their primary job and launch outcome, the minimum launch surface, a success signal, hard constraints, and launch-critical dependencies. Draft the smallest end-to-end shippable path and recommend scope cuts early. Keep only material deferrals with a rationale and revisit trigger. Do not produce exhaustive secondary-use-case inventories, error matrices, extreme-edge catalogs, or speculative scale plans. Still record concise applicability decisions required by the adopted gates (including G-COVERAGE failure categories) and preserve the app's thresholds, security, privacy, legal, accessibility, authorization, data-integrity, review, CI, and release controls. If the safe core path cannot fit the horizon, split it or ask the owner to choose a specific scope/date trade-off.
+
+Illustrative outputs (synthetic examples, not product evidence):
+
+| Scope | Primary user and outcome | Smallest launch slice | Brief deferrals |
+| --- | --- | --- | --- |
+| New app MVP | A solo reader wants to save and retrieve a reading list; success is completing that task on the chosen web surface. | Add a title, view the saved list, reopen an item. | Sharing (revisit after first-use feedback); bulk import (revisit if manual entry blocks adoption). |
+| Large feature in an existing app | A workspace admin wants to export the current report; success is a usable file from the report page. | Trigger export, receive the file, verify its contents against the visible report. | Scheduled exports (revisit if repeated manual exports are a demonstrated need); alternate formats (revisit from user requests). |
+
+For both, the gate record still makes concise applicability decisions for required failure categories; only relevant categories receive concrete states in the MVP journey. The examples do not waive policy-required checks.
+
 ## Roles
 
 - **Product owner:** supplies intent and context, resolves material product choices, and accepts/rejects proposed scope and outcome targets.
@@ -93,7 +106,8 @@ Use `python3 scripts/artifacts.py assumptions validate <bundle.json> --today YYY
 4. Define candidate outcomes and measures. Do not invent numeric targets without a baseline or source; mark success-measure decisions open.
 5. List boundaries: explicit in-scope outcomes, likely scope expansion, non-goals, user groups/surfaces/regions if chosen, and safety/legal constraints.
 6. Return a concise intent brief with recommendation, open decision vectors, and only the decisions needed to proceed. Complete independent artifact/research work first; bundle truly necessary questions. Do not require answers for every specification domain before drafting the mission.
-7. Record a G-INTENT gate result. An owner can accept a draft intent direction while leaving dependent choices visibly open; this does not imply the full specification is approved. A G-INTENT PASS is permitted only when all three criteria link artifact-reference evidence for the current `mission.md` bytes and link an accountable-owner decision whose choice is exactly `approve-intent: <APP>-MISSION-001; digest=sha256:<64 lowercase hex>`. Record the mission artifact ID in the decision's affected IDs. If the owner has not approved that exact revision, leave the gate in progress or blocked; never infer approval from the draft, a hash, or an agent-written review.
+7. If MVP / launch-sprint mode is selected, record the horizon, primary persona/job/outcome, minimum launch surface, success signal, hard constraints/dependencies, smallest launch slice, and short triggered deferrals in the canonical artifacts; keep the ten-working-day default unless the owner gives another date.
+8. Record a G-INTENT gate result. An owner can accept a draft intent direction while leaving dependent choices visibly open; this does not imply the full specification is approved. A G-INTENT PASS is permitted only when all three criteria link artifact-reference evidence for the current `mission.md` bytes and link an accountable-owner decision whose choice is exactly `approve-intent: <APP>-MISSION-001; digest=sha256:<64 lowercase hex>`. Record the mission artifact ID in the decision's affected IDs. If the owner has not approved that exact revision, leave the gate in progress or blocked; never infer approval from the draft, a hash, or an agent-written review.
 
 ## Pass B — Build the SDD package
 
