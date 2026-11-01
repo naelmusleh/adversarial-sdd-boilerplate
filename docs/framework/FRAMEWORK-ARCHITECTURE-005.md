@@ -3,7 +3,7 @@ id: FRAMEWORK-ARCHITECTURE-005
 type: framework-architecture
 title: FW-TASK-033 founder-facing orchestrator and role-capability architecture
 status: draft
-version: 0.1
+version: 0.2
 created: 2026-11-01
 updated: 2026-11-01
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-COVERAGE-004, FRAMEWORK-CX-004, DECISION-057, DECISION-058, FRAMEWORK-ADV-063
@@ -24,6 +24,14 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBIL
 Model roles as **capabilities with contracts**, not as a promise of separate always-running agents. The default is one lead orchestrator plus the current work agent; the orchestrator engages the smallest justified specialist set. Sequential role-bounded work in one agent is allowed unless independence, expertise, or useful parallelism requires a distinct actor. Independent review remains distinct from implementation; QA remains a distinct outcome even where one individual performs both activities on a low-risk task.
 
 Use current canonical artifacts for project state. The orchestrator reads them and reports; it does not create an alternate task/gate registry or author authoritative gate transitions. Optional app role profiles may state which capabilities are available and the app-specific triggers, but absence of a specialist never means that a required safeguard passed.
+
+## Architecture decisions
+
+| ADR | Decision and alternatives | Evidence / rationale | Authority and limits |
+| --- | --- | --- | --- |
+| ADR-FW033-01 Role capability vs separate-agent roster | **Recommend role contracts as capabilities**, with separate agent instances only when independence, expertise, or parallelism justifies them. Alternative A: require one agent per role/task. Alternative B: sequential role modes in the lead/work agent, while preserving independent review boundaries. | Existing framework is repository-first and provider-neutral; CAP-003 explicitly is not an orchestration service. A 26-agent default would create handoffs and suggest runtime availability not evidenced. Sequential role modes reduce overhead; independent reviewer separation remains mandatory where required. | DECISION-057/058 authorize the contract, not agent runtime. App owner selects role availability; no same-agent review can satisfy independence. |
+| ADR-FW033-02 Repository procedure vs hosted orchestrator | **Use canonical repository artifacts plus a lead-agent procedure.** Alternative A: central hosted service with persistent status and dispatch. Alternative B: read canonical app records and render a conversational status/handoff. | No hosting/provider/tool capability or cross-project service is selected; existing FR-FW-002/010 and NFR-FW-002 favor one source and inspectable repository artifacts. No evidence supports a hosted service's availability, access, or lifecycle. | DECISION-058 excludes hosted orchestration. The owner may authorize a new service only under a separate requirements/feasibility/architecture scope. |
+| ADR-FW033-03 Human-readable catalog vs machine schema | **Use one canonical Markdown role catalog with fixed columns and a small structural check.** Alternative A: JSON/YAML schema as canonical, with rendered docs. Alternative B: Markdown only and manual review. | Markdown fits existing canonical artifact practice and is reviewable by a nontechnical owner; a fixed table supports required fields, unique IDs, enums, and links. A lightweight validator can check structure without adding a runtime dependency or role dispatcher. Pure manual checking risks missing/duplicating one of the 26 entries. | Proposed for later G-IMPL; no catalog code or parser is authorized yet. The check must validate structure only, never infer role quality, trigger applicability, or gate status. |
 
 ## Full source-role crosswalk
 
@@ -93,18 +101,22 @@ These are architecture-level contracts for the next-version catalog. They define
 
 ## Proposed role-capability record
 
-The future role catalog should use one stable entry per capability, with this logical shape:
+The future role catalog should use one stable Markdown row per capability with the following contract. The catalog header carries one schema version; role IDs remain stable across revisions. Lists use semicolon-separated stable requirement/artifact IDs or explicit `none-applicable`, never free-floating implied authority.
 
 | Field | Purpose |
 | --- | --- |
-| `role_id`, `name`, `version`, `classification` | Stable identity; classification is existing, specialist, operational/product responsibility, or excluded. |
-| `purpose` | Outcome the role is responsible for supporting. |
-| `activate_when[]`, `do_not_activate_when[]` | Positive trigger and explicit non-trigger, linked to requirement/task/gate context. |
-| `required_inputs[]` | Canonical artifact paths/IDs and exact revisions needed to work safely. |
-| `deliverable` | Reviewable output, evidence location, and expected format. |
-| `decision_limits[]`, `escalate_when[]` | Authority boundary and condition that returns a decision to owner/operator/qualified professional. |
-| `handoff` | Next responsible actor, task/requirement links, and state/evidence references. |
-| `execution_mode` | `same-agent-sequential`, `separate-agent-when-justified`, or `external-qualified-review`; not a runtime promise. |
+| `role_id` | Required, unique stable ID matching `ROLE-[A-Z0-9-]+`. |
+| `name` / `catalog_version` | Required nonempty human-readable name; catalog version is `MAJOR.MINOR.PATCH`. |
+| `classification` | Required enum: `existing-role`, `on-demand-specialist`, `operational-responsibility`, `product-capability`, `excluded`. |
+| `purpose` | Required one-sentence outcome supported by the role. |
+| `activate_when` / `do_not_activate_when` | Both required; each names a trigger or explicit `none-applicable`, preferably linked to task/requirement/gate. |
+| `required_inputs` | Required list of canonical artifact IDs/paths and revision needs, or explicit `none-applicable`. |
+| `deliverable` | Required reviewable output, expected format, and canonical evidence destination. |
+| `decision_limits` / `escalate_when` | Both required; state reserved authority and explicit owner/operator/qualified-review escalation. |
+| `handoff` | Required next responsible role/capability and canonical task/evidence link, or explicit terminal/owner handoff. |
+| `execution_mode` | Required enum: `sequential-role-mode`, `separate-agent-justified`, `qualified-external-review`, `operational-procedure`, `not-applicable`. This states an allowed method, not runtime availability. |
+
+**Compatibility:** adding an optional explanatory field is a minor catalog-version change; changing required fields, enum meaning, authority, or role identity is a major change with review. Unsupported schema major versions fail validation. The later structural check verifies table columns, unique role IDs, required nonempty cells, enum values, and referenced artifact IDs. It does not decide whether triggers are wise or whether a specialist is qualified; those remain review/owner judgments.
 
 Per-app availability/activation belongs in that app's existing project context or role configuration, not in a second global status ledger. If the framework has no configured role catalog adapter, Markdown contracts remain authoritative and the orchestrator applies them procedurally.
 
@@ -130,8 +142,8 @@ Status report format is a projection from canonical records, not separately pers
 
 ## Implementation-sized follow-up (not authorized here)
 
-After separate G-IMPL approval, the minimal documentation-only slice would update the lifecycle/engineering workflows with the orchestration sequence, add an optional role-catalog template and concise role contracts, and add founder-facing status/handoff examples. It would not create agent runtime code. Automated dispatch, provider adapters, and app-specific role activation remain separate tasks requiring evidence and authorization.
+After separate G-IMPL approval, FW033-IMPL-01 will add `docs/framework/ROLE-CAPABILITIES-001.md`, update `workflows/lifecycle.md`, `workflows/ai-engineering-execution.md`, `workflows/product-discovery.md`, and `workflows/cx-design.md`, and add small founder-facing examples for routine fix, MVP feature, market bet, and post-launch work. Acceptance requires all 26 pinned roles to satisfy the catalog contract; correct next-action/owner-decision summaries; role activation/omission rationale; reviewer/QA/owner/operator boundaries; no duplicate state/gates; structural validation for columns, IDs, enums, and links; artifact validation; independent review; and exact-revision Verify Pipeline. Dependencies are FR-FW-041–045 and G-REQ/G-FEAS/G-COVERAGE/G-CX/G-ARCH PASS. This proposed unit does not execute until separately authorized at G-IMPL. Automated dispatch, provider adapters, executable role prompts, and app-specific activation remain separate tasks requiring their own evidence and authorization.
 
 ## G-ARCH exit criteria
 
-The architecture is ready only when the full crosswalk covers the pinned 26-role roster; each capability has triggers, inputs, output, limits, escalation, and handoff; the orchestrator's state/authority boundary is unambiguous; MVP and post-MVP routing are demonstrated; duplicate artifacts/gates are excluded; and an independent architecture review plus exact-revision CI pass.
+The architecture is ready only when the full crosswalk covers the pinned 26-role roster; each capability has triggers, inputs, output, limits, escalation, and handoff; the orchestrator's state/authority boundary is unambiguous; MVP and post-MVP routing are demonstrated; alternative decisions record evidence, authority, constraints, and disposition; the catalog contract has defined field requiredness, enums, compatibility, and practical validation; a bounded G-IMPL work unit lists exact file scope, dependencies, acceptance, and checks without granting authorization; duplicate artifacts/gates are excluded; and an independent architecture review plus exact-revision CI pass.

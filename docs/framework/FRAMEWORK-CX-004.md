@@ -3,7 +3,7 @@ id: FRAMEWORK-CX-004
 type: framework-cx
 title: FW-TASK-033 founder-facing coordination interaction contract
 status: draft
-version: 0.1
+version: 0.2
 created: 2026-11-01
 updated: 2026-11-01
 related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-COVERAGE-004, DECISION-057, DECISION-058, FRAMEWORK-GATE-CONTRACT-001
@@ -13,7 +13,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBIL
 
 ## Target and limits
 
-This is a nonvisual interaction contract for the nontechnical product owner using the framework through conversation and repository records. It covers FR-FW-041–045 and J-033-01 through J-033-05. It does not claim that a specific chat product, agent runtime, dashboard, or connector implements this behavior.
+This is a nonvisual interaction contract for the nontechnical product owner using the framework through conversation and repository records. It covers FR-FW-041–045 and J-033-01 through J-033-08. It does not claim that a specific chat product, agent runtime, dashboard, or connector implements this behavior.
 
 The core experience should reduce the owner's coordination burden: the owner states the desired outcome in ordinary language; the orchestrator reports the current evidence-based state, brings in relevant bounded expertise, and asks only for material owner decisions. It must make uncertainty and authority visible without turning each task into a long questionnaire.
 
