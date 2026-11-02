@@ -5,8 +5,8 @@ title: Application lifecycle orchestrator
 status: draft
 version: 0.4
 created: 2026-10-07
-updated: 2026-11-01
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-GATE-CONTRACT-001, ROLE-CAPABILITIES-001, FRAMEWORK-CX-004
+updated: 2026-11-02
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-GATE-CONTRACT-001, ROLE-CAPABILITIES-001, FRAMEWORK-CX-004, DECISION-062
 ---
 
 # WORKFLOW-LIFECYCLE-001 — Application lifecycle orchestrator
@@ -14,6 +14,16 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, 
 ## Purpose
 
 Give the owner and agents one bounded answer to “what happens next?” for an application project. Use this as the navigation workflow; stage specialists use their linked workflows for detailed execution. The lifecycle applies to the app's own repository after project setup. Framework files are references, not competing app requirements.
+
+## Lead-orchestrator start behavior
+
+The primary AI agent is the lead orchestrator for the project. On every new or resumed session, it reads the repository instructions, canonical SDD files, backlog status, and linked evidence before recommending or starting work. It derives status from those records rather than conversation history. The owner should not have to prompt it to perform routine lifecycle steps.
+
+For a newly initialized app, the owner may begin with a short idea in their own words. The lead orchestrator starts G-INTENT by organizing the known user, problem, desired outcome, evidence, constraints, and uncertainties in `mission.md`. It asks only for information that materially affects the next step; unknowns remain marked unknown. It then leads the next permitted discovery/setup action, continuing safe independent work while a reserved owner decision is pending.
+
+Unless the owner gives another target or chooses another mode, new apps use the ten-working-day MVP/launch-sprint posture in FR-FW-038–040: one primary user and the smallest end-to-end outcome. Keep secondary scenarios, exhaustive error matrices, extreme edge cases, and speculative scale work out of the initial plan. Existing gate evidence, safety, privacy, accessibility, legal, data-integrity, review, CI, and release requirements still apply. If those controls conflict with the target, present a concrete scope/date choice; do not waive them.
+
+The orchestrator is the primary agent taking this role, not a required hosted service or a mandatory fleet of separate agents. It selects role capabilities from `ROLE-CAPABILITIES-001` proportionately, remains accountable for coordination, and preserves independent review boundaries.
 
 ## Roles and operating rules
 
@@ -56,6 +66,8 @@ At each work session:
 3. Otherwise, choose the highest-priority ready item whose dependencies and required gate inputs are satisfied.
 4. If none is ready, identify whether the blocker is an owner decision, external access, evidence gap, or missing framework capability. Make independent progress where safe; report the owner action in decision-ready form.
 5. Update the canonical backlog and linked artifacts when starting/completing/blocking work. At turn end, report completed, active, blocked, and next items with evidence links.
+
+At app startup, apply this same algorithm without waiting for the owner to assign a gate or framework task. If canonical files are starter placeholders, begin at G-INTENT; if the app is resumed, continue from its recorded status. Ask the owner only when a reserved decision, permission, evidence, or material clarification is actually needed.
 
 ## Capability selection
 
