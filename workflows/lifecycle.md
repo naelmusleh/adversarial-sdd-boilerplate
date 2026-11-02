@@ -3,10 +3,10 @@ id: WORKFLOW-LIFECYCLE-001
 type: workflow
 title: Application lifecycle orchestrator
 status: draft
-version: 0.3
+version: 0.4
 created: 2026-10-07
-updated: 2026-10-20
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-GATE-CONTRACT-001
+updated: 2026-11-02
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-GATE-CONTRACT-001, ROLE-CAPABILITIES-001, FRAMEWORK-CX-004, DECISION-062
 ---
 
 # WORKFLOW-LIFECYCLE-001 — Application lifecycle orchestrator
@@ -15,10 +15,21 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, 
 
 Give the owner and agents one bounded answer to “what happens next?” for an application project. Use this as the navigation workflow; stage specialists use their linked workflows for detailed execution. The lifecycle applies to the app's own repository after project setup. Framework files are references, not competing app requirements.
 
+## Lead-orchestrator start behavior
+
+The primary AI agent is the lead orchestrator for the project. On every new or resumed session, it reads the repository instructions, canonical SDD files, backlog status, and linked evidence before recommending or starting work. It derives status from those records rather than conversation history. The owner should not have to prompt it to perform routine lifecycle steps.
+
+For a newly initialized app, the owner may begin with a short idea in their own words. The lead orchestrator starts G-INTENT by organizing the known user, problem, desired outcome, evidence, constraints, and uncertainties in `mission.md`. It asks only for information that materially affects the next step; unknowns remain marked unknown. It then leads the next permitted discovery/setup action, continuing safe independent work while a reserved owner decision is pending.
+
+Unless the owner gives another target or chooses another mode, new apps use the ten-working-day MVP/launch-sprint posture in FR-FW-038–040: one primary user and the smallest end-to-end outcome. Keep secondary scenarios, exhaustive error matrices, extreme edge cases, and speculative scale work out of the initial plan. Existing gate evidence, safety, privacy, accessibility, legal, data-integrity, review, CI, and release requirements still apply. If those controls conflict with the target, present a concrete scope/date choice; do not waive them.
+
+The orchestrator is the primary agent taking this role, not a required hosted service or a mandatory fleet of separate agents. It selects role capabilities from `ROLE-CAPABILITIES-001` proportionately, remains accountable for coordination, and preserves independent review boundaries.
+
 ## Roles and operating rules
 
 - **Owner:** sets product intent, makes reserved product decisions, accepts/rejects results, and authorizes consequential release or external actions.
 - **Lead agent:** reads the current app status/backlog, determines the next eligible action, assigns work, updates artifacts/status, and reports evidence and blockers.
+- **Optional capabilities:** use [ROLE-CAPABILITIES-001](../docs/framework/ROLE-CAPABILITIES-001.md) to choose the smallest relevant expertise set. A catalog entry is a work contract, not a promise of a separate agent or qualified professional.
 - **Specialist agents:** perform bounded tasks under linked specifications, acceptance criteria, and repository instructions.
 - **Independent reviewer:** performs the required review for its gate; an implementer may not label self-review independent.
 - Use the app's `backlog.md` and linked gate records as the durable status. Keep a short current-status section in `README.md` pointing to the active milestone, blocker, and next action. Do not create an independent hand-maintained dashboard with duplicate state.
@@ -39,8 +50,8 @@ Task statuses are project-defined but must distinguish at least: `planned`, `rea
 | 2. Project setup | Create or prepare a separate app repository; apply the approved project template; set instructions, owners, source-of-truth links, and access prerequisites. | App repository; starter artifacts; current-status section. | Pass **G-SETUP**. Do not place app code in the framework repo. |
 | 3. Specify | Build/maintain constitution, specification, and initial backlog. Record research, decisions, acceptance outcomes, open vectors, and traceability. Run adversarial review. | Approved or in-review SDD package; review record; dependency-linked backlog. | Pass **G-REQ**. Unresolved blocking decisions are returned with options and impact. |
 | 4. Feasibility and challenge | Probe high-impact provider/data rights, legal, security/privacy, platform, cost, and operational constraints. Run independent challenge. These checks may run in parallel with requirements/design exploration when no commitment is implied. | Feasibility register; evidence; decision requests; revised scope/requirements when needed. | Pass **G-FEAS** for committed scope. Unsupported capability claims remain out of promised behavior. |
-| 5. Experience design | Map applicable public/foundational, access, primary task, conversion, support/exception, and retention/return journeys; establish platform contract and visual direction; create linked reviewable prototype. | Canonical `design.md` and linked interaction matrix; active journey inventory; design system; Figma or equivalent evidence. | Pass **G-COVERAGE** before critique. Exclude irrelevant journeys with a reason. |
-| 6. Design quality | Run G-CX with the evaluator selected in the app's tool/evaluation decision. If Impeccable is selected, run `critique` on the complete active design scope and use only relevant refine commands for findings; otherwise use the tool-neutral procedure in GATE-CATALOG-001. Rerun after a focused remediation batch. | Critique report, dispositions, and full affected-scope rerun. | Pass **G-CX**. Technical audits are not substitutes for critique, and a static prototype does not prove runtime or native behavior. |
+| 5. Experience design | Map journeys and surfaces for the accepted scope. In selected MVP / launch-sprint mode, focus on the primary persona's minimum launch journey; still record concise applicability/rationale for each failure category required by the adopted gate contract. Establish platform contract and visual direction; create linked reviewable prototype for the active scope. | Canonical `design.md` and linked interaction matrix; active journey inventory; required category decisions; design system; Figma or equivalent evidence. | Pass **G-COVERAGE** before critique. Exclude out-of-scope journeys with a reason and revisit trigger when material. |
+| 6. Design quality | Run G-CX with the evaluator selected in the app's tool/evaluation decision. If Impeccable is selected, run `critique` on the complete active design scope and use only relevant refine commands for findings; otherwise use the tool-neutral procedure in GATE-CATALOG-001. In MVP mode, the complete active scope is the approved primary journey plus required safeguards and category decisions, not an exhaustive secondary-flow inventory. Rerun after a focused remediation batch. | Critique report, dispositions, and full affected-scope rerun. | Pass **G-CX**. Technical audits are not substitutes for critique, and a static prototype does not prove runtime or native behavior. |
 | 7. Architecture and build readiness | Convert accepted product/CX contracts and feasibility evidence into architecture, trust/data/integration behavior, verification approach, and ordered tasks. | Architecture/ADR records; threat/dependency view; implementation-ready backlog. | Pass **G-ARCH**. Stop dependent coding when a material contract remains open. |
 | 8. Implementation | Execute one approved app backlog item per run using `ai-engineering-execution.md`; inspect existing state, implement, verify, review, and record the milestone. | App code/configuration, review evidence, observed checks, backlog update. | Pass applicable **G-IMPL** criteria for each milestone. Failed checks keep task incomplete. |
 | 9. Verification and launch | Run app-specific test and technical audit plan (web `audit`, native `audit.native`, security/accessibility as applicable); rehearse release, rollback, and support ownership; request release authorization. | QA/release record, deployment evidence, rollback/recovery plan, operator assignment. | Pass **G-RELEASE** only with evidence and explicit owner authorization for the release. |
@@ -55,6 +66,14 @@ At each work session:
 3. Otherwise, choose the highest-priority ready item whose dependencies and required gate inputs are satisfied.
 4. If none is ready, identify whether the blocker is an owner decision, external access, evidence gap, or missing framework capability. Make independent progress where safe; report the owner action in decision-ready form.
 5. Update the canonical backlog and linked artifacts when starting/completing/blocking work. At turn end, report completed, active, blocked, and next items with evidence links.
+
+At app startup, apply this same algorithm without waiting for the owner to assign a gate or framework task. If canonical files are starter placeholders, begin at G-INTENT; if the app is resumed, continue from its recorded status. Ask the owner only when a reserved decision, permission, evidence, or material clarification is actually needed.
+
+## Capability selection
+
+After selecting the eligible task, match its approved outcome and risks to the catalog triggers. Keep routine fixes with the implementation capability; use a debugger only when diagnosis is difficult or repeated. For a focused MVP, start with the primary persona's smallest end-to-end path and omit growth, communications, dashboard, optimization, and extra-platform roles unless a concrete approved objective or safeguard triggers them. For a market bet, research and feasibility may run before a build commitment. After launch, use observed user or operator evidence to select one relevant capability. The catalog gives concise examples and required handoff fields.
+
+The owner-facing update leads with plain language: goal, current step, verified outcome, blocker or unknown, owner action if needed, and next step. Explain the gate meaning before its ID. Link actual claims to the current app records; this framework's role catalog does not substitute for them.
 
 ## Bounded loop and return rules
 

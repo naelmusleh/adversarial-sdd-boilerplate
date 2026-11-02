@@ -17,7 +17,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-065, FRAM
 
 - **Evaluator:** `/root/fw029_independent_review` (independent, read-only).
 - **Review date:** 2026-10-26.
-- **Gate:** G-COVERAGE for FW-TASK-031 slice B / FR-FW-049–051 under DECISION-065.
+- **Gate:** G-COVERAGE for FW-TASK-031 slice B / FR-FW-052–054 under DECISION-065.
 - **Exact reviewed revision:** `a22bfe20319a9ce02ad04de6d4e4abc2076ccf73` on `codex/fw031-greq`.
 - **Reviewed artifact:** FRAMEWORK-COVERAGE-005 v0.1, blob `b7c39f4e5cc50644189999fc2d5e04502c2e2ded`.
 - **Reviewed backlog:** FRAMEWORK-BACKLOG-001 candidate blob `f1c17e7f492caf11124c2098c944014054ffe6bf`.
@@ -29,7 +29,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-065, FRAM
 
 | Criterion | Result | Evidence and rationale |
 | --- | --- | --- |
-| GCOV-01 — journeys, actors, states and recovery | PASS | Six journeys in FRAMEWORK-COVERAGE-005 §2 map FR-FW-049–051 to actors, preconditions, transitions, exits, and recovery. Identity/revision provenance, timing, timeout, cancellation, measurement availability, and access/freshness states are explicit in §3. |
+| GCOV-01 — journeys, actors, states and recovery | PASS | Six journeys in FRAMEWORK-COVERAGE-005 §2 map FR-FW-052–054 to actors, preconditions, transitions, exits, and recovery. Identity/revision provenance, timing, timeout, cancellation, measurement availability, and access/freshness states are explicit in §3. |
 | GCOV-02 — failure and recovery coverage | PASS | §5 covers empty/missing, malformed/corrupt, unavailable, unauthorized, degraded, abuse, and recovery cases. Each has an applicability rationale and journey link; uncertainty cannot become zero or PASS evidence. |
 | GCOV-03 — surfaces and exclusions | PASS | §4 specifies framework records, conditional Actions data, PR/review/CI, end-user UI, and other execution profiles. Exclusions are justified for this framework-only slice. FEAS-014 conditional and blocked capabilities are preserved. |
 
@@ -39,6 +39,6 @@ No actionable findings. No owner decision is needed for this bounded coverage in
 
 ## Gate disposition and limits
 
-- **Review result:** PASS for the reviewed G-COVERAGE matrix within DECISION-065 and FR-FW-049–051. The same exact commit passed required CI.
+- **Review result:** PASS for the reviewed G-COVERAGE matrix within DECISION-065 and FR-FW-052–054. The same exact commit passed required CI.
 - **Limits:** The review does not establish implementation, profile adoption, workflow or permission changes, timeout configuration, runtime control, workload termination, actual metric collection, cost measurement, application use, or deployment.
 - **Next gate:** G-CX, if the reviewed artifacts also pass exact-revision Verify Pipeline. Use a nonvisual operator/reviewer interaction trace; no end-user prototype or visual/accessibility claim is applicable.

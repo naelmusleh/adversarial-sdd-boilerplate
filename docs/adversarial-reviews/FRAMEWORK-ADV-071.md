@@ -6,9 +6,9 @@ status: approved
 version: 0.1
 created: 2026-10-26
 updated: 2026-10-26
-reviewed-artifact: FRAMEWORK-ARCHITECTURE-005
+reviewed-artifact: FRAMEWORK-ARCHITECTURE-007
 reviewed-version: 0.1
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-COVERAGE-004, FRAMEWORK-CX-004, FRAMEWORK-ARCHITECTURE-005, DECISION-063
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-015, FRAMEWORK-COVERAGE-006, FRAMEWORK-CX-006, FRAMEWORK-ARCHITECTURE-007, DECISION-063
 ---
 
 # FRAMEWORK-ADV-071 — FW-TASK-031 G-ARCH review
@@ -17,10 +17,10 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBIL
 
 - **Evaluator:** `/root/fw029_independent_review` (independent, read-only)
 - **Review date:** 2026-10-26
-- **Gate:** G-ARCH for FW-TASK-031 and FR-FW-046–048 under DECISION-063 only.
+- **Gate:** G-ARCH for FW-TASK-031 and FR-FW-063–048 under DECISION-063 only.
 - **Exact reviewed revision:** `a07728f7e9f402eec1e372c87195e97c33699060` on `codex/fw031-greq`.
-- **Reviewed artifact:** FRAMEWORK-ARCHITECTURE-005 v0.1, blob `42531bd836ba28aacc9f6fa663a3e9a1e88c564e`.
-- **Other reviewed scope:** FR-FW-046–048; FRAMEWORK-FEASIBILITY-012, FRAMEWORK-COVERAGE-004, FRAMEWORK-CX-004; FRAMEWORK-GATE-CONTRACT-001; DECISION-063; FW-TASK-031 and its acceptance criteria.
+- **Reviewed artifact:** FRAMEWORK-ARCHITECTURE-007 v0.1, blob `42531bd836ba28aacc9f6fa663a3e9a1e88c564e`.
+- **Other reviewed scope:** FR-FW-063–048; FRAMEWORK-FEASIBILITY-015, FRAMEWORK-COVERAGE-006, FRAMEWORK-CX-006; FRAMEWORK-GATE-CONTRACT-001; DECISION-063; FW-TASK-031 and its acceptance criteria.
 - **Review method:** Independent architecture/security challenge of GARCH-01–04 covering data/state ownership, trust boundaries, failure and recovery behavior, privacy/retention, blocked decision ownership/triggers, and task-ready decomposition. The evaluator made no edits and ran no tests.
 - **CI evidence:** Verify Pipeline run [40322683751](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40322683751) passed Metadata & Artifact Audit, Initializer Regression Gate, and TypeScript Static Code Analysis on the exact reviewed revision. Optional FW-029/FW-030 probes were skipped.
 - **Local evidence:** `python3 scripts/artifacts.py validate` reported 116 artifacts; `git diff --check` passed on the reviewed candidate.
@@ -40,6 +40,6 @@ No material findings. No additional owner decision is needed to accept this arch
 
 ## Gate disposition and limits
 
-- **Result:** PASS for G-ARCH within DECISION-063 and FR-FW-046–048.
+- **Result:** PASS for G-ARCH within DECISION-063 and FR-FW-063–048.
 - **Limits:** The architecture establishes no implementation, host/process control, resource enforcement, authoritative meter, numeric spend, runtime/provider adoption, application use, or production readiness.
 - **Next action:** Request a separate owner authorization before any G-IMPL work. Proposed slice A only: pure policy/result schemas, deterministic validation, and synthetic fixtures; runtime and meter work remain blocked.

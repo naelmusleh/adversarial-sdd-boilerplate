@@ -6,14 +6,14 @@ status: approved
 version: 0.2
 created: 2026-10-26
 updated: 2026-10-26
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-ARCHITECTURE-005, FRAMEWORK-CONTRACT-031, DECISION-063, DECISION-064
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-015, FRAMEWORK-ARCHITECTURE-007, FRAMEWORK-CONTRACT-031, DECISION-063, DECISION-064
 ---
 
 # FRAMEWORK-FEASIBILITY-013 — FW-TASK-031 GitHub Actions hosted-runner capability probe
 
 ## Scope and boundaries
 
-This is a bounded, read-only capability probe requested by the owner after FW031-IMPL-01. It evaluates GitHub-hosted Actions as a possible execution profile for FR-FW-046–048. It does not select or adopt GitHub Actions, implement an adapter, change workflow configuration, set a budget threshold, exercise real cancellation, query private billing data, or authorize application use, credentials, merge, or deployment. It makes no claim that the observed CI jobs were agent executions.
+This is a bounded, read-only capability probe requested by the owner after FW031-IMPL-01. It evaluates GitHub-hosted Actions as a possible execution profile for FR-FW-052–048. It does not select or adopt GitHub Actions, implement an adapter, change workflow configuration, set a budget threshold, exercise real cancellation, query private billing data, or authorize application use, credentials, merge, or deployment. It makes no claim that the observed CI jobs were agent executions.
 
 The probe examined workflow and job metadata, logs, and timing for the successful Verify Pipeline run [40328119676](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40328119676), whose head was `ca0e8a40871a3e23ba4cafee1cf7ec377dc6fb6f`. The repository was public at observation time. Evidence was observed on 2026-10-26 and is specific to this run and the repository workflow at that commit.
 
@@ -41,7 +41,7 @@ The probe examined workflow and job metadata, logs, and timing for the successfu
 
 GitHub Actions provides a plausible boundary for workflow/job IDs, rerun attempts, elapsed timestamps, configurable job timeouts, and host-level cancellation. The current framework workflow does not capture a complete FW-031 capability record, configure a short time budget, count agent tool calls or internal retries, establish child-agent accounting, or measure monetary spend. A workflow-level timebox could be explored as a narrow advisory/control profile, but this probe does not adopt that profile or establish that it satisfies FW-TASK-031.
 
-**Result:** Evidence narrows several previous unknowns for workflow/job-level timing and cancellation surfaces. Tool calls and nested agent accounting remain unavailable in the current profile; resource metrics and termination for a future agent workload remain unknown; spend remains unknown. Slices B–D in FRAMEWORK-ARCHITECTURE-005 stay held. No threshold, budget policy, controller, or host profile is selected.
+**Result:** Evidence narrows several previous unknowns for workflow/job-level timing and cancellation surfaces. Tool calls and nested agent accounting remain unavailable in the current profile; resource metrics and termination for a future agent workload remain unknown; spend remains unknown. Slices B–D in FRAMEWORK-ARCHITECTURE-007 stay held. No threshold, budget policy, controller, or host profile is selected.
 
 **Independent review:** Reviewer `/root/fw029_independent_review` found no actionable findings at exact published candidate `934ee58f629af667341532eb6b95c8e1724e657e` on `codex/fw031-greq`. The reviewer confirmed that the claims stay at workflow/job level and do not transfer prior FW-029/FW-030 results into adoption evidence.
 

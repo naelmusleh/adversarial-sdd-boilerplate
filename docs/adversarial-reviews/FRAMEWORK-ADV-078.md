@@ -17,10 +17,10 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-065, FRAM
 
 - **Evaluator:** `/root/fw029_independent_review` (independent, read-only).
 - **Review date:** 2026-10-26.
-- **Gate:** G-ARCH for FW-TASK-031 slice B and FR-FW-049–051 under DECISION-065.
+- **Gate:** G-ARCH for FW-TASK-031 slice B and FR-FW-052–054 under DECISION-065.
 - **Exact reviewed revision:** `9e4e8bbefbd89a6392e6cc3917263971e115ea40` on `codex/fw031-greq`.
 - **Reviewed artifact:** FRAMEWORK-ARCHITECTURE-006 v0.1, blob `26d6fedb7618713d46859eae61569fa14fbaa73a`.
-- **Context reviewed:** FR-FW-049–051, DECISION-065, FRAMEWORK-FEASIBILITY-014, FRAMEWORK-COVERAGE-005, FRAMEWORK-CX-005 v0.3 / ADV-062, FRAMEWORK-CONTRACT-031 v1.0, and GARCH-01–03.
+- **Context reviewed:** FR-FW-052–054, DECISION-065, FRAMEWORK-FEASIBILITY-014, FRAMEWORK-COVERAGE-005, FRAMEWORK-CX-005 v0.3 / ADV-062, FRAMEWORK-CONTRACT-031 v1.0, and GARCH-01–03.
 - **Review method:** Read-only architecture challenge of identity/revision/timing, permission and collection alternatives, timeout/cancellation/termination, unavailable/proxy measurement behavior, trust/privacy/retention, failures/recovery/operations, ADR authority, and task scopes/dependencies/checks. No edits or tests.
 - **Exact-revision CI:** Verify Pipeline [40338717714](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40338717714) passed Metadata & Artifact Audit, Initializer Regression Gate, and TypeScript Static Code Analysis on this exact revision; optional FW-029/FW-030 probes were skipped.
 
@@ -38,6 +38,6 @@ No findings. No owner decision is required before recording this bounded G-ARCH 
 
 ## Gate disposition and limits
 
-- **Result:** G-ARCH PASS within DECISION-065 and FR-FW-049–051.
+- **Result:** G-ARCH PASS within DECISION-065 and FR-FW-052–054.
 - **Limits:** No implementation, profile/acquisition-route adoption, permission or workflow change, timeout selection, workload test/termination, metric/spend collection, application use, or deployment is authorized or established.
 - **Next checkpoint:** Owner authorization is separately required before proposed FW031-IMPL-02. Recommended scope is a pure profile evidence contract/schema, deterministic validator, and synthetic fixtures only, with no network or runtime integration.

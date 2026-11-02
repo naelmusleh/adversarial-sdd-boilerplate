@@ -13,8 +13,8 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-065, DECI
 
 ## G-ARCH work record and boundaries
 
-- **Gate:** G-ARCH for FW-TASK-031 slice B / FR-FW-049–051 under DECISION-065 only.
-- **Inputs:** FRAMEWORK-SPEC-001 FR-FW-049–051; FRAMEWORK-FEASIBILITY-013 and -014; FRAMEWORK-COVERAGE-005; FRAMEWORK-CX-005 v0.3; FRAMEWORK-GATE-CONTRACT-001; FRAMEWORK-CONTRACT-031 v1.0; DECISION-065.
+- **Gate:** G-ARCH for FW-TASK-031 slice B / FR-FW-052–054 under DECISION-065 only.
+- **Inputs:** FRAMEWORK-SPEC-001 FR-FW-052–054; FRAMEWORK-FEASIBILITY-013 and -014; FRAMEWORK-COVERAGE-005; FRAMEWORK-CX-005 v0.3; FRAMEWORK-GATE-CONTRACT-001; FRAMEWORK-CONTRACT-031 v1.0; DECISION-065.
 - **Target:** Define a reviewable, optional GitHub Actions workflow/job evidence architecture, its normalized records and invariants, boundaries, failures/recovery, decisions, and a task-ready proposed decomposition.
 - **Authority:** DECISION-065 approves requirements scope and G-REQ/G-FEAS/G-COVERAGE/G-CX work for slice B; it does not select an ingestion route, grant Actions permissions, configure a timeout, adopt a profile, or authorize G-IMPL.
 - **Non-adoption boundary:** GitHub Actions is the bounded subject of the optional profile, not a production adoption decision. No workflow configuration, permissions, collector, endpoint, credentials, threshold, spend meter, runtime controller, or application integration is selected or changed.
@@ -119,7 +119,7 @@ These are architecture proposals only. No IDs are committed to the application b
 
 ## G-ARCH disposition
 
-**G-ARCH result:** PASS within DECISION-065 and FR-FW-049–051 for FRAMEWORK-ARCHITECTURE-006 v0.1 at exact candidate `9e4e8bbefbd89a6392e6cc3917263971e115ea40`. Independent review [FRAMEWORK-ADV-078](../adversarial-reviews/FRAMEWORK-ADV-078.md) passed GARCH-01–03 with no findings. Verify Pipeline [40338717714](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40338717714) passed Metadata & Artifact Audit, Initializer Regression Gate, and TypeScript Static Code Analysis on that exact candidate; optional FW-029/FW-030 probes were skipped. The architecture freezes normalized contract boundaries and held work units only. It does not adopt a collection route/profile, grant permissions, configure timeouts, test cancellation, authorize implementation, or establish runtime/measurement claims.
+**G-ARCH result:** PASS within DECISION-065 and FR-FW-052–054 for FRAMEWORK-ARCHITECTURE-006 v0.1 at exact candidate `9e4e8bbefbd89a6392e6cc3917263971e115ea40`. Independent review [FRAMEWORK-ADV-078](../adversarial-reviews/FRAMEWORK-ADV-078.md) passed GARCH-01–03 with no findings. Verify Pipeline [40338717714](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40338717714) passed Metadata & Artifact Audit, Initializer Regression Gate, and TypeScript Static Code Analysis on that exact candidate; optional FW-029/FW-030 probes were skipped. The architecture freezes normalized contract boundaries and held work units only. It does not adopt a collection route/profile, grant permissions, configure timeouts, test cancellation, authorize implementation, or establish runtime/measurement claims.
 
 **Next step at v0.1:** An owner checkpoint was required before any proposed G-IMPL unit. The recommended first unit was FW031-IMPL-02, a pure profile evidence contract/schema, deterministic validator, and synthetic fixtures only, without network access or runtime integration. G-ARCH PASS did not authorize that work. Its subsequent execution is recorded in the backlog.
 

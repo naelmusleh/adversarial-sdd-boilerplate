@@ -1,23 +1,23 @@
 ---
-id: FRAMEWORK-ARCHITECTURE-005
+id: FRAMEWORK-ARCHITECTURE-007
 type: framework-architecture
 title: FW-TASK-031 per-run limits and stop conditions architecture
 status: approved
 version: 0.4
 created: 2026-10-26
 updated: 2026-10-26
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-063, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-COVERAGE-004, FRAMEWORK-CX-004, FRAMEWORK-GATE-CONTRACT-001, WORKFLOW-FEASIBILITY-001, FRAMEWORK-ADV-071, DECISION-064, FRAMEWORK-CONTRACT-031
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-063, FRAMEWORK-FEASIBILITY-015, FRAMEWORK-COVERAGE-006, FRAMEWORK-CX-006, FRAMEWORK-GATE-CONTRACT-001, WORKFLOW-FEASIBILITY-001, FRAMEWORK-ADV-071, DECISION-064, FRAMEWORK-CONTRACT-031
 ---
 
-# FRAMEWORK-ARCHITECTURE-005 — FW-TASK-031 per-run limits and stop conditions architecture
+# FRAMEWORK-ARCHITECTURE-007 — FW-TASK-031 per-run limits and stop conditions architecture
 
 ## G-ARCH work record
 
-- **Gate:** G-ARCH for FW-TASK-031 and FR-FW-046–048 under DECISION-063 only.
-- **Inputs:** FRAMEWORK-SPEC-001 v0.29; FRAMEWORK-FEASIBILITY-012 v0.2; FRAMEWORK-COVERAGE-004 v0.2; FRAMEWORK-CX-004 v0.2; FRAMEWORK-GATE-CONTRACT-001; DECISION-063.
+- **Gate:** G-ARCH for FW-TASK-031 and FR-FW-063–048 under DECISION-063 only.
+- **Inputs:** FRAMEWORK-SPEC-001 v0.29; FRAMEWORK-FEASIBILITY-015 v0.2; FRAMEWORK-COVERAGE-006 v0.2; FRAMEWORK-CX-006 v0.2; FRAMEWORK-GATE-CONTRACT-001; DECISION-063.
 - **Target:** Define a runtime-neutral budget policy/result boundary, state ownership, evidence flow, failure behavior, trust boundaries, and a task-ready but unauthorized implementation breakdown.
 - **Non-adoption boundary:** No execution host, runtime, provider, meter, threshold, currency, reset policy, or override policy is selected. FW-TASK-030's Podman evidence is not transferable support proof. No production/app use, credentials, deployment, or runtime execution is authorized.
-- **Implementation boundary:** Owner decision DECISION-064 authorizes only FW031-IMPL-01: pure versioned policy/result schemas, deterministic validation, and synthetic fixtures. Runtime counter collection, hard cancellation/resource enforcement, monetary spend, application integration, and production behavior remain blocked on the specific decisions and evidence in FRAMEWORK-FEASIBILITY-012 and are not authorized by DECISION-064.
+- **Implementation boundary:** Owner decision DECISION-064 authorizes only FW031-IMPL-01: pure versioned policy/result schemas, deterministic validation, and synthetic fixtures. Runtime counter collection, hard cancellation/resource enforcement, monetary spend, application integration, and production behavior remain blocked on the specific decisions and evidence in FRAMEWORK-FEASIBILITY-015 and are not authorized by DECISION-064.
 - **Exclusions:** FW-TASK-030 follow-on units; app changes; changing gate contract semantics; choosing a provider or budget threshold; actual host/process control; monetary estimation from proxy counters; repository split; release or deployment.
 - **Review plan:** Independent architecture review of GARCH-01–04, `python3 scripts/artifacts.py validate`, `git diff --check`, and exact-revision Verify Pipeline. A review PASS cannot select a deferred option or authorize implementation.
 
@@ -127,6 +127,6 @@ No task IDs are assigned to slices B–D and they remain unauthorized. DECISION-
 - **GARCH-03 — dependencies and operations:** Every blocked or conditional dependency names the decision owner, evidence trigger, and held work; privacy/retention and recovery limits are explicit.
 - **GARCH-04 — task readiness:** Proposed pure validation work has deterministic scope and evidence; runtime, meter, cancellation, and production slices stay held pending owner choices and separate G-IMPL authorization.
 
-**G-ARCH disposition (2026-10-26): PASS within DECISION-063.** The independent reviewer `/root/fw029_independent_review` passed GARCH-01–04 for FRAMEWORK-ARCHITECTURE-005 v0.1, blob `42531bd836ba28aacc9f6fa663a3e9a1e88c564e`, at exact candidate `a07728f7e9f402eec1e372c87195e97c33699060`; FRAMEWORK-ADV-071 records the complete scope and no material findings. Verify Pipeline [40322683751](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40322683751) passed Metadata & Artifact Audit, Initializer Regression Gate, and TypeScript Static Code Analysis on that exact candidate; optional FW-029/FW-030 probes were skipped. Artifact validation reported 116 artifacts and `git diff --check` passed. This v0.2 update records that disposition without changing the reviewed architecture content.
+**G-ARCH disposition (2026-10-26): PASS within DECISION-063.** The independent reviewer `/root/fw029_independent_review` passed GARCH-01–04 for FRAMEWORK-ARCHITECTURE-007 v0.1, blob `42531bd836ba28aacc9f6fa663a3e9a1e88c564e`, at exact candidate `a07728f7e9f402eec1e372c87195e97c33699060`; FRAMEWORK-ADV-071 records the complete scope and no material findings. Verify Pipeline [40322683751](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40322683751) passed Metadata & Artifact Audit, Initializer Regression Gate, and TypeScript Static Code Analysis on that exact candidate; optional FW-029/FW-030 probes were skipped. Artifact validation reported 116 artifacts and `git diff --check` passed. This v0.2 update records that disposition without changing the reviewed architecture content.
 
 **G-IMPL authorization (2026-10-26):** DECISION-064 authorizes FW031-IMPL-01 only. This owner decision follows the G-ARCH PASS without changing its reviewed architecture scope. The selected work is limited to schemas, deterministic structural/semantic validation, and synthetic fixtures. No runtime/provider/meter/threshold selection, process control, application use, or production readiness is authorized.

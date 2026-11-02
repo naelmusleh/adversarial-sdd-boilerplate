@@ -3,10 +3,10 @@ id: WORKFLOW-AI-ENGINEERING-001
 type: workflow
 title: Execute one approved application backlog item
 status: draft
-version: 0.3
+version: 0.4
 created: 2026-10-07
-updated: 2026-10-20
-related-artifacts: CAP-003, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001
+updated: 2026-11-01
+related-artifacts: CAP-003, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001, ROLE-CAPABILITIES-001, FRAMEWORK-CX-004
 ---
 
 # AI engineering execution workflow
@@ -21,6 +21,8 @@ Guide an AI implementation agent through exactly one approved task in an applica
 - **Lead agent/orchestrator:** identifies the selected task, supplies repository context, coordinates specialist review if needed, and reports current lifecycle status.
 - **Implementation agent:** inspects, changes, verifies, reviews, and records the selected task within its agreed boundary.
 - **Independent reviewer:** reviews the resulting diff or required quality gate when the application process requires a separate reviewer. The implementer must not represent its own work as an independent review.
+- **Optional specialist capabilities:** select from [ROLE-CAPABILITIES-001](../docs/framework/ROLE-CAPABILITIES-001.md) only when task scope, selected platform, or an applicable risk triggers them. The catalog does not promise an available agent or qualified professional.
+- **QA:** produces acceptance evidence distinct from code review and release authorization; activate it when the app's policy or acceptance criteria require observed QA.
 
 ## Required inputs
 
@@ -37,6 +39,8 @@ Record or link these before editing:
 If any required input is absent, do not infer it from a similarly named task or from framework examples. Identify the missing input in the blocked report.
 
 ## Procedure
+
+Before handing off work, the lead agent records why each material capability is activated or omitted and includes the exact task/requirement IDs, source revisions, bounded question, output, authority limits, and evidence location. Do not create separate-agent handoffs for routine role modes unless independence, expertise, or parallelism justifies them. No assignment or specialist recommendation passes a gate.
 
 ### 1. Confirm the target and task
 
@@ -69,11 +73,12 @@ When stopping, offer evidence-based options, impacts, the recommended resolution
 ### 4. Implement only the selected item
 
 1. Inspect relevant code and local patterns; prefer the smallest coherent change that meets the accepted criteria.
-2. Preserve compatibility and behavior outside the task's stated scope. Avoid unrelated refactors, dependency upgrades, formatting churn, new providers, or speculative abstractions.
-3. Add or update source, configuration, documentation, and task-level checks only when needed for this item's acceptance criteria and consistent with project conventions.
-4. Apply the application's security, privacy, accessibility, reliability, and platform requirements where relevant; record any risk that cannot be addressed within the task.
-5. Do not add secrets to source, logs, shell output, or artifacts. Do not use production data for local verification unless the project's approved procedure explicitly permits it.
-6. If implementation reveals that another task or scope change is required, stop that expansion and report the dependency. Do not implement the additional task under the selected ID.
+2. For a task explicitly marked MVP / launch-sprint, implement the smallest end-to-end slice for its primary persona and accepted launch outcome. Cut optional scope early; do not gold-plate, add speculative scale abstractions, or expand into deferred secondary journeys. Keep deferrals brief, with rationale and a revisit trigger. These limits do not waive adopted gate evidence or required quality, security, privacy, legal, accessibility, authorization, data-integrity, review, CI, or release controls.
+3. Preserve compatibility and behavior outside the task's stated scope. Avoid unrelated refactors, dependency upgrades, formatting churn, new providers, or speculative abstractions.
+4. Add or update source, configuration, documentation, and task-level checks only when needed for this item's acceptance criteria and consistent with project conventions.
+5. Apply the application's security, privacy, accessibility, reliability, and platform requirements where relevant; record any risk that cannot be addressed within the task.
+6. Do not add secrets to source, logs, shell output, or artifacts. Do not use production data for local verification unless the project's approved procedure explicitly permits it.
+7. If implementation reveals that another task or scope change is required, stop that expansion and report the dependency. Do not implement the additional task under the selected ID.
 
 ### 5. Verify and review
 

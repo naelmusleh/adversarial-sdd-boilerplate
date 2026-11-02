@@ -31,6 +31,9 @@ jobs:
       - name: Validate artifact metadata, IDs, and naming
         run: python3 scripts/artifacts.py validate
 
+      - name: Validate role capability catalog structure and references
+        run: python3 scripts/validate_role_catalog.py
+
   initializer-regression-gate:
     name: Initializer Regression Gate
     runs-on: ubuntu-latest

@@ -17,7 +17,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-065, FRAM
 
 - **Evaluator:** `/root/fw029_independent_review` (independent, read-only).
 - **Review date:** 2026-10-26.
-- **Gate:** G-CX for FW-TASK-031 slice B and FR-FW-049–051 under DECISION-065.
+- **Gate:** G-CX for FW-TASK-031 slice B and FR-FW-052–054 under DECISION-065.
 - **Exact reviewed revision:** `ed79642444fcbd0b278722f012f6e86757255a50` on `codex/fw031-greq`.
 - **Reviewed artifact:** FRAMEWORK-CX-005 v0.2.
 - **Context reviewed:** all six traces, FRAMEWORK-FEASIBILITY-014, FRAMEWORK-COVERAGE-005, DECISION-065, and GCX-01–03.

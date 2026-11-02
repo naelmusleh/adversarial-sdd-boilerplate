@@ -42,9 +42,9 @@ Cross-field checks enforce acquisition/identity state consistency; revision stat
 
 The test suite uses clearly named synthetic fixtures only. Positive fixtures exercise complete identity binding, distinct revision roles, ordered run/job timing, configured versus observed timeout, cancellation versus terminal versus workload state, unknown/unavailable values, and a fully populated synthetic provenance shape. Negative fixtures cover malformed/duplicate JSON, unknown fields/enums, missing or contradictory identity, cross-run/job/attempt timing and measurements, reversed timestamps, SHA-role substitution, inconsistent timeout claims, cancellation treated as termination, missing direct provenance, proxy/synthetic evidence mislabeling, duplicate metrics, and denied/partial source inflation.
 
-- FR-FW-049: source/identity tuple and revision roles bind; timing provenance cannot cross run/attempt/job boundaries.
-- FR-FW-050: timeout configuration, timeout observation, host terminal result, cancellation request, and workload termination are distinct validated states.
-- FR-FW-051: metrics require direct provenance; unknown/unavailable remains valueless; unsupported proxies are rejected.
+- FR-FW-052: source/identity tuple and revision roles bind; timing provenance cannot cross run/attempt/job boundaries.
+- FR-FW-053: timeout configuration, timeout observation, host terminal result, cancellation request, and workload termination are distinct validated states.
+- FR-FW-054: metrics require direct provenance; unknown/unavailable remains valueless; unsupported proxies are rejected.
 
 ## Deferred work and explicit non-adoption
 
