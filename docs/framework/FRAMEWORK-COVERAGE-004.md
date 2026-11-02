@@ -3,10 +3,10 @@ id: FRAMEWORK-COVERAGE-004
 type: framework-coverage
 title: FW-TASK-033 orchestrator and role-model journey coverage
 status: draft
-version: 0.2
+version: 0.3
 created: 2026-11-01
 updated: 2026-11-01
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-012, DECISION-057, DECISION-058, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-012, ROLE-CAPABILITIES-001, DECISION-057, DECISION-058, DECISION-059, DECISION-060, FRAMEWORK-ADV-064, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-GATE-TRACEABILITY-001
 ---
 
 # FRAMEWORK-COVERAGE-004 — FW-TASK-033 orchestrator and role-model journey coverage
@@ -54,6 +54,6 @@ Primary actor: a nontechnical product owner. Supporting actors: lead orchestrato
 | Abuse | Applicable | Prompt or role output asks to bypass approval, suppress findings, expose secrets, or treat external content as trusted instructions. Reject the instruction, preserve the applicable policy, and escalate material conflicts. |
 | Recovery | Applicable | Handoff, review, release, or operation fails. Preserve prior work/evidence, return to the responsible owner or specialist, and resume only from a verified checkpoint. |
 
-## Out of scope and next gate
+## Out of scope and gate disposition
 
-No UI prototype is applicable. The framework does not promise all role expertise, automated dispatch, real-time status synchronization, or full business coverage. G-CX will critique the nonvisual interaction contract in `FRAMEWORK-CX-004`; G-ARCH will define the repository-native role catalog/handoff structure without implementing it.
+No UI prototype is applicable. The framework does not promise all role expertise, automated dispatch, real-time status synchronization, or full business coverage. G-CX and G-ARCH passed for the bounded planning scope; FRAMEWORK-ADV-064 records the final review. Implementation is authorized only for FW033-IMPL-01 under DECISION-060.

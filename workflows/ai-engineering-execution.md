@@ -3,10 +3,10 @@ id: WORKFLOW-AI-ENGINEERING-001
 type: workflow
 title: Execute one approved application backlog item
 status: draft
-version: 0.3
+version: 0.4
 created: 2026-10-07
-updated: 2026-10-20
-related-artifacts: CAP-003, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001
+updated: 2026-11-01
+related-artifacts: CAP-003, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-GATE-CONTRACT-001, ROLE-CAPABILITIES-001, FRAMEWORK-CX-004
 ---
 
 # AI engineering execution workflow
@@ -21,6 +21,8 @@ Guide an AI implementation agent through exactly one approved task in an applica
 - **Lead agent/orchestrator:** identifies the selected task, supplies repository context, coordinates specialist review if needed, and reports current lifecycle status.
 - **Implementation agent:** inspects, changes, verifies, reviews, and records the selected task within its agreed boundary.
 - **Independent reviewer:** reviews the resulting diff or required quality gate when the application process requires a separate reviewer. The implementer must not represent its own work as an independent review.
+- **Optional specialist capabilities:** select from [ROLE-CAPABILITIES-001](../docs/framework/ROLE-CAPABILITIES-001.md) only when task scope, selected platform, or an applicable risk triggers them. The catalog does not promise an available agent or qualified professional.
+- **QA:** produces acceptance evidence distinct from code review and release authorization; activate it when the app's policy or acceptance criteria require observed QA.
 
 ## Required inputs
 
@@ -37,6 +39,8 @@ Record or link these before editing:
 If any required input is absent, do not infer it from a similarly named task or from framework examples. Identify the missing input in the blocked report.
 
 ## Procedure
+
+Before handing off work, the lead agent records why each material capability is activated or omitted and includes the exact task/requirement IDs, source revisions, bounded question, output, authority limits, and evidence location. Do not create separate-agent handoffs for routine role modes unless independence, expertise, or parallelism justifies them. No assignment or specialist recommendation passes a gate.
 
 ### 1. Confirm the target and task
 

@@ -3,10 +3,10 @@ id: WORKFLOW-LIFECYCLE-001
 type: workflow
 title: Application lifecycle orchestrator
 status: draft
-version: 0.3
+version: 0.4
 created: 2026-10-07
-updated: 2026-10-20
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-GATE-CONTRACT-001
+updated: 2026-11-01
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-GATE-CONTRACT-001, ROLE-CAPABILITIES-001, FRAMEWORK-CX-004
 ---
 
 # WORKFLOW-LIFECYCLE-001 — Application lifecycle orchestrator
@@ -19,6 +19,7 @@ Give the owner and agents one bounded answer to “what happens next?” for an 
 
 - **Owner:** sets product intent, makes reserved product decisions, accepts/rejects results, and authorizes consequential release or external actions.
 - **Lead agent:** reads the current app status/backlog, determines the next eligible action, assigns work, updates artifacts/status, and reports evidence and blockers.
+- **Optional capabilities:** use [ROLE-CAPABILITIES-001](../docs/framework/ROLE-CAPABILITIES-001.md) to choose the smallest relevant expertise set. A catalog entry is a work contract, not a promise of a separate agent or qualified professional.
 - **Specialist agents:** perform bounded tasks under linked specifications, acceptance criteria, and repository instructions.
 - **Independent reviewer:** performs the required review for its gate; an implementer may not label self-review independent.
 - Use the app's `backlog.md` and linked gate records as the durable status. Keep a short current-status section in `README.md` pointing to the active milestone, blocker, and next action. Do not create an independent hand-maintained dashboard with duplicate state.
@@ -55,6 +56,12 @@ At each work session:
 3. Otherwise, choose the highest-priority ready item whose dependencies and required gate inputs are satisfied.
 4. If none is ready, identify whether the blocker is an owner decision, external access, evidence gap, or missing framework capability. Make independent progress where safe; report the owner action in decision-ready form.
 5. Update the canonical backlog and linked artifacts when starting/completing/blocking work. At turn end, report completed, active, blocked, and next items with evidence links.
+
+## Capability selection
+
+After selecting the eligible task, match its approved outcome and risks to the catalog triggers. Keep routine fixes with the implementation capability; use a debugger only when diagnosis is difficult or repeated. For a focused MVP, start with the primary persona's smallest end-to-end path and omit growth, communications, dashboard, optimization, and extra-platform roles unless a concrete approved objective or safeguard triggers them. For a market bet, research and feasibility may run before a build commitment. After launch, use observed user or operator evidence to select one relevant capability. The catalog gives concise examples and required handoff fields.
+
+The owner-facing update leads with plain language: goal, current step, verified outcome, blocker or unknown, owner action if needed, and next step. Explain the gate meaning before its ID. Link actual claims to the current app records; this framework's role catalog does not substitute for them.
 
 ## Bounded loop and return rules
 

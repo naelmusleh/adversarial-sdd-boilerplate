@@ -3,10 +3,10 @@ id: FRAMEWORK-ARCHITECTURE-005
 type: framework-architecture
 title: FW-TASK-033 founder-facing orchestrator and role-capability architecture
 status: draft
-version: 0.2
+version: 0.3
 created: 2026-11-01
 updated: 2026-11-01
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-COVERAGE-004, FRAMEWORK-CX-004, DECISION-057, DECISION-058, FRAMEWORK-ADV-063
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-COVERAGE-004, FRAMEWORK-CX-004, ROLE-CAPABILITIES-001, DECISION-057, DECISION-058, DECISION-059, DECISION-060, FRAMEWORK-ADV-063, FRAMEWORK-ADV-064
 ---
 
 # FRAMEWORK-ARCHITECTURE-005 — FW-TASK-033 founder-facing orchestrator and role-capability architecture
@@ -17,7 +17,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBIL
 - **Inputs:** FRAMEWORK-FEASIBILITY-012; FRAMEWORK-COVERAGE-004; FRAMEWORK-CX-004; DECISION-057/058; the pinned one-man-startup roster at commit `0a47eac13eaf63511903a5c25933325210bdc101`.
 - **Target:** A repository-native, provider-neutral coordination contract; a catalog of role capabilities; and traceable handoff/status guidance.
 - **Exclusions:** Hosted orchestration, provider-specific dispatch, runtime execution guarantees, one executable agent per catalog item, app-specific activation, gate-contract changes, application implementation, automatic posting/spending/deployment, and production recovery actions.
-- **Implementation boundary:** This architecture authorizes no implementation. A later G-IMPL decision is required for the documented role catalog/workflow/template changes. Any executable orchestration or adapter needs a separate scope and feasibility review.
+- **Implementation boundary:** This architecture record itself did not authorize implementation. DECISION-060 separately authorizes only FW033-IMPL-01. Any executable orchestration or adapter needs a separate scope and feasibility review.
 
 ## Decision summary
 
@@ -31,7 +31,7 @@ Use current canonical artifacts for project state. The orchestrator reads them a
 | --- | --- | --- | --- |
 | ADR-FW033-01 Role capability vs separate-agent roster | **Recommend role contracts as capabilities**, with separate agent instances only when independence, expertise, or parallelism justifies them. Alternative A: require one agent per role/task. Alternative B: sequential role modes in the lead/work agent, while preserving independent review boundaries. | Existing framework is repository-first and provider-neutral; CAP-003 explicitly is not an orchestration service. A 26-agent default would create handoffs and suggest runtime availability not evidenced. Sequential role modes reduce overhead; independent reviewer separation remains mandatory where required. | DECISION-057/058 authorize the contract, not agent runtime. App owner selects role availability; no same-agent review can satisfy independence. |
 | ADR-FW033-02 Repository procedure vs hosted orchestrator | **Use canonical repository artifacts plus a lead-agent procedure.** Alternative A: central hosted service with persistent status and dispatch. Alternative B: read canonical app records and render a conversational status/handoff. | No hosting/provider/tool capability or cross-project service is selected; existing FR-FW-002/010 and NFR-FW-002 favor one source and inspectable repository artifacts. No evidence supports a hosted service's availability, access, or lifecycle. | DECISION-058 excludes hosted orchestration. The owner may authorize a new service only under a separate requirements/feasibility/architecture scope. |
-| ADR-FW033-03 Human-readable catalog vs machine schema | **Use one canonical Markdown role catalog with fixed columns and a small structural check.** Alternative A: JSON/YAML schema as canonical, with rendered docs. Alternative B: Markdown only and manual review. | Markdown fits existing canonical artifact practice and is reviewable by a nontechnical owner; a fixed table supports required fields, unique IDs, enums, and links. A lightweight validator can check structure without adding a runtime dependency or role dispatcher. Pure manual checking risks missing/duplicating one of the 26 entries. | Proposed for later G-IMPL; no catalog code or parser is authorized yet. The check must validate structure only, never infer role quality, trigger applicability, or gate status. |
+| ADR-FW033-03 Human-readable catalog vs machine schema | **Use one canonical Markdown role catalog with fixed columns and a small structural check.** Alternative A: JSON/YAML schema as canonical, with rendered docs. Alternative B: Markdown only and manual review. | Markdown fits existing canonical artifact practice and is reviewable by a nontechnical owner; a fixed table supports required fields, unique IDs, enums, and links. A lightweight validator can check structure without adding a runtime dependency or role dispatcher. Pure manual checking risks missing/duplicating one of the 26 entries. | DECISION-060 authorizes the catalog and structure-only validator. The check must never infer role quality, trigger applicability, qualifications, or gate status. |
 
 ## Full source-role crosswalk
 
@@ -99,9 +99,9 @@ These are architecture-level contracts for the next-version catalog. They define
 | Explainer writer | Help users understand a proven product task or concept. | Approved product behavior and sourced claims → concise educational copy/script. | No advice or unsupported claims; unclear behavior returns to product owner; handoff to design/content review. |
 | Optimizer | Investigate observed process cost, delay, or waste. | Measured baseline and bounded goal → recommendation with expected measure and rollback/revisit. | Proposal only; no automatic workflow change or endless optimization; owner selects; handoff to backlog. |
 
-## Proposed role-capability record
+## Role-capability record schema
 
-The future role catalog should use one stable Markdown row per capability with the following contract. The catalog header carries one schema version; role IDs remain stable across revisions. Lists use semicolon-separated stable requirement/artifact IDs or explicit `none-applicable`, never free-floating implied authority.
+The canonical role catalog uses one stable Markdown row per capability with the following contract. The catalog header carries one schema version; role IDs remain stable across revisions. Lists use semicolon-separated stable requirement/artifact IDs or explicit `none-applicable`, never free-floating implied authority.
 
 | Field | Purpose |
 | --- | --- |
@@ -116,7 +116,7 @@ The future role catalog should use one stable Markdown row per capability with t
 | `handoff` | Required next responsible role/capability and canonical task/evidence link, or explicit terminal/owner handoff. |
 | `execution_mode` | Required enum: `sequential-role-mode`, `separate-agent-justified`, `qualified-external-review`, `operational-procedure`, `not-applicable`. This states an allowed method, not runtime availability. |
 
-**Compatibility:** adding an optional explanatory field is a minor catalog-version change; changing required fields, enum meaning, authority, or role identity is a major change with review. Unsupported schema major versions fail validation. The later structural check verifies table columns, unique role IDs, required nonempty cells, enum values, and referenced artifact IDs. It does not decide whether triggers are wise or whether a specialist is qualified; those remain review/owner judgments.
+**Compatibility:** adding an optional explanatory field is a minor catalog-version change; changing required fields, enum meaning, authority, or role identity is a major change with review. Unsupported schema major versions fail validation. The structural check verifies table columns, unique role IDs/source roles, required nonempty cells, enum values, and referenced artifact IDs. It does not decide whether triggers are wise or whether a specialist is qualified; those remain review/owner judgments.
 
 Per-app availability/activation belongs in that app's existing project context or role configuration, not in a second global status ledger. If the framework has no configured role catalog adapter, Markdown contracts remain authoritative and the orchestrator applies them procedurally.
 
@@ -140,9 +140,9 @@ Status report format is a projection from canonical records, not separately pers
 - Reviewer independence is based on actual authorship/context and required policy, not the label assigned to a role. A same-agent sequential review cannot satisfy an independent-review requirement.
 - Growth, legal, social, dashboard, and optimizer roles do not automatically run during MVP mode. A market validation bet may use research/growth/feasibility before build when the owner selected that outcome.
 
-## Implementation-sized follow-up (not authorized here)
+## Implementation-sized follow-up (separately authorized)
 
-After separate G-IMPL approval, FW033-IMPL-01 will add `docs/framework/ROLE-CAPABILITIES-001.md`, update `workflows/lifecycle.md`, `workflows/ai-engineering-execution.md`, `workflows/product-discovery.md`, and `workflows/cx-design.md`, and add small founder-facing examples for routine fix, MVP feature, market bet, and post-launch work. Acceptance requires all 26 pinned roles to satisfy the catalog contract; correct next-action/owner-decision summaries; role activation/omission rationale; reviewer/QA/owner/operator boundaries; no duplicate state/gates; structural validation for columns, IDs, enums, and links; artifact validation; independent review; and exact-revision Verify Pipeline. Dependencies are FR-FW-041–045 and G-REQ/G-FEAS/G-COVERAGE/G-CX/G-ARCH PASS. This proposed unit does not execute until separately authorized at G-IMPL. Automated dispatch, provider adapters, executable role prompts, and app-specific activation remain separate tasks requiring their own evidence and authorization.
+Under DECISION-060, FW033-IMPL-01 is authorized to add `docs/framework/ROLE-CAPABILITIES-001.md`, update `workflows/lifecycle.md`, `workflows/ai-engineering-execution.md`, `workflows/product-discovery.md`, and `workflows/cx-design.md`, add concise founder-facing examples for routine fix, focused MVP, market bet, and post-launch work, and run the structural checker in Verify Pipeline. Acceptance requires all 26 pinned roles to satisfy the catalog contract; correct next-action/owner-decision summaries; role activation/omission rationale; reviewer/QA/owner/operator boundaries; no duplicate state/gates; structural validation for columns, IDs, enums, and artifact links; artifact validation; independent review; and exact-revision Verify Pipeline. Dependencies FR-FW-041–045 and passed G-REQ/G-FEAS/G-COVERAGE/G-CX/G-ARCH are satisfied. This authorization does not include automated dispatch, provider adapters, executable per-role prompts, or app-specific activation.
 
 ## G-ARCH exit criteria
 

@@ -3,10 +3,10 @@ id: FRAMEWORK-FEASIBILITY-012
 type: feasibility-register
 title: FW-TASK-033 role-model feasibility and applicability
 status: draft
-version: 0.1
+version: 0.2
 created: 2026-11-01
 updated: 2026-11-01
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-057, DECISION-058, WORKFLOW-FEASIBILITY-001, FRAMEWORK-ADV-063
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-057, DECISION-058, DECISION-059, DECISION-060, ROLE-CAPABILITIES-001, WORKFLOW-FEASIBILITY-001, FRAMEWORK-ADV-063, FRAMEWORK-ADV-064
 ---
 
 # FRAMEWORK-FEASIBILITY-012 — FW-TASK-033 role-model feasibility and applicability
@@ -37,4 +37,4 @@ This is not evidence of agent availability, qualified legal/security services, m
 ## Evidence and next action
 
 - **Evidence:** FR-FW-041–045; DECISION-057/058; pinned source file and blob above; existing CAP-003, lifecycle and feasibility workflows; MVP requirements FR-FW-038–040.
-- **Next:** G-COVERAGE maps the owner-facing journeys, role assignment outcomes, cross-surface states, and required failure-category applicability. No implementation is authorized.
+- **Disposition:** G-COVERAGE, G-CX, and G-ARCH subsequently passed for the same bounded role model, with final review in FRAMEWORK-ADV-064. FW033-IMPL-01 is separately authorized under DECISION-060; this feasibility record does not authorize runtime or provider-specific claims.

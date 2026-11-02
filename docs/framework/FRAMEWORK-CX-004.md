@@ -3,10 +3,10 @@ id: FRAMEWORK-CX-004
 type: framework-cx
 title: FW-TASK-033 founder-facing coordination interaction contract
 status: draft
-version: 0.3
+version: 0.4
 created: 2026-11-01
 updated: 2026-11-01
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-COVERAGE-004, DECISION-057, DECISION-058, FRAMEWORK-GATE-CONTRACT-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBILITY-012, FRAMEWORK-COVERAGE-004, ROLE-CAPABILITIES-001, DECISION-057, DECISION-058, DECISION-059, DECISION-060, FRAMEWORK-ADV-064, FRAMEWORK-GATE-CONTRACT-001
 ---
 
 # FRAMEWORK-CX-004 — FW-TASK-033 founder-facing coordination interaction contract
@@ -110,4 +110,6 @@ Record the exact revision, evaluator, target journeys, each criterion's finding/
 
 | Finding | Initial critique | Correction | Rerun state |
 | --- | --- | --- | --- |
-| CX-033-F01 | Gate IDs and states such as `stale`/`conflicted` lacked a required plain-language mapping and example for a nontechnical owner. | Added owner-facing translations, required IDs-after-meaning rule, and a sample status update with evidence/authorization limits. | Full affected-scope independent rerun is pending the owner checkpoint required before a third consecutive review pass. No G-CX PASS is claimed. |
+| CX-033-F01 | Gate IDs and states such as `stale`/`conflicted` lacked a required plain-language mapping and example for a nontechnical owner. | Added owner-facing translations, required IDs-after-meaning rule, and a sample status update with evidence/authorization limits. | Resolved; final independent review passed on `0c16e72cf6e191660c10669e027aff3bcb74d1ec` under DECISION-059, recorded in FRAMEWORK-ADV-064. |
+
+G-CX passed for this bounded nonvisual planning contract. The passing critique establishes document-level clarity only; it does not prove usability of an installed runtime. The implementation task must preserve this contract and receive its own G-IMPL review and exact CI.

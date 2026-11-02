@@ -3,10 +3,10 @@ id: WORKFLOW-DISCOVERY-001
 type: workflow
 title: Product idea framing and requirements discovery
 status: draft
-version: 0.5
+version: 0.6
 created: 2026-10-07
-updated: 2026-10-22
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, WORKFLOW-LIFECYCLE-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005
+updated: 2026-11-01
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, WORKFLOW-LIFECYCLE-001, FRAMEWORK-GATE-CONTRACT-001, FRAMEWORK-EXERCISE-004, FRAMEWORK-EXERCISE-005, ROLE-CAPABILITIES-001, FRAMEWORK-FEASIBILITY-012
 ---
 
 # WORKFLOW-DISCOVERY-001 — Product idea framing and requirements discovery
@@ -34,6 +34,9 @@ For both, the gate record still makes concise applicability decisions for requir
 - **Product agent:** interviews the owner only as needed; reviews supplied documents/data; identifies actors, problems, jobs, constraints, hypotheses, assumptions, and open decisions; drafts the SDD artifacts.
 - **Research agent/specialist:** gathers evidence for market, user, competitor, legal, or technology questions where requested and available; records source/date and evidence limits.
 - **Independent requirements critic:** challenges the frozen requirement set under `adversarial-review.md`.
+- **Optional role capabilities:** use [ROLE-CAPABILITIES-001](../docs/framework/ROLE-CAPABILITIES-001.md) for conditional researcher, feasibility, legal issue-spotting, and growth support. A market-bet experiment may use research/feasibility/growth before a build decision; a focused MVP does not activate growth or communications by default.
+
+For MVP or large-feature discovery, state the primary persona and outcome first, then choose only research needed to resolve a material assumption. Keep evidence limits and owner decision options visible. The owner chooses whether to commit to a market bet, spend, or scope change; a specialist recommendation does not make that decision.
 
 ## Inputs
 

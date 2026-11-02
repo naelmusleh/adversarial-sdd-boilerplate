@@ -3,10 +3,10 @@ id: WORKFLOW-CX-001
 type: workflow
 title: Platform-aware CX Design Workflow
 status: active
-version: 0.7
+version: 0.8
 created: 2026-10-05
-updated: 2026-10-20
-related-artifacts: FRAMEWORK-002, GATE-CATALOG-001, TOOL-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
+updated: 2026-11-01
+related-artifacts: FRAMEWORK-002, GATE-CATALOG-001, TOOL-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001, ROLE-CAPABILITIES-001, FRAMEWORK-CX-004
 ---
 
 # WORKFLOW-CX-001 — Platform-aware CX Design Workflow v0.6
@@ -15,6 +15,10 @@ related-artifacts: FRAMEWORK-002, GATE-CATALOG-001, TOOL-CATALOG-001, FRAMEWORK-
 ## Purpose
 
 Produce customer and operator experiences that explain decisions, expose meaningful user controls, and feel at home on each supported platform. Use official Material 3 and Apple Human Interface Guidelines as continuing references, not one-time inspiration.
+
+## Role capabilities
+
+Use [ROLE-CAPABILITIES-001](../docs/framework/ROLE-CAPABILITIES-001.md) to route user-experience work. Product design is relevant when an approved user journey changes; platform-design support is conditional on a selected platform creating a meaningful interaction difference. The orchestrator carries the accepted persona, outcome, requirements, evidence, and platform scope into the handoff. For a focused MVP, work on the primary journey and required safeguards; do not add a designer handoff for visual polish unrelated to an accepted need. Keep G-CX review independent from implementation and distinct from technical QA.
 
 ## Required sources
 
