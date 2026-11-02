@@ -13,7 +13,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-063, FRAM
 
 ## G-ARCH work record
 
-- **Gate:** G-ARCH for FW-TASK-031 and FR-FW-063–048 under DECISION-063 only.
+- **Gate:** G-ARCH for FW-TASK-031 and FR-FW-049–054 under DECISION-063 only.
 - **Inputs:** FRAMEWORK-SPEC-001 v0.29; FRAMEWORK-FEASIBILITY-015 v0.2; FRAMEWORK-COVERAGE-006 v0.2; FRAMEWORK-CX-006 v0.2; FRAMEWORK-GATE-CONTRACT-001; DECISION-063.
 - **Target:** Define a runtime-neutral budget policy/result boundary, state ownership, evidence flow, failure behavior, trust boundaries, and a task-ready but unauthorized implementation breakdown.
 - **Non-adoption boundary:** No execution host, runtime, provider, meter, threshold, currency, reset policy, or override policy is selected. FW-TASK-030's Podman evidence is not transferable support proof. No production/app use, credentials, deployment, or runtime execution is authorized.

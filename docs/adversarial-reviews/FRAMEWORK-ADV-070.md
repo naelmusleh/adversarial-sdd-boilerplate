@@ -17,7 +17,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBIL
 
 - **Evaluator:** `/root/fw029_independent_review` (independent, read-only)
 - **Review date:** 2026-10-26
-- **Gate:** G-CX for FW-TASK-031 and FR-FW-063–048 under DECISION-063 only.
+- **Gate:** G-CX for FW-TASK-031 and FR-FW-049–054 under DECISION-063 only.
 - **Exact reviewed revision:** `d2cd7c64819d86fc4acb8fb978077486762e07a1` on `codex/fw031-greq`.
 - **Reviewed artifact:** FRAMEWORK-CX-006 v0.1, blob `da0744df397d7939a6cd9a1762ca0d4ac92473d6`.
 - **Other reviewed evidence:** FRAMEWORK-COVERAGE-006 blob `e3f32f28f023cb61e034a85a2873e1f182619229`; FRAMEWORK-FEASIBILITY-015 blob `c72c9a8e5e9d457c7053bb4867c55f50eb53e5ba`; FRAMEWORK-BACKLOG-001 blob `a0fc8818af375d575472dd814ceceee056978d83`.
@@ -41,6 +41,10 @@ No material findings. No owner decision is needed for this interaction contract 
 
 ## Gate disposition and limits
 
-- **Result:** PASS for G-CX within DECISION-063 and FR-FW-063–048.
+- **Result:** PASS for G-CX within DECISION-063 and FR-FW-049–054.
 - **Limits:** No implementation, visual audit, accessibility result, runtime or meter support, process-control guarantee, spend capability, or application use is established.
 - **Next gate:** G-ARCH, preserving all blocked/conditional dependencies from FRAMEWORK-FEASIBILITY-015.
+
+### Requirement identifier reconciliation
+
+DECISION-069 renumbered the unchanged FW-TASK-031 requirements to FR-FW-049–054 after their original review. This record uses the current identifiers; its exact reviewed revision and source blob IDs above preserve the historical evidence. The reconciliation changes identifiers and links only, not requirement content or review findings.
