@@ -6,7 +6,7 @@ status: active
 version: 1.0
 created: 2026-10-26
 updated: 2026-10-26
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ARCHITECTURE-006, FRAMEWORK-FEASIBILITY-014, FRAMEWORK-COVERAGE-005, FRAMEWORK-CX-005, DECISION-038
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ARCHITECTURE-006, FRAMEWORK-FEASIBILITY-014, FRAMEWORK-COVERAGE-005, FRAMEWORK-CX-005, DECISION-065
 ---
 
 # FRAMEWORK-CONTRACT-032 — GitHub Actions run/job evidence v1
@@ -42,9 +42,9 @@ Cross-field checks enforce acquisition/identity state consistency; revision stat
 
 The test suite uses clearly named synthetic fixtures only. Positive fixtures exercise complete identity binding, distinct revision roles, ordered run/job timing, configured versus observed timeout, cancellation versus terminal versus workload state, unknown/unavailable values, and a fully populated synthetic provenance shape. Negative fixtures cover malformed/duplicate JSON, unknown fields/enums, missing or contradictory identity, cross-run/job/attempt timing and measurements, reversed timestamps, SHA-role substitution, inconsistent timeout claims, cancellation treated as termination, missing direct provenance, proxy/synthetic evidence mislabeling, duplicate metrics, and denied/partial source inflation.
 
-- FR-FW-041: source/identity tuple and revision roles bind; timing provenance cannot cross run/attempt/job boundaries.
-- FR-FW-042: timeout configuration, timeout observation, host terminal result, cancellation request, and workload termination are distinct validated states.
-- FR-FW-043: metrics require direct provenance; unknown/unavailable remains valueless; unsupported proxies are rejected.
+- FR-FW-049: source/identity tuple and revision roles bind; timing provenance cannot cross run/attempt/job boundaries.
+- FR-FW-050: timeout configuration, timeout observation, host terminal result, cancellation request, and workload termination are distinct validated states.
+- FR-FW-051: metrics require direct provenance; unknown/unavailable remains valueless; unsupported proxies are rejected.
 
 ## Deferred work and explicit non-adoption
 

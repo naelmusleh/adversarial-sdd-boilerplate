@@ -1,5 +1,5 @@
 ---
-id: FRAMEWORK-ADV-065
+id: FRAMEWORK-ADV-080
 type: adversarial-review
 title: FW-TASK-031 passive Actions collector implementation review
 status: approved
@@ -8,14 +8,14 @@ created: 2026-10-27
 updated: 2026-10-27
 reviewed-artifact: FRAMEWORK-CONTRACT-032
 reviewed-version: 1.0
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-038, DECISION-039, FRAMEWORK-FEASIBILITY-014, FRAMEWORK-ARCHITECTURE-006, FRAMEWORK-CONTRACT-032
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-065, DECISION-066, FRAMEWORK-FEASIBILITY-014, FRAMEWORK-ARCHITECTURE-006, FRAMEWORK-CONTRACT-032
 ---
 
-# FRAMEWORK-ADV-065 — FW031-IMPL-03 independent review
+# FRAMEWORK-ADV-080 — FW031-IMPL-03 independent review
 
 ## Frozen target and reviewer
 
-- **Gate:** G-IMPL for FW031-IMPL-03 under DECISION-039; task-wide acceptance remains incomplete.
+- **Gate:** G-IMPL for FW031-IMPL-03 under DECISION-066; task-wide acceptance remains incomplete.
 - **Reviewer:** Independent read-only reviewer `/root/fw031_impl03_review`.
 - **Review date:** 2026-10-27.
 - **Final candidate:** `fa020dd799cd99e7973eb0008201526b0c66496a` on `codex/fw031-greq`.

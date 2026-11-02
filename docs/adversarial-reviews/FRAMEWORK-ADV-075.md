@@ -1,5 +1,5 @@
 ---
-id: FRAMEWORK-ADV-060
+id: FRAMEWORK-ADV-075
 type: adversarial-review
 title: FW-TASK-031 slice B G-CX review
 status: approved
@@ -8,19 +8,19 @@ created: 2026-10-26
 updated: 2026-10-26
 reviewed-artifact: FRAMEWORK-CX-005
 reviewed-version: 0.1
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-038, FRAMEWORK-FEASIBILITY-014, FRAMEWORK-COVERAGE-005, FRAMEWORK-CX-005
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-065, FRAMEWORK-FEASIBILITY-014, FRAMEWORK-COVERAGE-005, FRAMEWORK-CX-005
 ---
 
-# FRAMEWORK-ADV-060 — FW-TASK-031 slice B G-CX review
+# FRAMEWORK-ADV-075 — FW-TASK-031 slice B G-CX review
 
 ## Evaluator and frozen evidence
 
 - **Evaluator:** `/root/fw029_independent_review` (independent, read-only).
 - **Review date:** 2026-10-26.
-- **Gate:** G-CX for FW-TASK-031 slice B and FR-FW-041–043 under DECISION-038.
+- **Gate:** G-CX for FW-TASK-031 slice B and FR-FW-049–051 under DECISION-065.
 - **Exact reviewed revision:** `f4467cf271f5048b2c17c8a51e3d1d24b605c50b` on `codex/fw031-greq`.
 - **Reviewed artifact:** FRAMEWORK-CX-005 v0.1 at that revision.
-- **Context reviewed:** FRAMEWORK-COVERAGE-005, FRAMEWORK-FEASIBILITY-014, DECISION-038, and normative GCX-01–03 criteria.
+- **Context reviewed:** FRAMEWORK-COVERAGE-005, FRAMEWORK-FEASIBILITY-014, DECISION-065, and normative GCX-01–03 criteria.
 - **Review method:** Full-scope challenge of six conceptual traces, state axes, surfaces, evaluator/method/limitations, evidence boundaries, and interaction clarity. Read-only; no edits or tests.
 - **Exact-revision CI:** Verify Pipeline [40336862952](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40336862952) passed Metadata & Artifact Audit, Initializer Regression Gate, and TypeScript Static Code Analysis on the reviewed revision; optional FW-029/FW-030 probes were skipped.
 
