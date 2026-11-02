@@ -42,3 +42,7 @@ Verify Pipeline [40504287589](https://github.com/naelmusleh/adversarial-sdd-boil
 - **Result:** G-IMPL PASS for FW031-IMPL-02 only, under DECISION-065 and FR-FW-052–054.
 - **Limits:** No data collection, runtime integration, workflow/permission/timeout change, host adoption, process control, real measurements, source authentication, or enforcement claim is established. FW-TASK-031 as a whole remains in progress.
 - **Next held unit:** FW031-IMPL-03 requires owner decisions for acquisition route and least-privilege Actions-read permission, followed by its own G-IMPL authorization.
+
+### Requirement identifier reconciliation
+
+DECISION-069 renumbered the unchanged FW-TASK-031 slice B requirements originally reviewed as FR-FW-041–043 to current FR-FW-052–054. This record uses the current identifiers; its exact reviewed revision and source blob IDs above preserve the historical evidence. Only identifiers and links changed; requirement content and review findings did not.

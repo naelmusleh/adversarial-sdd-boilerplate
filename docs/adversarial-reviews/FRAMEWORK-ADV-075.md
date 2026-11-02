@@ -43,3 +43,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-065, FRAM
 - **Round result:** NEEDS-CHANGES; G-CX has not passed.
 - **Correction:** FRAMEWORK-CX-005 v0.2 separates the four state dimensions, defines how they combine, preserves the six journey traces, and records the finding disposition. Independent full-scope rerun and exact-revision CI remain required.
 - **Limits:** This review does not establish implementation, profile adoption, workflow or permission changes, runtime collection/control, workload termination, metric/spend measurement, application use, or deployment.
+
+### Requirement identifier reconciliation
+
+DECISION-069 renumbered the unchanged FW-TASK-031 slice B requirements originally reviewed as FR-FW-041–043 to current FR-FW-052–054. This record uses the current identifiers; its exact reviewed revision and source blob IDs above preserve the historical evidence. Only identifiers and links changed; requirement content and review findings did not.

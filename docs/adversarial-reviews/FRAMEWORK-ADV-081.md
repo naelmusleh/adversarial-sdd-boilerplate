@@ -43,3 +43,7 @@ No findings. The reviewer found the three closure artifacts consistent with DECI
 - **Task state:** Complete within the authorized framework scope; unsupported measurements, hard enforcement, and application adoption remain unimplemented and unauthorized.
 - **Deferred:** FW031-IMPL-05, direct measurement sources, any profile/threshold/meter selection, and application or production use require new source-specific feasibility and owner authorization.
 - **Not established:** Cancellation-only process-tree termination, general runner containment, tool/retry/resource/spend measurements, durable evidence retention, production readiness, merge, or deployment.
+
+### Requirement identifier reconciliation
+
+DECISION-069 renumbered the unchanged FW-TASK-031 slice B requirements originally reviewed as FR-FW-041–043 to current FR-FW-052–054. This record uses the current identifiers; its exact reviewed revision and source blob IDs above preserve the historical evidence. Only identifiers and links changed; requirement content and review findings did not.

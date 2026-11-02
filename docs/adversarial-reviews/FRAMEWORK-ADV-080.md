@@ -54,3 +54,7 @@ Verify Pipeline push run [40508980927](https://github.com/naelmusleh/adversarial
 - G-IMPL: **IN PROGRESS**, because required private-repository access evidence is not available.
 - No live API collection, private authorization, token scope, repository setting, timeout configuration, cancellation, workload termination, spend/resource measurement, gate mutation, or profile adoption is established by this review.
 - Next action: the owner supplies the private repository identity and an Actions-read-only credential or enables an existing connection with that repository’s Actions-read permission. Then run the collector against one named run/attempt and record the exact output and limitations. Keep the token outside logs, files, and PR content.
+
+### Requirement identifier reconciliation
+
+DECISION-069 renumbered the unchanged FW-TASK-031 slice B requirements originally reviewed as FR-FW-041–043 to current FR-FW-052–054. This record uses the current identifiers; its exact reviewed revision and source blob IDs above preserve the historical evidence. Only identifiers and links changed; requirement content and review findings did not.

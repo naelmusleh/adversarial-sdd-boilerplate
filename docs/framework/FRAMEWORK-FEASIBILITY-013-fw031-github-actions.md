@@ -13,7 +13,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBIL
 
 ## Scope and boundaries
 
-This is a bounded, read-only capability probe requested by the owner after FW031-IMPL-01. It evaluates GitHub-hosted Actions as a possible execution profile for FR-FW-052–048. It does not select or adopt GitHub Actions, implement an adapter, change workflow configuration, set a budget threshold, exercise real cancellation, query private billing data, or authorize application use, credentials, merge, or deployment. It makes no claim that the observed CI jobs were agent executions.
+This is a bounded, read-only capability probe requested by the owner after FW031-IMPL-01. It evaluates GitHub-hosted Actions as a possible execution profile for FR-FW-052–054. It does not select or adopt GitHub Actions, implement an adapter, change workflow configuration, set a budget threshold, exercise real cancellation, query private billing data, or authorize application use, credentials, merge, or deployment. It makes no claim that the observed CI jobs were agent executions.
 
 The probe examined workflow and job metadata, logs, and timing for the successful Verify Pipeline run [40328119676](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40328119676), whose head was `ca0e8a40871a3e23ba4cafee1cf7ec377dc6fb6f`. The repository was public at observation time. Evidence was observed on 2026-10-26 and is specific to this run and the repository workflow at that commit.
 

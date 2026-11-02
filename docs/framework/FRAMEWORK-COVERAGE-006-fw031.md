@@ -13,7 +13,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBIL
 
 ## Scope and evidence boundary
 
-This is the G-COVERAGE journey/state inventory for FW-TASK-031 and FR-FW-049–054, approved by DECISION-063. It uses FRAMEWORK-FEASIBILITY-015's bounded findings: contract and synthetic-fixture work is feasible to explore; live counter collection is conditional; hard cancellation/resource enforcement and monetary spend remain blocked pending a selected controller and authoritative meter.
+This is the G-COVERAGE journey/state inventory for FW-TASK-031 and FR-FW-049–051, approved by DECISION-063. It uses FRAMEWORK-FEASIBILITY-015's bounded findings: contract and synthetic-fixture work is feasible to explore; live counter collection is conditional; hard cancellation/resource enforcement and monetary spend remain blocked pending a selected controller and authoritative meter.
 
 No runtime, provider, meter, threshold, spend policy, implementation, or application UI is adopted or implied. Journeys describe the future framework operator contract and distinguish states that are specified from capabilities that remain unavailable or unverified. Test fixtures may use labeled synthetic values only.
 
@@ -67,6 +67,6 @@ Every in-scope journey covers at least one applicable failure category. All decl
 
 ## Coverage result and next step
 
-**G-COVERAGE result:** PASS within DECISION-063 and FR-FW-049–054 at exact candidate revision `8e570fff61472c8aa3dd108352d68909ba4b213d`. Independent full-scope review FRAMEWORK-ADV-069 found no material findings. Verify Pipeline run [40321566854](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40321566854) passed all three required jobs on that exact revision; optional FW-029/FW-030 probes were skipped. The review and CI evidence establish coverage of the declared journeys, states, surfaces, and failure/recovery cases only; blocked host and meter capabilities remain unchanged.
+**G-COVERAGE result:** PASS within DECISION-063 and FR-FW-049–051 at exact candidate revision `8e570fff61472c8aa3dd108352d68909ba4b213d`. Independent full-scope review FRAMEWORK-ADV-069 found no material findings. Verify Pipeline run [40321566854](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40321566854) passed all three required jobs on that exact revision; optional FW-029/FW-030 probes were skipped. The review and CI evidence establish coverage of the declared journeys, states, surfaces, and failure/recovery cases only; blocked host and meter capabilities remain unchanged.
 
 **Next gate:** G-CX, using a nonvisual operator/reviewer interaction trace. Do not create an end-user prototype or claim a live host, enforcement, cost, or accessibility capability from this coverage inventory.

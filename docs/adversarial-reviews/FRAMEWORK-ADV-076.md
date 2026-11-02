@@ -44,3 +44,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-065, FRAM
 - **Owner checkpoint:** The owner previously directed, “keep going and use all the checkpoints you need until you are done.” This standing instruction authorizes continuation through the checkpoint required before a third consecutive adversarial review loop.
 - **Correction:** FRAMEWORK-CX-005 v0.3 separates authorization/access, retrieval/evidence, reviewer disposition, owner authorization, and gate disposition, and adds combination rules. A third independent full-scope rerun and exact-revision CI remain necessary.
 - **Limits:** No implementation, profile adoption, workflow/permission change, runtime control, workload termination, measurement/spend, application use, or deployment is established.
+
+### Requirement identifier reconciliation
+
+DECISION-069 renumbered the unchanged FW-TASK-031 slice B requirements originally reviewed as FR-FW-041–043 to current FR-FW-052–054. This record uses the current identifiers; its exact reviewed revision and source blob IDs above preserve the historical evidence. Only identifiers and links changed; requirement content and review findings did not.

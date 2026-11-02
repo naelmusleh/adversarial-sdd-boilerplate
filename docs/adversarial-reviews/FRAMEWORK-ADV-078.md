@@ -41,3 +41,7 @@ No findings. No owner decision is required before recording this bounded G-ARCH 
 - **Result:** G-ARCH PASS within DECISION-065 and FR-FW-052–054.
 - **Limits:** No implementation, profile/acquisition-route adoption, permission or workflow change, timeout selection, workload test/termination, metric/spend collection, application use, or deployment is authorized or established.
 - **Next checkpoint:** Owner authorization is separately required before proposed FW031-IMPL-02. Recommended scope is a pure profile evidence contract/schema, deterministic validator, and synthetic fixtures only, with no network or runtime integration.
+
+### Requirement identifier reconciliation
+
+DECISION-069 renumbered the unchanged FW-TASK-031 slice B requirements originally reviewed as FR-FW-041–043 to current FR-FW-052–054. This record uses the current identifiers; its exact reviewed revision and source blob IDs above preserve the historical evidence. Only identifiers and links changed; requirement content and review findings did not.

@@ -17,9 +17,9 @@ related-artifacts: FRAMEWORK-BACKLOG-001, DECISION-LOG-001, DECISION-063, FRAMEW
 
 - **Evaluator:** `/root/fw029_independent_review` (independent, read-only)
 - **Review date:** 2026-10-26
-- **Gate:** G-REQ for FW-TASK-031 only under DECISION-063.
+- **Gate:** G-REQ for FW-TASK-031 requirements FR-FW-049–051 only under DECISION-063.
 - **Exact reviewed revision:** `620f7676b6a78b3a3ff614b59b138c7ffa727267` on `codex/fw031-greq`.
-- **Reviewed sources:** FR-FW-049–054 in FRAMEWORK-SPEC-001 v0.22 (blobs `952bb7482ba4ac14259f42f45b8289fb8842b638`); FW-TASK-031, its dependencies, acceptance criteria, and G-REQ work record in FRAMEWORK-BACKLOG-001 (blob `0b7ff2383bd2a7b4f08a2668a59db9572e1d1f82`); DECISION-063 in DECISION-LOG-001 (blob `6bfc779945cee23cb5c48257a8f8d6efea76790c`).
+- **Reviewed sources:** current FR-FW-049–051, corresponding to original FR-FW-038–040 in frozen FRAMEWORK-SPEC-001 v0.22 (blobs `952bb7482ba4ac14259f42f45b8289fb8842b638`); FW-TASK-031, its dependencies, acceptance criteria, and G-REQ work record in FRAMEWORK-BACKLOG-001 (blob `0b7ff2383bd2a7b4f08a2668a59db9572e1d1f82`); DECISION-063 in DECISION-LOG-001 (blob `6bfc779945cee23cb5c48257a8f8d6efea76790c`).
 - **Review method:** Frozen-scope challenge of approval fidelity, requirement clarity/testability, acceptance mapping, dependency/deferral consistency, and enforcement/spend claim limits. The evaluator made no edits and ran no tests.
 - **CI evidence:** Verify Pipeline run [40319286445](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40319286445) passed on exact head `620f7676b6a78b3a3ff614b59b138c7ffa727267`: Metadata & Artifact Audit, Initializer Regression Gate, and TypeScript Static Code Analysis. Optional FW-029 Synthetic Evidence Probe and FW-030 Rootless Runtime Probe were skipped.
 - **Local evidence:** `python3 scripts/artifacts.py validate` reported 108 artifacts; `git diff --check` passed on the identical three-file scope content before the review record was added.
@@ -41,11 +41,11 @@ related-artifacts: FRAMEWORK-BACKLOG-001, DECISION-LOG-001, DECISION-063, FRAMEW
 
 ## Gate disposition and limits
 
-- **Result:** PASS for G-REQ within DECISION-063 and FR-FW-049–054.
+- **Result:** PASS for G-REQ within DECISION-063 and FR-FW-049–051.
 - **Rationale:** All three requirements and the canonical task record are coherent and testable; the one publication-integrity finding was corrected and rerun; the approved scope and unresolved dependencies are explicit; the independent review passed; and all three required hosted checks passed on the exact reviewed revision.
 - **Next action:** G-FEAS may assess advisory behavior and whether a named controller and authoritative meter are available. Hard-stop/resource enforcement, spend-limit adoption, runtime/provider selection, implementation, and application use remain unauthorized or conditional on later evidence and owner decisions.
 - **Limits:** This G-REQ result establishes no runtime enforcement, process termination capability, provider/host meter, monetary spend value, application adoption, production use, or implementation authorization.
 
 ### Requirement identifier reconciliation
 
-DECISION-069 renumbered the unchanged FW-TASK-031 requirements to FR-FW-049–054 after their original review. This record uses the current identifiers; its exact reviewed revision and source blob IDs above preserve the historical evidence. The reconciliation changes identifiers and links only, not requirement content or review findings.
+DECISION-069 renumbered the unchanged FW-TASK-031 requirements to FR-FW-049–051 after their original review. This record uses the current identifiers; its exact reviewed revision and source blob IDs above preserve the historical evidence. The reconciliation changes identifiers and links only, not requirement content or review findings.

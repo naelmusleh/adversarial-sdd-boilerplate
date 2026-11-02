@@ -43,3 +43,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-065, FRAM
 - **Result:** G-CX PASS for the conceptual interaction contract within DECISION-065 and FR-FW-052–054.
 - **Limits:** No implementation, profile adoption, workflow/permission change, live collection, cancellation test, workload termination, actual metric/spend, visual/accessibility result, application use, or deployment is established.
 - **Next gate:** G-ARCH for task-ready architecture, preserving FEAS-014 conditional and blocked dependencies. G-IMPL authorization remains separate.
+
+### Requirement identifier reconciliation
+
+DECISION-069 renumbered the unchanged FW-TASK-031 slice B requirements originally reviewed as FR-FW-041–043 to current FR-FW-052–054. This record uses the current identifiers; its exact reviewed revision and source blob IDs above preserve the historical evidence. Only identifiers and links changed; requirement content and review findings did not.

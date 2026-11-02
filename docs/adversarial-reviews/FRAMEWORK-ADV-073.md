@@ -42,3 +42,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-065, FRAM
 - **Result:** PASS for this bounded G-FEAS assessment only.
 - **Limits:** No automatic collector, Actions permission change, timeout configuration/value, cancellation test, workload termination, runtime enforcement, spend measurement, profile adoption, or implementation permission is established.
 - **Next gate:** G-COVERAGE for FR-FW-052–054 only, after this assessment is published and Verify Pipeline passes on the exact final revision.
+
+### Requirement identifier reconciliation
+
+DECISION-069 renumbered the unchanged FW-TASK-031 slice B requirements originally reviewed as FR-FW-041–043 to current FR-FW-052–054. This record uses the current identifiers; its exact reviewed revision and source blob IDs above preserve the historical evidence. Only identifiers and links changed; requirement content and review findings did not.

@@ -42,3 +42,7 @@ No actionable findings. No owner decision is needed for this bounded coverage in
 - **Review result:** PASS for the reviewed G-COVERAGE matrix within DECISION-065 and FR-FW-052–054. The same exact commit passed required CI.
 - **Limits:** The review does not establish implementation, profile adoption, workflow or permission changes, timeout configuration, runtime control, workload termination, actual metric collection, cost measurement, application use, or deployment.
 - **Next gate:** G-CX, if the reviewed artifacts also pass exact-revision Verify Pipeline. Use a nonvisual operator/reviewer interaction trace; no end-user prototype or visual/accessibility claim is applicable.
+
+### Requirement identifier reconciliation
+
+DECISION-069 renumbered the unchanged FW-TASK-031 slice B requirements originally reviewed as FR-FW-041–043 to current FR-FW-052–054. This record uses the current identifiers; its exact reviewed revision and source blob IDs above preserve the historical evidence. Only identifiers and links changed; requirement content and review findings did not.

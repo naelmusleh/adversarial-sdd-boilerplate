@@ -42,3 +42,7 @@ No actionable findings.
 - **Result:** PASS for this bounded G-REQ only.
 - **Limits:** This does not establish GitHub Actions profile adoption, actual agent accounting, a configured timeout, measured resource use or spend, process termination, enforcement, or implementation authorization.
 - **Next permitted step:** G-FEAS for FR-FW-052–054. Any G-IMPL work requires separate owner authorization after applicable gates.
+
+### Requirement identifier reconciliation
+
+DECISION-069 renumbered the unchanged FW-TASK-031 slice B requirements originally reviewed as FR-FW-041–043 to current FR-FW-052–054. This record uses the current identifiers; its exact reviewed revision and source blob IDs above preserve the historical evidence. Only identifiers and links changed; requirement content and review findings did not.

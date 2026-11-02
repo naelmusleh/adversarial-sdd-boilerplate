@@ -13,7 +13,7 @@ related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-FEASIBIL
 
 ## Scope and interaction target
 
-This conceptual G-CX artifact covers FW-TASK-031 and FR-FW-049–054 under DECISION-063. Its users are framework maintainers, authorized run operators, independent reviewers, and owners who may approve an override or later host/meter choice. It provides a reviewable, nonvisual interaction trace across policy, execution, gate evidence, review, and owner authorization.
+This conceptual G-CX artifact covers FW-TASK-031 and FR-FW-049–051 under DECISION-063. Its users are framework maintainers, authorized run operators, independent reviewers, and owners who may approve an override or later host/meter choice. It provides a reviewable, nonvisual interaction trace across policy, execution, gate evidence, review, and owner authorization.
 
 No application end-user interface is in scope. No runtime, provider, meter, threshold, spend policy, CLI command, API endpoint, visual prototype, or implementation is selected. The trace describes required information and state transitions; it does not claim any current tool emits them. Execution-host and meter states remain conditional or blocked as specified by FRAMEWORK-FEASIBILITY-015. Examples of values are synthetic contract values only.
 
@@ -88,6 +88,6 @@ Diagnostics must be actionable without exposing secrets, full source, user conte
 
 ## G-CX finding and next step
 
-**G-CX result:** PASS within DECISION-063 and FR-FW-049–054 at exact candidate `d2cd7c64819d86fc4acb8fb978077486762e07a1`. Independent full-scope critique FRAMEWORK-ADV-070 found no material findings. Verify Pipeline run [40322197363](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40322197363) passed all three required jobs on that exact revision; optional FW-029/FW-030 probes were skipped. The review and run establish only that the conceptual nonvisual interaction contract covers its declared journeys and state distinctions; they do not establish implementation, visual audit, accessibility, runtime, cancellation, spend, or application capability.
+**G-CX result:** PASS within DECISION-063 and FR-FW-049–051 at exact candidate `d2cd7c64819d86fc4acb8fb978077486762e07a1`. Independent full-scope critique FRAMEWORK-ADV-070 found no material findings. Verify Pipeline run [40322197363](https://github.com/naelmusleh/adversarial-sdd-boilerplate/actions/runs/40322197363) passed all three required jobs on that exact revision; optional FW-029/FW-030 probes were skipped. The review and run establish only that the conceptual nonvisual interaction contract covers its declared journeys and state distinctions; they do not establish implementation, visual audit, accessibility, runtime, cancellation, spend, or application capability.
 
 **Next gate:** G-ARCH, preserving G-FEAS blocked/conditional dependencies in architecture and task breakdown.
