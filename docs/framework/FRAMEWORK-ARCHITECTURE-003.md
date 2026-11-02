@@ -3,10 +3,10 @@ id: FRAMEWORK-ARCHITECTURE-003
 type: framework-architecture
 title: FW-TASK-029 signed CI evidence receipt architecture
 status: draft
-version: 0.8
+version: 0.9
 created: 2026-10-24
 updated: 2026-10-25
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-027, DECISION-028, DECISION-029, DECISION-030, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-COVERAGE-002, FRAMEWORK-CX-002, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-031, FRAMEWORK-ADV-032, FRAMEWORK-GATE-CONTRACT-001
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, DECISION-027, DECISION-028, DECISION-029, DECISION-030, DECISION-033, FRAMEWORK-FEASIBILITY-010, FRAMEWORK-COVERAGE-002, FRAMEWORK-CX-002, FRAMEWORK-ADV-027, FRAMEWORK-ADV-028, FRAMEWORK-ADV-031, FRAMEWORK-ADV-032, FRAMEWORK-GATE-CONTRACT-001
 ---
 
 # FRAMEWORK-ARCHITECTURE-003 — FW-TASK-029 signed CI evidence receipt architecture
@@ -92,7 +92,7 @@ The verifier is not a production monitor or gate runner. It makes no network cal
 
 ### ADR-FW029-ARCH-02 — Require an independent trust anchor for policy and root bytes
 
-**Options:** owner-supplied digest/root via an independent controlled channel; an organization-controlled protected setting or signed policy release; or a live trust-service refresh with pinned bootstrap/root rotation. A digest stored only alongside a mutable policy is insufficient. **Evidence:** the feasibility probe rejected policy/root mutations when supplied expected digests were pinned independently; it did not establish a production source. **Decision:** no production trust source is selected. **Authority:** owner must select and document the source, access/rotation owner, and recovery route before production use. **Impact:** FW029-IMPL-03 may test explicit caller-supplied trust inputs only; any product/gate integration requiring durable trust is blocked.
+**Options:** owner-supplied digest/root via an independent controlled channel; an organization-controlled protected setting or signed policy release; or a live trust-service refresh with pinned bootstrap/root rotation. A digest stored only alongside a mutable policy is insufficient. **Evidence:** the feasibility probe rejected policy/root mutations when supplied expected digests were pinned independently; it did not establish a production source. **Bounded pilot decision (DECISION-033):** the owner supplies the trusted-root snapshot and its expected digest, and supplies the policy's expected digest, through a channel independent of the files and bundle under review. The owner is the input/recovery contact. Missing independent digests or inputs block verification. **Limits:** this does not establish that a snapshot is current, unrevoked, or maintained; no automated refresh/rotation or production trust service is selected. **Impact:** the supplied inputs support only read-only verification against those exact bytes. Production or application trust distribution remains undecided.
 
 ### ADR-FW029-ARCH-03 — Do not infer freshness, revocation or one-use behavior
 
@@ -100,7 +100,7 @@ The verifier is not a production monitor or gate runner. It makes no network cal
 
 ### ADR-FW029-ARCH-04 — Treat retention as split across artifact and attestation stores
 
-**Options:** rely on short-lived hosted artifacts and rerun on expiry; require an owner-managed archive with explicit access/retention controls; or select a provider with a reviewed retention/deletion contract. **Evidence:** synthetic artifact retention was configured for one day; hosted-attestation deletion/retention semantics were unknown. **Decision:** no retention guarantee or provider lifecycle is selected. **Authority:** owner must set a retention target and select its storage/control owner before any use that requires durable audit or deletion guarantees. **Impact:** present evidence supports acquisition and local verification while available, not long-term availability or complete deletion.
+**Options:** rely on short-lived hosted artifacts and rerun on expiry; require an owner-managed archive with explicit access/retention controls; or select a provider with a reviewed retention/deletion contract. **Evidence:** synthetic artifact retention was configured for one day; hosted-attestation deletion/retention semantics were unknown. **Bounded pilot decision (DECISION-033):** use only temporary private local review while exact hosted artifacts are available; ordinary local deletion after review is not secure erasure. Expiry means unavailable evidence, not invalid evidence. **Limits:** no durable audit archive, retention guarantee, secure erasure, provider-side deletion, or attestation lifecycle is established. **Impact:** any use needing durable audit or deletion guarantees remains blocked pending a separately approved retention target and storage/control owner.
 
 ### ADR-FW029-ARCH-05 — Bound v1 receipt and policy inputs
 

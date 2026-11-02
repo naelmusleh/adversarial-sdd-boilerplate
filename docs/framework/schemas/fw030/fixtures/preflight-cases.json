@@ -1,0 +1,22 @@
+{
+  "fixture_status": "synthetic-test-only",
+  "never_run_workloads": true,
+  "profile_observation": {
+    "synthetic_test_only": true,
+    "profile_id": "synthetic-linux-profile",
+    "profile_revision": "fixture-v1",
+    "support_status": "supported",
+    "observed_host": "linux/amd64",
+    "supported_hosts": ["linux/amd64"],
+    "runtime_available": true,
+    "available_capabilities": ["filesystem.readonly-input", "runtime.rootless"]
+  },
+  "cases": [
+    { "id": "FW030-SYN-01", "expected_status": "prerequisites_valid", "expected_diagnostic": null, "observation_changes": {} },
+    { "id": "FW030-SYN-02", "expected_status": "unsupported", "expected_diagnostic": "fw030.host.unsupported", "observation_changes": { "observed_host": "synthetic-unsupported/os" } },
+    { "id": "FW030-SYN-03", "expected_status": "unsupported", "expected_diagnostic": "fw030.profile.unsupported", "observation_changes": { "support_status": "unsupported" } },
+    { "id": "FW030-SYN-04", "expected_status": "blocked", "expected_diagnostic": "fw030.runtime.missing", "observation_changes": { "runtime_available": false } },
+    { "id": "FW030-SYN-05", "expected_status": "blocked", "expected_diagnostic": "fw030.capability.unavailable", "observation_changes": { "available_capabilities": ["filesystem.readonly-input"] } },
+    { "id": "FW030-SYN-06", "expected_status": "unsupported", "expected_diagnostic": "fw030.profile.observation_invalid", "observation_changes": { "synthetic_test_only": false } }
+  ]
+}
