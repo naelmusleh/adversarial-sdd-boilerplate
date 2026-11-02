@@ -3,9 +3,9 @@ id: FRAMEWORK-CONTRACT-030
 type: framework-contract
 title: FW-030 host-neutral request/result contract
 status: draft
-version: 1.2
+version: 1.3
 created: 2026-10-25
-updated: 2026-10-28
+updated: 2026-11-02
 related-artifacts: FRAMEWORK-ARCHITECTURE-004, FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, FRAMEWORK-ADV-051, FRAMEWORK-PROFILE-030-001, DECISION-035, DECISION-043
 ---
 
@@ -22,4 +22,4 @@ Results preserve separate request-readiness, authorization, execution, cleanup, 
 
 ## Bounded profile-specific adapter (FW030-IMPL-02)
 
-The selected profile contract is [FRAMEWORK-PROFILE-030-001](../../FRAMEWORK-PROFILE-030-001.md). The profile-specific module `scripts/fw030_podman_adapter.py` consumes the v1 request/result shapes but refuses all profiles except the exact hosted Ubuntu/Podman profile and fixed synthetic pilot workload. It checks exact source and Actions run identity, pinned workload image, request-bound supplied authorization reference, fixed canonical temporary paths, no-workload-network/no-secret policy, effective container settings, bounded case output, and cleanup status. Host network is used only for anonymous retrieval of the exact pinned public image. The outer report records profile/runtime and runner-image metadata because the v1 InvocationResult schema intentionally remains host-neutral. The report is run-log evidence only and does not establish retention, production support, general runtime support, complete host isolation, graceful termination, or gate authorization.
+The selected profile contract is [FRAMEWORK-PROFILE-030-001](../../FRAMEWORK-PROFILE-030-001.md). A profile-specific runtime adapter was explored in a bounded implementation candidate, but FW030-IMPL-02 remains blocked and that candidate is not part of this merge. The recorded failures do not establish a supported runtime profile, complete host isolation, graceful termination, production support, or gate authorization. The profile and its synthetic observations remain feasibility evidence only; any renewed runtime implementation requires a fresh owner checkpoint and a separately passed G-IMPL gate.
