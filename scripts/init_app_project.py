@@ -5,18 +5,74 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
+import json
+import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
+import uuid
 from pathlib import Path
 from urllib.parse import urlparse
+
+try:
+    from .profile_composer import compose_profiles, safe_relative_path
+except ImportError:
+    from profile_composer import compose_profiles, safe_relative_path
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = ROOT / "docs" / "templates" / "app-project"
 DEFAULT_FRAMEWORK_URL = "https://github.com/naelmusleh/adversarial-sdd-boilerplate"
 PREFIX_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 ARTIFACT_ID_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]{3}$")
+FRAMEWORK_REVISION_RE = re.compile(r"^[a-f0-9]{40}$")
 REQUIRED_METADATA = {"id", "type", "title", "status", "version", "created", "updated"}
+APP_LOCKED_FILES = (
+    "scripts/artifacts.py",
+    ".sdd/G-REQ-HANDOFF.json.template",
+    ".sdd/G-ARCH-CONTRACT.json.template",
+    "docs/templates/app-project/gate-record.md.template",
+    ".github/workflows/sdd-contract-validation.yml",
+)
+APP_LOCKED_FILES_V2 = APP_LOCKED_FILES + (
+    ".sdd/schemas/gate-run-v1.schema.json",
+    ".sdd/gate-run-v1.json.template",
+)
+APP_LOCKED_FILES_V3 = APP_LOCKED_FILES_V2 + (
+    "scripts/ci_checks.py",
+    ".sdd/schemas/required-checks-v1.schema.json",
+    ".sdd/required-checks.json.template",
+)
+APP_LOCKED_FILES_V4 = APP_LOCKED_FILES_V3 + (
+    ".sdd/schemas/gate-run-v1.2.schema.json",
+    ".sdd/gate-run-v1.2.json.template",
+    ".sdd/schemas/trusted-ci-v1.schema.json",
+    ".sdd/trusted-ci.json.template",
+)
+PROFILE_CONTRACT_FILES = (
+    ".sdd/schemas/core-file-manifest-v1.schema.json",
+    ".sdd/schemas/profile-manifest-v1.schema.json",
+    ".sdd/schemas/profile-selection-manifest-v1.schema.json",
+    ".sdd/schemas/profile-check-result-v1.schema.json",
+    ".sdd/core-file-manifest-v1.json",
+    ".sdd/profile-selection-v1.json",
+    ".sdd/profile-check-result-v1.json",
+)
+APP_LOCKED_FILES_V5 = APP_LOCKED_FILES_V4 + PROFILE_CONTRACT_FILES
+GATE_CONTRACT_ID = "FRAMEWORK-GATE-CONTRACT-001"
+GATE_CONTRACT_VERSION = "1.2"
+FRAMEWORK_SOURCE_PATHS = (
+    "scripts/init_app_project.py",
+    "scripts/artifacts.py",
+    "scripts/ci_checks.py",
+    ".sdd",
+    "docs/templates/app-project",
+    "docs/framework/schemas",
+    "scripts/profile_composer.py",
+    "framework/profiles",
+)
 
 # The default is the smallest complete app starter: the five canonical SDD files.
 # Supporting records are created when their lifecycle triggers are reached.
@@ -37,10 +93,12 @@ LIFECYCLE_FILES = {
     "feasibility-register.md.template": "architecture/feasibility-register.md",
     "architecture-overview.md.template": "architecture/architecture.md",
     "architecture-decision-record.md.template": "architecture/ADR-001.md",
+    "architect-handshake.md.template": "architecture/<APP>-ARCH-HANDSHAKE-001.md",
     "verification-plan.md.template": "delivery/verification-plan.md",
     "verification-record.md.template": "delivery/verification/VERIFY-001.md",
     "release-record.md.template": "delivery/releases/RELEASE-001.md",
     "operations-runbook.md.template": "operations/RUNBOOK.md",
+    "assumption-experiment-records.json.template": ".sdd/assumption-experiments.json",
 }
 
 
@@ -59,6 +117,8 @@ def validate_generated_artifacts(outputs: dict[str, str]) -> None:
     seen: set[str] = set()
     for relative, content in outputs.items():
         if not relative.endswith(".md") or not content.startswith("---\n"):
+            continue
+        if relative.startswith("docs/templates/"):
             continue
         lines = content.splitlines()
         try:
@@ -84,8 +144,8 @@ def validate_generated_artifacts(outputs: dict[str, str]) -> None:
             raise ValueError(f"{relative}: starter artifact must begin in draft status")
 
 
-def framework_link(base: str, path: str) -> str:
-    return f"{base.rstrip('/')}/blob/main/{path}"
+def framework_link(base: str, path: str, revision: str) -> str:
+    return f"{base.rstrip('/')}/blob/{revision}/{path}"
 
 
 def discover_framework_url() -> str:
@@ -107,10 +167,91 @@ def discover_framework_url() -> str:
     return DEFAULT_FRAMEWORK_URL
 
 
+def discover_framework_revision(explicit_revision: str | None = None) -> str:
+    """Return an immutable source commit and reject dirty Git-backed inputs."""
+    try:
+        top_level = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        is_framework_checkout = Path(top_level).resolve() == ROOT.resolve()
+    except (OSError, subprocess.CalledProcessError):
+        is_framework_checkout = False
+
+    if is_framework_checkout:
+        try:
+            status = subprocess.run(
+                ["git", "status", "--porcelain", "--untracked-files=all", "--", *FRAMEWORK_SOURCE_PATHS],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise ValueError("Could not verify that framework source inputs match a clean commit.") from exc
+        if status.stdout.strip():
+            raise ValueError(
+                "Framework source inputs have uncommitted changes. Commit them before initializing an app "
+                "so the recorded framework revision identifies the copied source."
+            )
+
+    if explicit_revision is not None:
+        revision = explicit_revision.strip().lower()
+        if not FRAMEWORK_REVISION_RE.fullmatch(revision):
+            raise ValueError("Framework revision must be an exact 40-character lowercase commit SHA.")
+        if is_framework_checkout:
+            try:
+                head = subprocess.run(
+                    ["git", "rev-parse", "--verify", "HEAD^{commit}"],
+                    cwd=ROOT,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                ).stdout.strip().lower()
+            except (OSError, subprocess.CalledProcessError) as exc:
+                raise ValueError("Could not verify the explicit framework revision against the current checkout.") from exc
+            if revision != head:
+                raise ValueError(
+                    "The supplied framework revision does not match the current Git checkout. "
+                    "Use a clean checkout at that commit or provide the matching archive revision."
+                )
+        return revision
+    if not is_framework_checkout:
+        raise ValueError(
+            "Could not identify an exact framework commit. When using a source archive, pass "
+            "--framework-revision with the 40-character commit SHA for that archive."
+        )
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--verify", "HEAD^{commit}"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise ValueError(
+            "Could not identify an exact framework commit. When using a source archive, pass "
+            "--framework-revision with the 40-character commit SHA for that archive."
+        ) from exc
+    revision = result.stdout.strip().lower()
+    if not FRAMEWORK_REVISION_RE.fullmatch(revision):
+        raise ValueError("Framework checkout did not resolve to an exact 40-character commit SHA.")
+    return revision
+
+
+def sha256_text(value: str) -> str:
+    return "sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
 def generated_readme(
     name: str,
     prefix: str,
     framework_url: str,
+    framework_revision: str,
     *,
     include_lifecycle_records: bool,
 ) -> str:
@@ -119,10 +260,10 @@ def generated_readme(
 
 **Project status:** Ideation
 **Active gate:** None; discovery has not started
-**Next action:** Give your AI agent the app idea, intended user, problem evidence, desired outcome, and known constraints. Ask it to draft `mission.md` and lead the [product discovery workflow]({framework_link(framework_url, "workflows/product-discovery.md")}) in this repository.
+**Next action:** Give your AI agent the app idea, intended user, problem evidence, desired outcome, and known constraints. Ask it to draft `mission.md` and lead the [product discovery workflow]({framework_link(framework_url, "workflows/product-discovery.md", framework_revision)}) in this repository.
 **Canonical status source:** [`backlog.md`](backlog.md)
 
-This repository is the source of truth for {name}: its product decisions, code, and delivery evidence belong here. It was initialized from the reusable [Adversarial SDD template]({framework_url}); there is no framework service to install or operate. No gate has passed and no product decisions are pre-approved by this starter.
+This repository is the source of truth for {name}: its product decisions, code, and delivery evidence belong here. It was initialized from the reusable [Adversarial SDD template]({framework_url}/tree/{framework_revision}); there is no framework service to install or operate. The exact source revision is recorded in [`.sdd/framework.lock.json`](.sdd/framework.lock.json). No gate has passed and no product decisions are pre-approved by this starter.
 
 ## Local artifact commands
 
@@ -139,17 +280,21 @@ The helper discovers this repository's canonical SDD files and artifact folders;
 ## Start here
 
 1. Give the agent the app idea, intended user, problem evidence, desired outcome, and known constraints. The agent drafts [`mission.md`](mission.md) with you and records evidence, assumptions, exclusions, and unresolved decisions.
-2. Have the agent follow the [product discovery workflow]({framework_link(framework_url, "workflows/product-discovery.md")}) to draft `constitution.md`, `specification.md`, and `backlog.md`, then return only material decisions and the G-INTENT/G-REQ evidence for your review.
-3. Keep `design.md` as the canonical experience contract. Use the [CX design workflow]({framework_link(framework_url, "workflows/cx-design.md")}) and link visual review evidence there.
-4. Use [`backlog.md`](backlog.md) for prioritized, approved implementation work and the [lifecycle workflow]({framework_link(framework_url, "workflows/lifecycle.md")}) for the next stage.
+2. Have the agent follow the [product discovery workflow]({framework_link(framework_url, "workflows/product-discovery.md", framework_revision)}) to draft `constitution.md`, `specification.md`, and `backlog.md`, then return only material decisions and the G-INTENT/G-REQ evidence for your review.
+3. Keep `design.md` as the canonical experience contract. Use the [CX design workflow]({framework_link(framework_url, "workflows/cx-design.md", framework_revision)}) and link visual review evidence there.
+4. Use [`backlog.md`](backlog.md) for prioritized, approved implementation work and the [lifecycle workflow]({framework_link(framework_url, "workflows/lifecycle.md", framework_revision)}) for the next stage.
 
 ## Gates and tools
 
-Use the framework's [gate catalog]({framework_link(framework_url, "docs/framework/GATE-CATALOG-001.md")}) for transition criteria and its [tool and skill catalog]({framework_link(framework_url, "docs/framework/TOOL-CATALOG-001.md")}) to select currently available tools. Record applicable gates, their results, and evidence in `reviews/`; a score alone never passes a required gate.
+Use the framework's [gate catalog]({framework_link(framework_url, "docs/framework/GATE-CATALOG-001.md", framework_revision)}) for transition criteria and its [tool and skill catalog]({framework_link(framework_url, "docs/framework/TOOL-CATALOG-001.md", framework_revision)}) to select currently available tools. Record applicable gates, their results, and evidence in `reviews/`; a score alone never passes a required gate.
 
 ## Artifact identities
 
 This project uses the `{prefix}` prefix for stable artifact IDs. Do not reuse IDs. Keep gate results separate from artifact lifecycle statuses, and link decisions/reviews to the exact versions they affect.
+
+## Framework checks
+
+The generated SDD workflow validates artifact metadata, framework snapshot integrity, handoffs, and the app-owned `.sdd/required-checks.json` manifest. Configure that manifest from the approved verification plan before implementation: each check names its task and acceptance criteria, platform/path scope, exact command or manual procedure, pass condition, and evidence location. Required CI commands run on pushes and pull requests; each attempt records the tested SHA, provider run/attempt, event/ref, runtime probe, command exit, and output digests in an uploaded evidence artifact. The workflow has read-only repository permissions, injects no secrets, and does not deploy. Pull-request commands execute untrusted checkout code and must never depend on privileged credentials. CI evidence does not prove semantic correctness or branch protection; require the relevant status checks in repository settings before treating them as merge or release controls.
 
 ## Supporting records as needed
 
@@ -159,7 +304,7 @@ The SDD `design.md` is canonical. The Impeccable `document` command writes `DESI
 '''
 
 
-def generated_agents(framework_url: str) -> str:
+def generated_agents(framework_url: str, framework_revision: str) -> str:
     links = {
         "lifecycle": "workflows/lifecycle.md",
         "discovery": "workflows/product-discovery.md",
@@ -171,7 +316,7 @@ def generated_agents(framework_url: str) -> str:
         "release and operations": "workflows/release-operations.md",
     }
     procedure_list = "\n".join(
-        f"- {label}: {framework_link(framework_url, path)}"
+        f"- {label}: {framework_link(framework_url, path, framework_revision)}"
         for label, path in links.items()
     )
     return f'''# Agent instructions
@@ -182,16 +327,24 @@ This is an application repository initialized from Adversarial SDD. Read this fi
 - Treat repository artifacts as the durable source of truth. Maintain stable IDs, versions, links, open-decision records, and gate evidence.
 - Do not implement work that is blocked by a failed mandatory gate, unresolved owner decision, missing access, or unmet dependency. State the blocker and the next actionable step.
 - AI agents perform authorized documentation and implementation work. The product owner makes material product decisions, accepts residual risk, and authorizes consequential external actions.
+- At each coherent, verified task checkpoint, commit only reviewed in-scope files and inspect the staged diff. Push to the authorized feature branch when standing or task-specific push authorization exists; never force-push, bypass branch protection, merge, or deploy under this rule. If checks fail, authorization is absent, or the remote is unavailable, report the exact state and do not claim the change is complete or published.
 - Do not claim checks, approvals, deployments, or production readiness without observed evidence.
 - Keep `design.md` canonical. Do not run Impeccable `document` at this repository root; use an isolated staging copy and store reviewed generated output in `.impeccable/generated/`.
 - Use `python3 scripts/artifacts.py list`, `validate`, and `new` for local artifact management. The helper is a snapshot of the framework tool; structural validation does not prove links, decisions, gate evidence, or app readiness.
+- The `.sdd/framework.lock.json` file pins the exact framework commit and digests of the copied validator, handoff checks, gate-run schema, and starter template. Update it only as part of a reviewed framework migration.
+- The app-owned `.sdd/required-checks.json` is not framework-locked: maintain its task/acceptance-criterion/platform mapping as product scope changes. The locked schema and `scripts/ci_checks.py` validate and execute required entries. Review command changes as code because pull-request workflows execute them without secrets and with read-only repository permissions.
+- Each CI attempt writes a provider/run-attempt/source-SHA/event/ref record and hashed stdout/stderr under an uploaded workflow artifact. Link that exact evidence to the task/gate record; a green status for another SHA, skipped check, local commit, or file-presence claim cannot satisfy G-IMPL/G-RELEASE.
+- A passed G-REQ or G-ARCH record requires its corresponding populated manifest under `.sdd/`; the validator checks frozen files and exact digests. A passing validator is not itself a gate pass.
+- New version-2 apps store immutable JSON gate-run records under `.sdd/gate-runs/<record_id>.json`. The generated G-INTENT record template starts at `not-ready`; it does not assert a gate result. The validator checks structure and repository-local relationships, not the truth or sufficiency of evidence.
+- Add SDD Contract Validation and app-specific required checks to branch protection before claiming they block merges. Do not treat this workflow alone as a release gate.
+- Record each change's commit SHA, branch/ref, push outcome, required-check results, and review status in its task milestone.
 
 ## Framework procedures
 
 Use the current procedures from the configured Adversarial SDD template source. Record the procedure path/version used in gate and review records.
 
-- Gate catalog: {framework_link(framework_url, "docs/framework/GATE-CATALOG-001.md")}
-- Tool and skill catalog: {framework_link(framework_url, "docs/framework/TOOL-CATALOG-001.md")}
+- Gate catalog: {framework_link(framework_url, "docs/framework/GATE-CATALOG-001.md", framework_revision)}
+- Tool and skill catalog: {framework_link(framework_url, "docs/framework/TOOL-CATALOG-001.md", framework_revision)}
 
 {procedure_list}
 '''
@@ -203,10 +356,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--prefix", required=True, help="Stable artifact prefix, e.g. ACME")
     parser.add_argument("--target", required=True, type=Path, help="New or empty application repository directory")
     parser.add_argument("--framework-url", help="Override the GitHub repository URL for the reusable framework")
+    parser.add_argument("--framework-revision", help="Exact 40-character framework commit SHA (required for source archives)")
     parser.add_argument(
         "--include-lifecycle-records",
         action="store_true",
         help="Preseed decision, review, architecture, delivery, and operations records",
+    )
+    parser.add_argument(
+        "--stack",
+        action="append",
+        default=[],
+        metavar="PROFILE_ID",
+        help="Explicit application profile to compose; repeat for independent profiles. Default: governance core only.",
     )
     parser.add_argument("--dry-run", action="store_true", help="Print the planned file list without writing files")
     return parser.parse_args()
@@ -217,6 +378,11 @@ def main() -> int:
     name = " ".join(args.name.split())
     prefix = args.prefix.strip().upper()
     framework_url = (args.framework_url or discover_framework_url()).strip().rstrip("/")
+    try:
+        framework_revision = discover_framework_revision(args.framework_revision)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     if not name:
         print("Application name must not be empty.", file=sys.stderr)
         return 2
@@ -234,8 +400,27 @@ def main() -> int:
         print("Framework URL must include a repository name.", file=sys.stderr)
         return 2
     framework_url = f"https://github.com/{repo_parts[0]}/{repo_name}"
+    framework_repository = f"{repo_parts[0]}/{repo_name}"
+    if framework_url != "https://github.com/naelmusleh/adversarial-sdd-boilerplate":
+        print(
+            "Framework lock v4/v5 trusted CI is enrolled only for "
+            "https://github.com/naelmusleh/adversarial-sdd-boilerplate. "
+            "A framework fork requires a separately reviewed trust-root enrollment.",
+            file=sys.stderr,
+        )
+        return 2
 
-    target = args.target.expanduser().absolute()
+    requested_target = args.target.expanduser().absolute()
+    requested_parent = requested_target.parent
+    try:
+        resolved_parent = requested_parent.resolve(strict=False)
+    except OSError as exc:
+        print(f"Could not canonicalize target parent: {exc}", file=sys.stderr)
+        return 2
+    if not requested_target.name:
+        print("Target must name a new project directory.", file=sys.stderr)
+        return 2
+    target = resolved_parent / requested_target.name
     if target.is_symlink():
         print(f"Refusing to initialize a symlink target: {target}", file=sys.stderr)
         return 2
@@ -255,7 +440,7 @@ def main() -> int:
 
     today = dt.date.today().isoformat()
     outputs = {
-        destination: render_template(
+        destination.replace("<APP>", prefix): render_template(
             (TEMPLATES / source).read_text(encoding="utf-8"),
             name=name,
             prefix=prefix,
@@ -267,11 +452,126 @@ def main() -> int:
         name,
         prefix,
         framework_url,
+        framework_revision,
         include_lifecycle_records=args.include_lifecycle_records,
     )
-    outputs["AGENTS.md"] = generated_agents(framework_url)
+    outputs["AGENTS.md"] = generated_agents(framework_url, framework_revision)
     outputs[".gitignore"] = ".impeccable/staging/\n"
     outputs["scripts/artifacts.py"] = artifact_helper.read_text(encoding="utf-8")
+    outputs["docs/templates/app-project/gate-record.md.template"] = render_template(
+        (TEMPLATES / "gate-record.md.template").read_text(encoding="utf-8"),
+        name=name,
+        prefix=prefix,
+        today=today,
+    )
+    outputs[".sdd/G-REQ-HANDOFF.json.template"] = (
+        (ROOT / ".sdd" / "G-REQ-HANDOFF.json.template").read_text(encoding="utf-8")
+        .replace("<APP>", prefix)
+        .replace("<40-character framework commit SHA>", framework_revision)
+    )
+    outputs[".sdd/G-ARCH-CONTRACT.json.template"] = (
+        (ROOT / ".sdd" / "G-ARCH-CONTRACT.json.template").read_text(encoding="utf-8")
+        .replace("<APP>", prefix)
+        .replace("<40-character framework commit SHA>", framework_revision)
+    )
+    outputs[".sdd/schemas/gate-run-v1.schema.json"] = (
+        (ROOT / "docs" / "framework" / "schemas" / "gate-run-v1.schema.json").read_text(encoding="utf-8")
+    )
+    outputs[".sdd/gate-run-v1.json.template"] = (
+        (ROOT / ".sdd" / "gate-run-v1.json.template").read_text(encoding="utf-8")
+        .replace("<APP>", prefix)
+    )
+    outputs[".sdd/schemas/gate-run-v1.2.schema.json"] = (
+        (ROOT / "docs" / "framework" / "schemas" / "gate-run-v1.2.schema.json").read_text(encoding="utf-8")
+    )
+    outputs[".sdd/gate-run-v1.2.json.template"] = (
+        (ROOT / ".sdd" / "gate-run-v1.2.json.template").read_text(encoding="utf-8")
+        .replace("<APP>", prefix)
+    )
+    outputs[".sdd/schemas/trusted-ci-v1.schema.json"] = (
+        (ROOT / "docs" / "framework" / "schemas" / "trusted-ci-v1.schema.json").read_text(encoding="utf-8")
+    )
+    outputs[".sdd/trusted-ci.json.template"] = (
+        (ROOT / ".sdd" / "trusted-ci.json.template").read_text(encoding="utf-8")
+        .replace("<FRAMEWORK_REVISION>", framework_revision)
+    )
+    outputs[".sdd/trusted-ci.json"] = outputs[".sdd/trusted-ci.json.template"]
+    outputs[".sdd/schemas/assumption-experiment-v1.schema.json"] = (
+        (ROOT / "docs" / "framework" / "schemas" / "assumption-experiment-v1.schema.json").read_text(encoding="utf-8")
+    )
+    outputs["scripts/ci_checks.py"] = (ROOT / "scripts" / "ci_checks.py").read_text(encoding="utf-8")
+    outputs[".sdd/schemas/required-checks-v1.schema.json"] = (
+        (ROOT / "docs" / "framework" / "schemas" / "required-checks-v1.schema.json").read_text(encoding="utf-8")
+    )
+    for schema_name in (
+        "core-file-manifest-v1.schema.json",
+        "profile-manifest-v1.schema.json",
+        "profile-selection-manifest-v1.schema.json",
+        "profile-check-result-v1.schema.json",
+    ):
+        outputs[f".sdd/schemas/{schema_name}"] = (
+            (ROOT / "docs" / "framework" / "schemas" / schema_name).read_text(encoding="utf-8")
+        )
+    required_check_template = (TEMPLATES / "required-checks.json.template").read_text(encoding="utf-8")
+    outputs[".sdd/required-checks.json.template"] = required_check_template
+    outputs[".sdd/required-checks.json"] = required_check_template
+    outputs[".github/workflows/sdd-contract-validation.yml"] = (
+        (TEMPLATES / "sdd-contract-validation.yml.template").read_text(encoding="utf-8")
+        .replace("<FRAMEWORK_REVISION>", framework_revision)
+        .replace("<FRAMEWORK_REPOSITORY>", framework_repository)
+    )
+    core_sources: dict[str, Path] = {}
+    for source, destination in selected_files.items():
+        core_sources[destination.replace("<APP>", prefix)] = TEMPLATES / source
+    for relative in outputs:
+        if relative in core_sources:
+            continue
+        if relative == "scripts/artifacts.py":
+            core_sources[relative] = artifact_helper
+        elif relative == "scripts/ci_checks.py":
+            core_sources[relative] = ROOT / "scripts" / "ci_checks.py"
+        elif relative == "docs/templates/app-project/gate-record.md.template":
+            core_sources[relative] = TEMPLATES / "gate-record.md.template"
+        elif relative == ".sdd/required-checks.json" or relative == ".sdd/required-checks.json.template":
+            core_sources[relative] = TEMPLATES / "required-checks.json.template"
+        elif relative == ".github/workflows/sdd-contract-validation.yml":
+            core_sources[relative] = TEMPLATES / "sdd-contract-validation.yml.template"
+        elif relative.startswith(".sdd/schemas/"):
+            core_sources[relative] = ROOT / "docs" / "framework" / "schemas" / Path(relative).name
+        elif relative in {".sdd/G-REQ-HANDOFF.json.template", ".sdd/G-ARCH-CONTRACT.json.template"}:
+            core_sources[relative] = ROOT / relative
+        elif relative.endswith(".json.template") and relative.startswith(".sdd/"):
+            core_sources[relative] = ROOT / relative
+        else:
+            # Generated README, instructions, gitignore, and lock content are sourced
+            # from this versioned initializer implementation.
+            core_sources[relative] = ROOT / "scripts" / "init_app_project.py"
+    base_core_outputs = dict(outputs)
+    try:
+        profile_outputs, core_manifest, selection_manifest, check_result = compose_profiles(
+            args.stack, base_core_outputs, core_sources, framework_revision
+        )
+    except (OSError, ValueError) as exc:
+        print(f"Profile composition stopped: {exc}", file=sys.stderr)
+        return 2
+    outputs.update(profile_outputs)
+    outputs[".sdd/core-file-manifest-v1.json"] = json.dumps(core_manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    outputs[".sdd/profile-selection-v1.json"] = json.dumps(selection_manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    outputs[".sdd/profile-check-result-v1.json"] = json.dumps(check_result, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    lock = {
+        "lock_version": 5,
+        "framework_repository": framework_url,
+        "framework_revision": framework_revision,
+        "artifact_contract_id": "ARTIFACT-CONTRACT-001",
+        "artifact_contract_version": 1,
+        "gate_contract_id": GATE_CONTRACT_ID,
+        "gate_contract_version": GATE_CONTRACT_VERSION,
+        "locked_files": {
+            relative: sha256_text(outputs[relative])
+            for relative in APP_LOCKED_FILES_V5
+        },
+    }
+    outputs[".sdd/framework.lock.json"] = json.dumps(lock, indent=2, sort_keys=True) + "\n"
     try:
         validate_generated_artifacts(outputs)
     except ValueError as exc:
@@ -285,21 +585,64 @@ def main() -> int:
         return 0
 
     try:
-        target.mkdir(parents=True, exist_ok=True)
-        for relative, content in outputs.items():
-            destination = target / relative
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            # Exclusive creation closes the race between the initial empty-target
-            # check and writing. If another process creates a file meanwhile,
-            # stop rather than replacing that file.
-            with destination.open("x", encoding="utf-8") as output_file:
-                output_file.write(content)
-    except OSError as exc:
+        _write_outputs_transactionally(target, outputs)
+    except (OSError, ValueError) as exc:
         print(f"Initialization stopped: {exc}", file=sys.stderr)
         return 1
     print(f"Initialized {name} ({prefix}) at {target}")
     print(f"Created {len(outputs)} files. Review mission.md and README.md before proceeding.")
+    if args.stack:
+        print("Selected profiles were composed. Their declared checks are recorded as not-run; initialization did not execute profile code.")
+    else:
+        print("No application profile selected; this is a governance-core-only initialization.")
     return 0
+
+
+def _write_outputs_transactionally(target: Path, outputs: dict[str, str]) -> None:
+    parent = target.parent
+    parent.mkdir(parents=True, exist_ok=True)
+    for relative in outputs:
+        if not safe_relative_path(relative):
+            raise ValueError(f"Generated output path is unsafe: {relative!r}")
+    initial = None
+    if target.is_symlink():
+        raise ValueError(f"Refusing to replace a symlink target: {target}")
+    if target.exists():
+        if not target.is_dir() or any(target.iterdir()):
+            raise ValueError(f"Refusing to overwrite a non-empty or non-directory target: {target}")
+        initial = target.stat()
+
+    staging = Path(tempfile.mkdtemp(prefix=f".{target.name}.sdd-init-", dir=parent))
+    backup: Path | None = None
+    try:
+        for relative, content in outputs.items():
+            destination = staging / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with destination.open("x", encoding="utf-8", newline="\n") as output_file:
+                output_file.write(content)
+        if initial is None:
+            if target.exists() or target.is_symlink():
+                raise FileExistsError(f"Target appeared during initialization: {target}")
+            os.replace(staging, target)
+            return
+        current = target.stat()
+        if (current.st_dev, current.st_ino) != (initial.st_dev, initial.st_ino) or any(target.iterdir()):
+            raise FileExistsError(f"Empty target changed during initialization: {target}")
+        backup = parent / f".{target.name}.sdd-init-backup-{uuid.uuid4().hex}"
+        os.replace(target, backup)
+        try:
+            os.replace(staging, target)
+        except OSError:
+            os.replace(backup, target)
+            backup = None
+            raise
+        backup.rmdir()
+        backup = None
+    finally:
+        if staging.exists():
+            shutil.rmtree(staging)
+        if backup is not None and backup.exists() and not target.exists():
+            os.replace(backup, target)
 
 
 if __name__ == "__main__":

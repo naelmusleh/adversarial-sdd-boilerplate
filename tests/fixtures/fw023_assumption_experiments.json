@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "assumptions": [
+    {
+      "id": "SAMPLE-ASM-001", "claim": "Users will complete a five-step setup without assistance.",
+      "source_type": "inference", "confidence": "low", "limits": "Synthetic illustration; no real users observed.",
+      "impact_if_wrong": "Setup scope and support burden may be misestimated.",
+      "confirmation_method": "Observe a consented usability study and record completion without assistance.",
+      "disproof_method": "Fewer than four of five eligible participants complete without assistance.",
+      "owner": "Product owner", "due_date": "2026-12-01", "review_date": "2026-11-15",
+      "requirement_ids": ["FR-APP-001"], "task_ids": ["APP-TASK-001", "APP-TASK-002"],
+      "task_effects": [
+        {"task_id": "APP-TASK-001", "depends_on_assumption": true, "state": "conditional", "reason": "Setup scope depends on the assumption.", "reassessment_trigger": "Reopen if evidence disproves unaided completion."},
+        {"task_id": "APP-TASK-002", "depends_on_assumption": false, "state": "unblocked", "reason": "Help content can be drafted independently.", "reassessment_trigger": "Reassess only if content work starts depending on setup completion."}
+      ],
+      "blocking_state": "conditional", "status": "open", "status_history": [{"status": "open", "recorded_at": "2026-10-22", "reason": "Initial assumption record."}], "evidence": [], "disposition": null, "gate_supporting": false
+    }
+  ],
+  "experiments": [
+    {
+      "id": "SAMPLE-EXP-001", "assumption_id": "SAMPLE-ASM-001",
+      "hypothesis": "A five-step setup is understandable without assistance.",
+      "prediction": "At least four of five participants complete unaided.",
+      "wrong_if": "Fewer than four of five participants complete unaided.",
+      "method": "Moderated usability sessions with consent and a fixed task script.",
+      "sample_data_limits": "Synthetic tabletop example only; five participants would not estimate population demand.",
+      "privacy_handling": "Use consented notes; collect no unnecessary identifiers; retain per approved research plan.",
+      "read_date": null, "owner": "Product researcher", "status": "proposed",
+      "decision_rule": "Owner reviews actual results and limitations; no automatic scope change.",
+      "evidence": [{"id": "SAMPLE-EVID-001", "type": "synthetic", "source": "Synthetic framework fixture", "observed_at": "2026-10-22", "limits": "No user behavior was observed.", "result": "Illustrates record routing only."}],
+      "outcome": null
+    }
+  ]
+}

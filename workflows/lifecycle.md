@@ -3,10 +3,10 @@ id: WORKFLOW-LIFECYCLE-001
 type: workflow
 title: Application lifecycle orchestrator
 status: draft
-version: 0.2
+version: 0.3
 created: 2026-10-07
-updated: 2026-10-09
-related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, FRAMEWORK-001, FRAMEWORK-002
+updated: 2026-10-20
+related-artifacts: FRAMEWORK-SPEC-001, FRAMEWORK-BACKLOG-001, GATE-CATALOG-001, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-GATE-CONTRACT-001
 ---
 
 # WORKFLOW-LIFECYCLE-001 — Application lifecycle orchestrator

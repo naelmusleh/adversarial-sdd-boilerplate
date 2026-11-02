@@ -3,10 +3,10 @@ id: WORKFLOW-CX-001
 type: workflow
 title: Platform-aware CX Design Workflow
 status: active
-version: 0.6
+version: 0.7
 created: 2026-10-05
-updated: 2026-10-08
-related-artifacts: FRAMEWORK-002, GATE-CATALOG-001, TOOL-CATALOG-001
+updated: 2026-10-20
+related-artifacts: FRAMEWORK-002, GATE-CATALOG-001, TOOL-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
 ---
 
 # WORKFLOW-CX-001 — Platform-aware CX Design Workflow v0.6

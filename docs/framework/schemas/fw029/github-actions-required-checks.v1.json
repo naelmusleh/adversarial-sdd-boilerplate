@@ -1,0 +1,1 @@
+{"schema_version":"1.0","required_checks":[{"logical_id":"initializer-regression","name":"Initializer Regression Gate"},{"logical_id":"metadata-audit","name":"Metadata & Artifact Audit"},{"logical_id":"typescript-static-analysis","name":"TypeScript Static Code Analysis"}]}

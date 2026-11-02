@@ -1,0 +1,32 @@
+{
+  "schema_version": "1",
+  "profile_id": "nextjs-typescript",
+  "profile_version": "1.0.0",
+  "language": {"name": "TypeScript", "version_range": "5.9.3"},
+  "runtime": {"name": "Node.js", "version_range": ">=22.12.0"},
+  "prerequisites": {
+    "node": {"required": true, "version_constraint": ">=22.12.0"},
+    "npm": {"required": true, "version_constraint": ">=10.9.0"}
+  },
+  "source_layout": ["profiles/nextjs-typescript/src", "profiles/nextjs-typescript/tests"],
+  "checks": {
+    "typecheck": {"status": "applicable", "required": true, "command": "npm --prefix profiles/nextjs-typescript run typecheck", "scope": "synthetic profile source"},
+    "contract-tests": {"status": "applicable", "required": true, "command": "npm --prefix profiles/nextjs-typescript test", "scope": "GalleryItemV1 compatibility fixtures only"},
+    "browser-device": {"status": "unsupported", "required": false, "reason": "No browser or device execution is part of this framework fixture."}
+  },
+  "owned_dependencies": [
+    {"name": "next", "version_constraint": "15.5.27", "purpose": "synthetic web profile runtime"},
+    {"name": "react", "version_constraint": "19.2.8", "purpose": "synthetic web profile runtime"},
+    {"name": "react-dom", "version_constraint": "19.2.8", "purpose": "synthetic web profile runtime"},
+    {"name": "typescript", "version_constraint": "5.9.3", "purpose": "synthetic web profile type checking"},
+    {"name": "vitest", "version_constraint": "5.0.0", "purpose": "synthetic contract fixture tests"}
+  ],
+  "generated_files": [
+    ".sdd/profiles/nextjs-typescript.json",
+    "profiles/nextjs-typescript/README.md",
+    "profiles/nextjs-typescript/package.json",
+    "profiles/nextjs-typescript/tsconfig.json",
+    "profiles/nextjs-typescript/src/GalleryItemV1.ts",
+    "profiles/nextjs-typescript/tests/GalleryItemV1.test.ts"
+  ]
+}

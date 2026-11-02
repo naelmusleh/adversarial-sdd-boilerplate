@@ -3,10 +3,10 @@ id: WORKFLOW-ADV-001
 type: workflow
 title: Adversarial review workflow
 status: active
-version: 0.3
+version: 0.4
 created: 2026-10-05
-updated: 2026-10-08
-related-artifacts: CAP-002, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, GATE-CATALOG-001
+updated: 2026-10-20
+related-artifacts: CAP-002, FRAMEWORK-001, FRAMEWORK-002, FRAMEWORK-SPEC-001, GATE-CATALOG-001, FRAMEWORK-GATE-CONTRACT-001
 ---
 
 # WORKFLOW-ADV-001 — Adversarial Review Workflow v0.3

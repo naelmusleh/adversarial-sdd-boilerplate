@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://adversarial-sdd.example/schemas/core-file-manifest-v1.schema.json",
+  "title": "Adversarial SDD generated core file inventory v1",
+  "description": "Versioned authoritative inventory of generated governance-core paths for one core contract version. Not yet emitted by the initializer.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "core_contract_version", "files"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "core_contract_version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+    "files": {
+      "description": "Map key is a unique generated relative path; exact membership is required for a complete core selection inventory.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/safePath" },
+      "additionalProperties": { "$ref": "#/$defs/coreFile" }
+    }
+  },
+  "$defs": {
+    "safePath": { "type": "string", "minLength": 1, "not": { "pattern": "(^/|(^|/)\\.\\.(/|$)|\\\\)" } },
+    "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "coreFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_sha256"],
+      "properties": { "source_sha256": { "$ref": "#/$defs/digest" } }
+    }
+  }
+}

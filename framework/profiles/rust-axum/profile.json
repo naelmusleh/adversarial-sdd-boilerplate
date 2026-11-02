@@ -1,0 +1,29 @@
+{
+  "schema_version": "1",
+  "profile_id": "rust-axum",
+  "profile_version": "1.0.0",
+  "language": {"name": "Rust", "version_range": "1.97.0"},
+  "runtime": {"name": "Rust stable toolchain", "version_range": "1.97.0"},
+  "prerequisites": {
+    "rustc": {"required": true, "version_constraint": ">=1.97.0"},
+    "cargo": {"required": true, "version_constraint": ">=1.97.0"}
+  },
+  "source_layout": ["profiles/rust-axum/src", "profiles/rust-axum/tests"],
+  "checks": {
+    "compile": {"status": "applicable", "required": true, "command": "cargo check --manifest-path profiles/rust-axum/Cargo.toml", "scope": "synthetic profile source"},
+    "contract-tests": {"status": "applicable", "required": true, "command": "cargo test --manifest-path profiles/rust-axum/Cargo.toml", "scope": "GalleryItemV1 compatibility fixtures only"},
+    "persistent-storage": {"status": "unsupported", "required": false, "reason": "The framework fixture defines metadata compatibility only and has no persistence adapter."}
+  },
+  "owned_dependencies": [
+    {"name": "axum", "version_constraint": "0.8.9", "purpose": "synthetic API profile"},
+    {"name": "serde", "version_constraint": "1.0.228", "purpose": "synthetic serialization profile"},
+    {"name": "serde_json", "version_constraint": "1.0.145", "purpose": "synthetic contract fixture tests"}
+  ],
+  "generated_files": [
+    ".sdd/profiles/rust-axum.json",
+    "profiles/rust-axum/README.md",
+    "profiles/rust-axum/Cargo.toml",
+    "profiles/rust-axum/src/lib.rs",
+    "profiles/rust-axum/tests/contract.rs"
+  ]
+}

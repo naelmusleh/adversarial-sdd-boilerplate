@@ -36,11 +36,12 @@ adversarial-sdd-boilerplate/
 ├── src/
 │   ├── app/                           # neutral Next.js App Router shell
 │   └── core/env.ts                    # fail-fast runtime configuration
+├── .sdd/                              # generated app handoff templates and framework lock
 ├── docs/
 │   ├── constitution/                  # reusable framework principles
 │   ├── framework/                     # scope, backlog, gates, tool catalog
 │   └── templates/app-project/         # canonical app SDD starter files
-├── framework/capabilities/            # CAP-000 through CAP-005 contracts
+├── framework/capabilities/            # CAP-000 through CAP-006 contracts
 ├── scripts/
 │   ├── artifacts.py                   # list, create, validate SDD records
 │   ├── init_app_project.py            # generate a fresh app repository
@@ -53,9 +54,11 @@ Framework artifacts describe reusable process. Generated application artifacts d
 
 ## Repository automation
 
-The [Verify Pipeline](.github/workflows/verify-pipeline.yml) runs independent artifact-contract, artifact-regression, initializer, TypeScript, Vitest, and coverage checks for pushes and pull requests targeting `main`. Framework mode validates the required template inventory and configured RFC 2119 requirement tables from [ARTIFACT-CONTRACT-001](docs/framework/ARTIFACT-CONTRACT-001.json). App mode keeps its five canonical root documents mandatory and applies the same table-shape and uppercase-keyword checks only under the named requirements headings when tables are present. These checks validate structure and language form, not semantic quality. The workflow provides G-RELEASE evidence. GitHub repository protection must separately require those checks and restrict direct updates or bypasses before the evidence becomes a merge block; a successful workflow alone does not protect the branch.
+The [Verify Pipeline](.github/workflows/verify-pipeline.yml) runs the complete Python governance/initializer suite, artifact validation, TypeScript compilation, Vitest, and configured coverage checks on pushes and pull requests across branches. Framework mode validates the required template inventory and configured RFC 2119 requirement tables from [ARTIFACT-CONTRACT-001](docs/framework/ARTIFACT-CONTRACT-001.json). App mode keeps its five canonical root documents mandatory and applies the same table-shape and uppercase-keyword checks only under the named requirements headings when tables are present. These checks validate structure and language form, not semantic quality. Newly initialized apps also run their app-owned `.sdd/required-checks.json` through the generated SDD workflow and upload run-attempt evidence bound to the tested SHA. See the [CI and release policy](docs/framework/FRAMEWORK-CI-RELEASE-POLICY-001.md) for the evidence and security boundaries. GitHub repository protection must separately require those checks and restrict direct updates or bypasses before the evidence becomes a merge block; a successful workflow alone does not protect the branch.
 
 The [Weekly Architecture Audit](.github/workflows/weekly-architecture-audit.yml) runs Sunday at 00:00 UTC and can be started manually from `main`. It audits the committed npm lockfile and runs three public engineering research sweeps. It combines vulnerability metrics, source links, screening outcomes, and any qualified FW task drafts into a new validated report, then opens or updates a draft PR on `automation/weekly-architecture-audit`. Configure the repository Actions secret `TAVILY_API_KEY` for the research sweeps; missing credentials or incomplete research produce a visible non-zero workflow result. The daemon never edits `/src`, the canonical backlog, dependencies, or existing records. A maintainer reviews source claims and accepts any candidate task through a separate change. GitHub may place checks triggered by a PR created with the default Actions token into an approval-required state; a maintainer must approve that run or manually dispatch Verify Pipeline against the PR branch before merge. The combined report is operational evidence, not a complete architecture or production-readiness review. See [CAP-005](framework/capabilities/CAP-005-platform-governance-daemon.md) for permissions, boundaries, and evidence requirements.
+
+The [CAP-006 adversarial reviewer contract](framework/capabilities/CAP-006-adversarial-review-daemon.md) defines a fail-closed, stateless batch review protocol for applications that adopt it. The contract and the Step 2 architect handshake template are included in the framework copy instructions; the handshake is generated with the optional lifecycle records.
 
 ## Requirements
 
@@ -73,7 +76,7 @@ The following steps produce a new local app directory. They do not create a GitH
 
 ### 1. Obtain the template
 
-Clone the repository or download its ZIP from GitHub and extract it. Then open a terminal in the extracted `adversarial-sdd-boilerplate` directory.
+Clone the repository or download its ZIP from GitHub and extract it. Then open a terminal in the extracted `adversarial-sdd-boilerplate` directory. App initialization pins an exact 40-character framework commit. A Git clone supplies that automatically; for a source archive, retain the commit SHA used to download it and pass it with `--framework-revision`.
 
 ```sh
 git clone https://github.com/naelmusleh/adversarial-sdd-boilerplate.git
@@ -106,7 +109,13 @@ python3 scripts/init_app_project.py \
   --target ../example-app
 ```
 
-The initializer refuses a non-empty target. By default it creates the five canonical app SDD documents, an app README, app-specific `AGENTS.md`, `.gitignore`, and a copy of the dependency-free artifact helper. It never overwrites existing work. Add `--include-lifecycle-records` only if the team wants the optional supporting record templates preseeded; otherwise create records when their gate requires them.
+When initializing from a source archive, add `--framework-revision <40-character-commit-sha>` to the command. The generated `.sdd/framework.lock.json` records that revision and digests for the copied validator, handoff templates, gate-record template, and SDD validation workflow. Generated procedure links point to the same immutable revision; initialize from the reviewed framework commit so those links match the copied contracts.
+
+The initializer refuses a non-empty target. By default it creates the five canonical app SDD documents, an app README, app-specific `AGENTS.md`, `.gitignore`, the dependency-free artifact helper, a framework lock, G-REQ/G-ARCH handoff templates, a gate-record template, and an SDD Contract Validation workflow. It never overwrites existing work. Add `--include-lifecycle-records` only if the team wants the optional supporting record templates preseeded; otherwise create records when their gate requires them.
+
+The default initializer composes only the stack-neutral governance core. To include one or more explicit framework profile fixtures, repeat `--stack` with a declared ID, for example `--stack nextjs-typescript`. Profiles are separate, versioned examples; prerequisites are checked before writing, and their commands are recorded as `not-run` (or `unsupported`) rather than executed. They do not determine an application's approved stack. New lock-v5 apps pin the profile contracts and generated-file inventory; older lock versions retain their existing validation behavior.
+
+The generated validator checks a populated G-REQ/G-ARCH handoff against frozen artifact versions and file digests. It does not judge requirement quality or execute code checks. Each app still defines its stack-specific G-IMPL checks in its verification plan and CI. The SDD workflow must be configured as a required status check in repository settings before it can block merges; that configuration is not performed by the initializer.
 
 ### 4. Add the selected runtime and lifecycle files to the app repository
 
@@ -117,7 +126,23 @@ TARGET=../example-app
 mkdir -p "$TARGET/tests" "$TARGET/docs" "$TARGET/framework"
 cp -R docs/framework "$TARGET/docs/"
 cp -R docs/constitution "$TARGET/docs/"
-cp -R docs/templates "$TARGET/docs/"
+mkdir -p "$TARGET/docs/templates"
+python3 - "$TARGET" <<'PY'
+from pathlib import Path
+import shutil
+import sys
+
+source = Path("docs/templates")
+destination = Path(sys.argv[1]) / "docs/templates"
+for item in source.rglob("*"):
+    if not item.is_file():
+        continue
+    target = destination / item.relative_to(source)
+    if target.exists() or target.is_symlink():
+        continue
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(item, target)
+PY
 cp -R workflows "$TARGET/"
 cp -R framework/capabilities "$TARGET/framework/"
 ```
@@ -140,7 +165,7 @@ dist/
 EOF
 ```
 
-These commands add the same reusable lifecycle/gate contracts and neutral app shell to the newly created app directory. They do not copy product requirements from another app. Inspect the output before proceeding; the initializer refuses non-empty targets, and the copy commands above target only the just-generated directory.
+These commands add the reusable lifecycle/gate contracts and neutral app shell to the newly created app directory. Template copying is no-clobber: the initializer-rendered, lock-digested app gate template remains byte-for-byte intact, while missing shared templates are added. They do not copy product requirements from another app. Inspect the output before proceeding; the initializer refuses non-empty targets, and the copy commands above target only the just-generated directory.
 
 Initialize Git in the app directory and create its first commit only after reviewing the generated files. If using GitHub, create a new repository for this app and add it as the app repository's remote; do not reuse the template remote.
 
@@ -150,11 +175,15 @@ The app's repository is its source of truth after setup. Later changes to this t
 
 In the new app repo:
 
-1. Give the agent the app idea, intended user, observed problem evidence, desired outcome, constraints, and any supplied source material. The agent drafts `mission.md`, labeling evidence, assumptions, non-goals, and unknowns.
-2. Have the agent lead product discovery and draft `constitution.md`, `specification.md`, and `backlog.md`, with linked decisions and testable acceptance outcomes.
+1. Start with the app idea and whatever is already known about the user, problem, desired outcome, constraints, and evidence. A short description is enough to begin; label missing details “unknown” rather than guessing or completing a fixed questionnaire. The agent inspects the app repository and relevant source material before asking follow-up questions.
+2. Have the agent draft `mission.md` and then lead product discovery for `constitution.md`, `specification.md`, and `backlog.md`, labeling owner statements, observed facts, researched claims, and agent inferences separately. Ask only material questions that affect scope or the next safe action; provider, platform, budget, legal, and operational choices may remain open until relevant.
 3. Review material scope and risk decisions returned by the agent; record owner decisions in the app repository.
 4. Have the agent define the full active journey set, platform behavior, design system, content, states, errors, accessibility, and prototype links in `design.md`.
 5. Run required adversarial and CX reviews. Keep findings in review artifacts separate from the documents being reviewed.
+
+When resuming setup, the agent re-reads current repository state and canonical SDD files, preserves unaffected accepted decisions, and revisits only questions affected by changed context or new evidence. The canonical mission, decision/specification records, backlog, and gate records remain the durable record; do not create a second onboarding tracker. Generated files and a passing structural validator do not imply owner approval or a passed gate.
+
+For an existing application repository, do not run the new-app initializer. Inspect its instructions, source layout, dependency manifests, Git state, and current SDD records first; propose only a reviewed, path-specific migration for missing framework assets.
 
 Do not start implementation of dependent features while a blocking requirement, feasibility, coverage, CX, or architecture gate is failed or blocked.
 
@@ -236,4 +265,5 @@ This package is the separated boilerplate repository and is available from the o
 - [Tool and skill routing](docs/framework/TOOL-CATALOG-001.md)
 - [Fresh-session bootstrap contract](framework/capabilities/CAP-000-template-initialization.md)
 - [App-project starter contract](framework/capabilities/CAP-004-app-repository-bootstrap.md)
+- [Asynchronous adversarial reviewer contract](framework/capabilities/CAP-006-adversarial-review-daemon.md)
 - [MIT License](LICENSE)

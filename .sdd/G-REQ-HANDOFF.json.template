@@ -1,0 +1,41 @@
+{
+  "contract_id": "G-REQ-HANDOFF-001",
+  "contract_version": 1,
+  "framework_revision": "<40-character framework commit SHA>",
+  "source_gate": "G-REQ",
+  "scope": "<approved requirement scope and platform set>",
+  "frozen_artifacts": [
+    {
+      "path": "mission.md",
+      "id": "<APP>-MISSION-001",
+      "version": "<artifact version>",
+      "sha256": "sha256:<64 lowercase hexadecimal characters>"
+    },
+    {
+      "path": "constitution.md",
+      "id": "<APP>-CONSTITUTION-001",
+      "version": "<artifact version>",
+      "sha256": "sha256:<64 lowercase hexadecimal characters>"
+    },
+    {
+      "path": "specification.md",
+      "id": "<APP>-SPEC-001",
+      "version": "<artifact version>",
+      "sha256": "sha256:<64 lowercase hexadecimal characters>"
+    },
+    {
+      "path": "backlog.md",
+      "id": "<APP>-BACKLOG-001",
+      "version": "<artifact version>",
+      "sha256": "sha256:<64 lowercase hexadecimal characters>"
+    }
+  ],
+  "independent_review": {
+    "path": "reviews/<APP>-REVIEW-REQ-001.md",
+    "id": "<APP>-REVIEW-REQ-001",
+    "version": "<review version>",
+    "sha256": "sha256:<64 lowercase hexadecimal characters>",
+    "reviewer_mode": "independent",
+    "result": "PASS"
+  }
+}

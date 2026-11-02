@@ -52,7 +52,7 @@ Define product-level outcomes and how they will be measured. Separate app behavi
 
 ## Assumptions and dependencies
 
-Label inference and assumptions; name owner, evidence, affected requirements, and what work is blocked.
+Label material assumptions with stable IDs; state source type, confidence and limits, impact if wrong, confirmation/disproof methods, owner, due/review dates, affected requirements/tasks, blocking state, and disposition. Keep decision authority in the canonical decision log. Use the optional versioned assumption/experiment bundle and validator only when falsifiable experiments or expiry tracking are needed; an open, overdue, or unsupported assumption MUST NOT silently support a gate PASS.
 
 ## Open decision vectors
 

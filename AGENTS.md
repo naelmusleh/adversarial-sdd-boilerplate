@@ -9,14 +9,14 @@ First identify whether this checkout is the reusable template or an initialized 
 ### Template repository mode
 
 1. Read `README.md`, this `AGENTS.md`, `docs/missions/MISSION-001.md`, `docs/constitution/FRAMEWORK-001.md`, `docs/constitution/FRAMEWORK-002.md`, `docs/framework/FRAMEWORK-SPEC-001.md`, and `docs/framework/FRAMEWORK-BACKLOG-001.md`.
-2. Read the matching workflow in `workflows/` and the applicable contract in `docs/framework/GATE-CATALOG-001.md` or `framework/capabilities/`.
+2. Read the matching workflow in `workflows/` and the applicable contract in `docs/framework/GATE-CATALOG-001.md` or `framework/capabilities/`. When changing gate semantics or records, also read `docs/framework/FRAMEWORK-GATE-CONTRACT-001.md` and its traceability matrix.
 3. Run `python3 scripts/artifacts.py list` and `python3 scripts/artifacts.py validate`; inspect Git status and the selected framework backlog item.
 4. State the active gate, approved scope, selected task, acceptance evidence, and blockers in the work record before changing files.
 
 ### Initialized application repository mode
 
 1. Read `README.md`, this `AGENTS.md`, `mission.md`, `constitution.md`, `specification.md`, `design.md`, and `backlog.md` before implementation.
-2. Read the matching workflow and applicable gate contract in `docs/framework/GATE-CATALOG-001.md`.
+2. Read the matching workflow and applicable gate contract in `docs/framework/GATE-CATALOG-001.md`. If the app framework lock pins `FRAMEWORK-GATE-CONTRACT-001`, read that exact pinned version and its validator behavior; a legacy app without the pin is not silently promoted to the versioned record contract.
 3. Run `python3 scripts/artifacts.py list` and `python3 scripts/artifacts.py validate`; inspect Git status and the selected application backlog item.
 4. State the active gate, approved scope, selected task, acceptance evidence, and blockers in the work record before changing files.
 
@@ -28,6 +28,7 @@ In either mode, do not implement through a failed or blocked gate. Ask the produ
 - `PRODUCT.md` contains durable product context for compatible tools. It must not override the canonical SDD files.
 - SDD `design.md` remains canonical. Generated design-tool output belongs under `.impeccable/generated/`; never create a case-only `DESIGN.md` beside `design.md` on a case-insensitive filesystem.
 - `docs/` holds durable framework references and artifact templates. App-specific decisions, code, secrets, and release evidence remain in this repository after the template is initialized as an app.
+- `docs/framework/FRAMEWORK-GATE-CONTRACT-001.md` is the normative versioned source for gate-run semantics, stable criterion IDs, evidence types, and transitions when an app explicitly adopts that contract version. The gate catalog and workflows are operational summaries. Existing apps are not promoted or rewritten implicitly.
 - Preserve artifact IDs. Update the relevant document, decision record, gate record, and backlog state together when a decision or outcome changes.
 - Distinguish owner decisions, observed facts, and agent inferences. Do not resolve open decisions silently.
 
@@ -35,6 +36,10 @@ In either mode, do not implement through a failed or blocked gate. Ask the produ
 
 - AI agents are expected to perform routine implementation, documentation, and verification work. The owner supplies intent, resolves material choices, and reviews/accepts results.
 - Implement exactly one selected backlog task at a time. Link code and evidence to its requirement and acceptance criteria.
+- At each coherent, verified task checkpoint, create a scoped commit after inspecting the complete and staged diffs. Stage explicit task files only; preserve unrelated or user-owned changes. Do not bundle unrelated tasks to reduce commit count.
+- Push the commit to the authorized feature branch/remote when the owner has granted standing or task-specific authorization. Do not ask again while a valid standing authorization applies. Never force-push, bypass branch protection, merge, or deploy under this rule.
+- If a required check fails, keep the task incomplete and report the failure. A reviewable failing feature-branch checkpoint may be pushed only under the owner's existing authorization and must be labeled unready for merge. Missing authorization, remote, or credentials is a publication blocker; never expose credentials.
+- Record the commit SHA, branch/ref, push result, review status, and actual check results in the task milestone and final report. Correct published commits with follow-up commits rather than rewriting shared history.
 - Run the relevant checks, including `npm run typecheck`, `npm test`, `npm run test:coverage`, and `npm run build` when applicable. A required check that cannot run is reported as unverified, never as passed.
 - Run `python3 scripts/artifacts.py validate` before proposing a change for review.
 - Do not use production credentials or deploy without the specific authorization and release gate required by this repository.
@@ -44,9 +49,10 @@ In either mode, do not implement through a failed or blocked gate. Ask the produ
 
 ### Verify Pipeline — server-side G-RELEASE evidence
 
-- `.github/workflows/verify-pipeline.yml` is the repository's consolidated CI workflow. It runs artifact metadata validation, app-initializer regression tests, strict TypeScript compilation, Vitest tests, and the configured coverage gate on pushes and pull requests targeting `main`.
+- `.github/workflows/verify-pipeline.yml` is the repository's consolidated CI workflow. It runs artifact metadata validation, the complete Python governance/initializer suite, strict TypeScript compilation, Vitest tests, and the configured coverage gate on pushes and pull requests across branches.
 - Treat its required checks as G-RELEASE evidence for a code change only when the checks ran against the exact proposed commit and passed.
 - Workflow YAML alone does not prevent a direct push, force push, or merge. G-RELEASE blocks changes from reaching `main` only if repository settings require every applicable Verify Pipeline check, require pull requests, prohibit force pushes, restrict bypass, and prevent unreviewed direct updates. Do not claim this protection is active without observing and recording the repository settings.
+- New initialized apps use framework lock v3 and an editable `.sdd/required-checks.json` app manifest. Their generated SDD workflow validates the manifest, runs required CI commands with read-only permissions and no secrets, and uploads tested-SHA/run-attempt evidence. Pull-request code is untrusted executable input; never expose privileged secrets to it. Existing app lock v1/v2 snapshots remain supported and do not acquire the new app-check runner without explicit migration. See `docs/framework/FRAMEWORK-CI-RELEASE-POLICY-001.md` for required-check, release-evidence, and rehearsal rules.
 - `workflow_dispatch` is available for the weekly report branch. Pull requests opened or updated with the repository's default `GITHUB_TOKEN` can produce `pull_request` workflow runs that remain approval-required; a maintainer must approve that run or manually dispatch the Verify Pipeline against the PR branch before relying on its checks. The weekly workflow performs report-specific artifact validation before it opens a PR.
 - The verification workflow is read-only. It must not deploy, publish, mutate repository settings, approve a gate, or receive production credentials.
 

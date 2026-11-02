@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "policy_id": "CONTEXT-POLICY-REFERENCE-001",
+  "policy_revision": "1.0",
+  "contract_version": "context-projection-v1",
+  "profile_revision": "framework-python-reference-v1",
+  "policies": [
+    {
+      "gate": "G-IMPL",
+      "role": "implementation-agent",
+      "required_paths": [
+        "AGENTS.md",
+        "README.md",
+        "docs/constitution/FRAMEWORK-001.md",
+        "docs/constitution/FRAMEWORK-002.md",
+        "docs/framework/FRAMEWORK-SPEC-001.md",
+        "docs/framework/FRAMEWORK-BACKLOG-001.md",
+        "docs/framework/GATE-CATALOG-001.md",
+        "docs/framework/FRAMEWORK-GATE-CONTRACT-001.md",
+        "docs/decisions/DECISION-LOG-001.md",
+        "scripts/context_projection.py",
+        "tests/test_context_projection.py"
+      ],
+      "optional_paths": ["docs/framework/FRAMEWORK-GATE-TRACEABILITY-001.md"],
+      "excluded_paths": [".env", ".git", "node_modules", "private-data"]
+    }
+  ]
+}

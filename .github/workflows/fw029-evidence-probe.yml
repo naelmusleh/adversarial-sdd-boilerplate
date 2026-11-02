@@ -1,0 +1,102 @@
+name: FW-029 Hosted Receipt and Sigstore Adapter
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-receipt:
+    name: Resolve exact hosted checks and prepare signed receipt
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      checks: read
+    steps:
+      - name: Check out the dispatched source revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Build canonical receipt from exact GitHub provider records
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+          GH_SHA: ${{ github.sha }}
+          GH_REF: ${{ github.ref }}
+          GH_EVENT: ${{ github.event_name }}
+          GH_CALLER_WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: python3 -m scripts.fw029_github_adapter
+
+      - name: Upload receipt for isolated signing job
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        with:
+          name: fw029-receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: receipt.json
+          if-no-files-found: error
+          retention-days: 1
+
+  sign-receipt:
+    name: Sign receipt with hosted ephemeral identity
+    needs: prepare-receipt
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - name: Download only the bounded receipt
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3
+        with:
+          name: fw029-receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/fw029-receipt
+
+      - name: Attest canonical receipt bytes
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: ${{ runner.temp }}/fw029-receipt/receipt.json
+
+      - name: Download the generated attestation bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+          RECEIPT_PATH: ${{ runner.temp }}/fw029-receipt/receipt.json
+          BUNDLE_DIR: ${{ runner.temp }}/fw029-attestation-bundle
+        run: |
+          set -euo pipefail
+          mkdir -p "$BUNDLE_DIR"
+          cd "$BUNDLE_DIR"
+          gh attestation download "$RECEIPT_PATH" --repo "$GH_REPOSITORY" >/dev/null
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          bundles = list(Path(os.environ["BUNDLE_DIR"]).glob("sha256*.jsonl"))
+          if (
+              len(bundles) != 1
+              or not re.fullmatch(r"sha256[:-][0-9a-f]{64}\.jsonl", bundles[0].name)
+              or bundles[0].is_symlink()
+              or not bundles[0].is_file()
+              or not 0 < bundles[0].stat().st_size <= 4_194_304
+          ):
+              raise SystemExit("expected one bounded attestation bundle")
+          safe_bundle = Path(os.environ["BUNDLE_DIR"]) / "attestation-bundle.jsonl"
+          if safe_bundle.exists():
+              raise SystemExit("normalized bundle path already exists")
+          bundles[0].rename(safe_bundle)
+          PY
+
+      - name: Preserve receipt and bundle briefly for offline verification
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        with:
+          name: fw029-receipt-and-bundle-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/fw029-receipt/receipt.json
+            ${{ runner.temp }}/fw029-attestation-bundle/attestation-bundle.jsonl
+          if-no-files-found: error
+          retention-days: 1

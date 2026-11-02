@@ -1,0 +1,192 @@
+{
+  "contract_version": "1.0",
+  "synthetic_only": true,
+  "cases": [
+    {
+      "id": "FW029-SEM-01",
+      "mutation": "provider run source SHA differs from receipt source SHA",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.source_mismatch"
+    },
+    {
+      "id": "FW029-SEM-02",
+      "mutation": "provider metadata returns more than one matching run attempt",
+      "expected_status": "failed",
+      "expected_diagnostic": "provider.run_ambiguous"
+    },
+    {
+      "id": "FW029-SEM-03",
+      "mutation": "provider check query cannot be retrieved",
+      "expected_status": "unavailable",
+      "expected_diagnostic": "provider.checks_unavailable"
+    },
+    {
+      "id": "FW029-SEM-04",
+      "mutation": "returned required check set omits or duplicates a logical check",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.check_set_mismatch"
+    },
+    {
+      "id": "FW029-SEM-05",
+      "mutation": "policy file is present but its separately supplied expected digest is absent",
+      "expected_status": "blocked",
+      "expected_diagnostic": "policy.expected_digest_missing"
+    },
+    {
+      "id": "FW029-SEM-06",
+      "mutation": "policy bytes differ from the externally pinned digest",
+      "expected_status": "failed",
+      "expected_diagnostic": "policy.digest_mismatch"
+    },
+    {
+      "id": "FW029-SEM-07",
+      "mutation": "required trust-root file was not supplied before verification starts",
+      "expected_status": "blocked",
+      "expected_diagnostic": "trust_root.missing"
+    },
+    {
+      "id": "FW029-SEM-08",
+      "mutation": "supplied trust-root bytes differ from the policy-bound root digest",
+      "expected_status": "failed",
+      "expected_diagnostic": "trust_root.digest_mismatch"
+    },
+    {
+      "id": "FW029-SEM-09",
+      "mutation": "signature verifies but issuer identity is not allowed by the pinned policy",
+      "expected_status": "failed",
+      "expected_diagnostic": "issuer.identity_untrusted"
+    },
+    {
+      "id": "FW029-SEM-10",
+      "mutation": "previously produced verification result is evaluated after selected policy revision changes",
+      "expected_status": "stale",
+      "expected_diagnostic": "result.scope_stale"
+    },
+    {
+      "id": "FW029-SEM-11",
+      "mutation": "receipt and signature verify against supplied snapshot, but snapshot freshness is unknown",
+      "expected_status": "passed",
+      "expected_diagnostic": "trust.freshness_unknown"
+    },
+    {
+      "id": "FW029-SEM-12",
+      "mutation": "receipt bytes are changed after signing or the signature is invalid",
+      "expected_status": "failed",
+      "expected_diagnostic": "signature.verification_failed"
+    },
+    {
+      "id": "FW029-SEM-13",
+      "mutation": "receipt repository host, owner, name, or stable ID differs from policy/provider evidence",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.repository_mismatch"
+    },
+    {
+      "id": "FW029-SEM-14",
+      "mutation": "workflow path, immutable revision, or trusted identity differs from policy",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.workflow_mismatch"
+    },
+    {
+      "id": "FW029-SEM-15",
+      "mutation": "gate-contract ID, version, or digest differs from the selected contract",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.contract_mismatch"
+    },
+    {
+      "id": "FW029-SEM-16",
+      "mutation": "provider run attempt, event, ref, or URL identifies a different source run",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.run_mismatch"
+    },
+    {
+      "id": "FW029-SEM-17",
+      "mutation": "receipt required-check manifest digest differs from the policy-pinned digest",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.manifest_mismatch"
+    },
+    {
+      "id": "FW029-SEM-18",
+      "mutation": "a required provider check has a non-success conclusion",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.check_failed"
+    },
+    {
+      "id": "FW029-SEM-19",
+      "mutation": "a required logical check is substituted by a different provider check ID or name",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.check_identity_mismatch"
+    },
+    {
+      "id": "FW029-SEM-20",
+      "mutation": "a required provider check head SHA differs from the receipt source SHA",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.check_source_mismatch"
+    },
+    {
+      "id": "FW029-SEM-21",
+      "mutation": "a supplied evidence item's bytes do not match its receipt digest",
+      "expected_status": "failed",
+      "expected_diagnostic": "evidence.digest_mismatch"
+    },
+    {
+      "id": "FW029-SEM-22",
+      "mutation": "the selected policy requests one-use or replay prevention semantics unsupported by v1",
+      "expected_status": "failed",
+      "expected_diagnostic": "policy.replay_mode_unsupported"
+    },
+    {
+      "id": "FW029-SEM-23",
+      "mutation": "verification repeats for the same valid receipt under read-only-repeatable policy",
+      "expected_status": "passed",
+      "expected_diagnostic": "verification.repeatable_read_only"
+    },
+    {
+      "id": "FW029-SEM-24",
+      "mutation": "receipt exceeds the v1 serialized-byte limit of 262144 bytes",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.size_limit_exceeded"
+    },
+    {
+      "id": "FW029-SEM-25",
+      "mutation": "verification policy exceeds the v1 serialized-byte limit of 65536 bytes",
+      "expected_status": "failed",
+      "expected_diagnostic": "policy.size_limit_exceeded"
+    },
+    {
+      "id": "FW029-SEM-26",
+      "mutation": "receipt contains more than 100 checks or evidence references, or policy more than 100 required checks",
+      "expected_status": "failed",
+      "expected_diagnostic": "contract.array_limit_exceeded"
+    },
+    {
+      "id": "FW029-SEM-27",
+      "mutation": "an unsigned local receipt is edited to claim trusted status without a valid signature",
+      "expected_status": "failed",
+      "expected_diagnostic": "signature.missing"
+    },
+    {
+      "id": "FW029-SEM-28",
+      "mutation": "receipt check set adds an unconfigured check while retaining every required check",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.check_set_mismatch"
+    },
+    {
+      "id": "FW029-SEM-29",
+      "mutation": "top-level receipt source ref differs from the policy-pinned source ref",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.source_ref_mismatch"
+    },
+    {
+      "id": "FW029-SEM-30",
+      "mutation": "receipt provider identity differs from the policy-pinned provider",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.run_mismatch"
+    },
+    {
+      "id": "FW029-SEM-31",
+      "mutation": "receipt provider run ID differs from the policy-pinned run ID",
+      "expected_status": "failed",
+      "expected_diagnostic": "receipt.run_mismatch"
+    }
+  ]
+}

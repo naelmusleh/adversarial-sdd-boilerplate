@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://adversarial-sdd.example/schemas/profile-manifest-v1.schema.json",
+  "title": "Adversarial SDD application profile manifest v1",
+  "description": "Architecture contract for explicit, independently versioned application profiles. Not yet consumed by the initializer.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "profile_id",
+    "profile_version",
+    "language",
+    "runtime",
+    "prerequisites",
+    "source_layout",
+    "checks",
+    "owned_dependencies",
+    "generated_files"
+  ],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "profile_id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "profile_version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+    "language": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "version_range"],
+      "properties": { "name": { "type": "string", "minLength": 1 }, "version_range": { "type": "string", "minLength": 1 } }
+    },
+    "runtime": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "version_range"],
+      "properties": { "name": { "type": "string", "minLength": 1 }, "version_range": { "type": "string", "minLength": 1 } }
+    },
+    "prerequisites": {
+      "description": "Map key is a unique prerequisite name.",
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+      "additionalProperties": { "$ref": "#/$defs/prerequisite" }
+    },
+    "source_layout": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "checks": {
+      "description": "Map keys are unique check IDs, preventing one check from being simultaneously applicable and unsupported.",
+      "type": "object", "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+      "additionalProperties": { "$ref": "#/$defs/profileCheck" }
+    },
+    "owned_dependencies": { "type": "array", "items": { "$ref": "#/$defs/dependency" }, "uniqueItems": true },
+    "generated_files": {
+      "type": "array", "minItems": 1,
+      "items": { "type": "string", "minLength": 1, "not": { "pattern": "(^/|(^|/)\\.\\.(/|$)|\\\\)" } },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "profileCheck": {
+      "type": "object", "additionalProperties": false, "required": ["status", "required"],
+      "properties": {
+        "status": { "enum": ["applicable", "unsupported"] },
+        "required": { "type": "boolean" },
+        "command": { "type": "string", "minLength": 1 },
+        "scope": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "applicable" } }, "required": ["status"] },
+          "then": { "required": ["command", "scope"], "not": { "required": ["reason"] } },
+          "else": { "required": ["reason"], "not": { "anyOf": [{ "required": ["command"] }, { "required": ["scope"] }] } }
+        }
+      ]
+    },
+    "dependency": {
+      "type": "object", "additionalProperties": false, "required": ["name", "version_constraint", "purpose"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version_constraint": { "type": "string", "minLength": 1 },
+        "purpose": { "type": "string", "minLength": 1 }
+      }
+    },
+    "prerequisite": {
+      "type": "object", "additionalProperties": false, "required": ["required", "version_constraint"],
+      "properties": { "required": { "type": "boolean" }, "version_constraint": { "type": "string", "minLength": 1 } }
+    }
+  }
+}

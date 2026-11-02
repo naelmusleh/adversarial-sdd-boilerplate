@@ -24,11 +24,19 @@
       "scripts/artifacts.py",
       "scripts/init_app_project.py",
       "docs/framework/ARTIFACT-CONTRACT-001.json",
+      "docs/framework/schemas/assumption-experiment-v1.schema.json",
       "docs/templates/app-project/mission.md.template",
+      "docs/templates/app-project/assumption-experiment-records.json.template",
       "docs/templates/app-project/constitution.md.template",
       "docs/templates/app-project/specification.md.template",
       "docs/templates/app-project/design.md.template",
-      "docs/templates/app-project/backlog.md.template"
+      "docs/templates/app-project/backlog.md.template",
+      "docs/templates/app-project/architect-handshake.md.template",
+      "docs/templates/app-project/gate-record.md.template",
+      "docs/templates/app-project/sdd-contract-validation.yml.template",
+      ".sdd/G-REQ-HANDOFF.json.template",
+      ".sdd/G-ARCH-CONTRACT.json.template",
+      "framework/capabilities/CAP-006-adversarial-review-daemon.md"
     ],
     "required_artifacts": [
       {
@@ -82,6 +90,10 @@
       {
         "path": "framework/capabilities/CAP-005-platform-governance-daemon.md",
         "id": "CAP-005"
+      },
+      {
+        "path": "framework/capabilities/CAP-006-adversarial-review-daemon.md",
+        "id": "CAP-006"
       },
       {
         "path": "workflows/lifecycle.md",
