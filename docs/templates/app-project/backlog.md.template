@@ -24,6 +24,18 @@ Keep this as the canonical ordered task list unless the project explicitly adopt
 - **Next action:** Work with the product owner to frame intent, draft the mission, and follow the framework product discovery workflow toward the G-INTENT/G-REQ gates.
 - **Status updated:** YYYY-MM-DD
 
+## Optional delivery focus
+
+- **Delivery mode:** `<standard | MVP / launch-sprint>`
+- **Target horizon/date:** `<10 working days by default in MVP mode, or owner-selected date>`
+- **Primary persona and job:** `<one persona and the job to complete>`
+- **Launch outcome and success signal:** `<observable outcome and how it will be recognized>`
+- **Minimum launch surface and critical dependencies:** `<surfaces, constraints, and dependencies>`
+- **Smallest end-to-end slice:** `<primary happy path to ship>`
+- **Material deferrals:** `<brief item, rationale, revisit trigger; omit routine possibilities>`
+
+Use this section only when MVP / launch-sprint mode is selected. It scopes work; it does not waive the app's quality thresholds, required gate evidence, or security, privacy, legal, accessibility, authorization, data-integrity, review, CI, and release controls. Record concise applicability decisions for failure categories required by the adopted gate contract; do not create exhaustive scenario matrices.
+
 ## Status and priority rules
 
 Define project status vocabulary, priority meaning, and who may authorize scope changes. A task blocked on an owner decision or access must name that dependency and must not be silently substituted.

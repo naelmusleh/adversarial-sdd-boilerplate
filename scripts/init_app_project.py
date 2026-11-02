@@ -260,7 +260,7 @@ def generated_readme(
 
 **Project status:** Ideation
 **Active gate:** None; discovery has not started
-**Next action:** Give your AI agent the app idea, intended user, problem evidence, desired outcome, and known constraints. Ask it to draft `mission.md` and lead the [product discovery workflow]({framework_link(framework_url, "workflows/product-discovery.md", framework_revision)}) in this repository.
+**Next action:** Start with the lead orchestrator. Give it the app idea in your own words; it will inspect this repository, explain the next step, and guide the app through the required gates.
 **Canonical status source:** [`backlog.md`](backlog.md)
 
 This repository is the source of truth for {name}: its product decisions, code, and delivery evidence belong here. It was initialized from the reusable [Adversarial SDD template]({framework_url}/tree/{framework_revision}); there is no framework service to install or operate. The exact source revision is recorded in [`.sdd/framework.lock.json`](.sdd/framework.lock.json). No gate has passed and no product decisions are pre-approved by this starter.
@@ -279,10 +279,10 @@ The helper discovers this repository's canonical SDD files and artifact folders;
 
 ## Start here
 
-1. Give the agent the app idea, intended user, problem evidence, desired outcome, and known constraints. The agent drafts [`mission.md`](mission.md) with you and records evidence, assumptions, exclusions, and unresolved decisions.
-2. Have the agent follow the [product discovery workflow]({framework_link(framework_url, "workflows/product-discovery.md", framework_revision)}) to draft `constitution.md`, `specification.md`, and `backlog.md`, then return only material decisions and the G-INTENT/G-REQ evidence for your review.
-3. Keep `design.md` as the canonical experience contract. Use the [CX design workflow]({framework_link(framework_url, "workflows/cx-design.md", framework_revision)}) and link visual review evidence there.
-4. Use [`backlog.md`](backlog.md) for prioritized, approved implementation work and the [lifecycle workflow]({framework_link(framework_url, "workflows/lifecycle.md", framework_revision)}) for the next stage.
+1. Start a conversation with the lead orchestrator and describe the app in your own words. A short idea is enough; you do not need to fill out a framework questionnaire first.
+2. The orchestrator reads this repository, tells you what stage the app is at, and leads the next permitted step. For a new app, that begins with framing the primary user, problem, desired outcome, known evidence, and uncertainties in [`mission.md`](mission.md).
+3. By default, the orchestrator plans toward a two-week MVP for one primary user and the smallest useful end-to-end journey. You can provide another target date or choose a different mode. Required safety, privacy, accessibility, quality, review, and release controls still apply.
+4. The orchestrator leads discovery and design through the [product discovery workflow]({framework_link(framework_url, "workflows/product-discovery.md", framework_revision)}), keeps [`backlog.md`](backlog.md) as the project status source, and explains material decisions in plain language with options and a recommendation where useful. You decide product scope and reserved actions.
 
 ## Gates and tools
 
@@ -322,6 +322,18 @@ def generated_agents(framework_url: str, framework_revision: str) -> str:
     return f'''# Agent instructions
 
 This is an application repository initialized from Adversarial SDD. Read this file and the canonical `mission.md`, `constitution.md`, `specification.md`, `design.md`, and `backlog.md` before substantive work.
+
+## Your job: lead the project
+
+You are the application's owner-facing lead agent and orchestrator. Drive the work from the current repository state; do not wait for the owner to name the next framework step.
+
+- At the start of every new or resumed session, inspect these instructions, the canonical SDD documents, the current-status section in `backlog.md`, and linked decision/gate/review evidence. Derive the current stage, active task, blockers, and next permitted action from those files, not chat history.
+- If this is a new app and the canonical documents are still starter placeholders, begin G-INTENT. Use the idea and constraints the owner has already shared; if no idea was provided, invite a short description in their own words. Capture what is known, what is inferred, and what remains unknown, then lead the next safe discovery step.
+- Default a new app to a two-week MVP/launch-sprint posture: one primary user, their main job, and the smallest useful end-to-end outcome. Honor another owner-provided target or mode. Do not front-load exhaustive questionnaires, secondary scenarios, error matrices, extreme edge cases, or speculative scale plans.
+- Preserve all applicable gates and required safety, security, privacy, accessibility, legal, data-integrity, review, CI, and release controls. If a control makes the target infeasible, show the owner concrete scope/date options; never waive it silently.
+- Select the smallest relevant role capabilities from the catalog and explain material assignments. Perform role-bounded work sequentially by default; use another agent only when available and justified by independence, expertise, or useful parallelism. You remain the coordination point.
+- Do routine authorized, reversible work and continue independent work while awaiting owner decisions. Ask only for material missing information, permissions, evidence, review, or reserved decisions. Use plain language and include the impact and recommendation where helpful.
+- Before stopping, update the canonical records as authorized and tell the owner what changed, what is verified, what needs the owner's decision, and the next step. Never pass a gate, authorize release, or claim evidence that is not recorded and observed.
 
 - Keep application code and its product artifacts in this repository. The template source owns reusable procedures, not this application's implementation.
 - Treat repository artifacts as the durable source of truth. Maintain stable IDs, versions, links, open-decision records, and gate evidence.

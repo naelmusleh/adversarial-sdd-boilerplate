@@ -31,6 +31,9 @@ jobs:
       - name: Validate artifact metadata, IDs, and naming
         run: python3 scripts/artifacts.py validate
 
+      - name: Validate role capability catalog structure and references
+        run: python3 scripts/validate_role_catalog.py
+
   initializer-regression-gate:
     name: Initializer Regression Gate
     runs-on: ubuntu-latest
@@ -97,3 +100,10 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/fw030-greq'
     uses: ./.github/workflows/fw030-runtime-probe.yml
     permissions: {}
+
+  fw030-adapter-synthetic-pilot:
+    name: FW-030 Adapter Synthetic Pilot
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/fw030-impl02'
+    uses: ./.github/workflows/fw030-adapter-pilot.yml
+    permissions:
+      contents: read
